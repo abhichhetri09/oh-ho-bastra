@@ -1,0 +1,17 @@
+{
+  "name": "oh-ho-bastra",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": ["web", "api"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w api\" \"npm run dev -w web\"",
+    "dev:web": "npm run dev -w web",
+    "dev:api": "npm run dev -w api",
+    "docker:up": "docker compose -f docker-compose.dev.yml up --build",
+    "docker:down": "docker compose -f docker-compose.dev.yml down",
+    "db:up": "docker compose -f docker-compose.dev.yml up db -d"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
