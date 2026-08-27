@@ -1,19 +1,32 @@
-import { Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 
 import { Header } from "@/components/Header";
-import { Logo } from "@/components/Logo";
+import { SiteFooter } from "@/components/SiteFooter";
+
+function ScrollToHash() {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      document.querySelector(hash)?.scrollIntoView();
+      return;
+    }
+    window.scrollTo(0, 0);
+  }, [pathname, hash]);
+
+  return null;
+}
 
 export function AppFrame() {
   return (
-    <div className="mx-auto flex min-h-svh w-full  flex-col">
+    <div className="flex min-h-svh w-full flex-col">
+      <ScrollToHash />
       <Header />
-      <main className="flex-1 px-6 py-10">
+      <main className="flex-1">
         <Outlet />
       </main>
-      <footer className="flex items-center justify-between bg-black px-6 py-4 text-sm text-white/70">
-        <Logo mark className="h-8" />
-        <span>Bastra</span>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { PageShell } from "@/components/PageShell";
+import { LogOut } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,25 +30,32 @@ export function Account() {
   }
 
   if (isPending || !user) {
-    return <p className="text-muted-foreground">Checking session…</p>;
+    return (
+      <PageShell>
+        <p className="text-muted-foreground">Checking session…</p>
+      </PageShell>
+    );
   }
 
   return (
-    <section className="mx-auto max-w-sm space-y-4">
-      <p className="text-sm uppercase tracking-[0.16em] text-muted-foreground">
-        Account
-      </p>
-      <Card>
-        <CardHeader>
-          <CardTitle>{user.name}</CardTitle>
-          <CardDescription>{user.email}</CardDescription>
-        </CardHeader>
-        <CardFooter>
-          <Button variant="outline" onClick={() => void onSignOut()}>
-            Sign out
-          </Button>
-        </CardFooter>
-      </Card>
-    </section>
+    <PageShell>
+      <section className="mx-auto max-w-sm space-y-4">
+        <p className="text-sm uppercase tracking-[0.16em] text-muted-foreground">
+          Account
+        </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>{user.name}</CardTitle>
+            <CardDescription>{user.email}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button variant="outline" onClick={() => void onSignOut()}>
+              <LogOut />
+              Sign out
+            </Button>
+          </CardFooter>
+        </Card>
+      </section>
+    </PageShell>
   );
 }

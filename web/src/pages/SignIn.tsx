@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { PageShell } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,7 +39,8 @@ export function SignIn() {
   }
 
   return (
-    <section className="mx-auto max-w-sm space-y-4">
+    <PageShell>
+      <section className="mx-auto max-w-sm space-y-4">
       <p className="text-sm uppercase tracking-[0.16em] text-muted-foreground">
         Account
       </p>
@@ -88,5 +90,6 @@ export function SignIn() {
         </form>
       </Card>
     </section>
+    </PageShell>
   );
 }
