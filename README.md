@@ -25,6 +25,14 @@ npm run docker:down
 
 Health check: [http://localhost:5173/api/v1/health](http://localhost:5173/api/v1/health).
 
+Auth check: [http://localhost:5173/api/auth/ok](http://localhost:5173/api/auth/ok).
+
+After pulling schema changes, apply migrations:
+
+```bash
+npm run db:migrate
+```
+
 ## Host apps (optional)
 
 If you prefer Vite and Express on the machine, keep only the database in Docker:
