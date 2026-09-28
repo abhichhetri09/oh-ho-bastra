@@ -8,16 +8,21 @@
     "start": "tsx src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:reset-catalog": "tsx src/db/seed.ts --reset",
+    "admin:grant": "tsx src/scripts/grant-admin.ts",
+    "typecheck": "tsc --noEmit",
     "auth:generate": "npx auth@latest generate --config src/auth.ts --output src/db/auth-schema.ts -y"
   },
   "dependencies": {
-    "@better-auth/drizzle-adapter": "^1.7.2",
-    "better-auth": "^1.7.2",
+    "@better-auth/drizzle-adapter": "^1.7.6",
+    "better-auth": "^1.7.6",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^1.0.0-rc.4",
     "express": "^5.2.1",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

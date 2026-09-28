@@ -7,11 +7,14 @@
     "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w api\" \"npm run dev -w web\"",
     "dev:web": "npm run dev -w web",
     "dev:api": "npm run dev -w api",
-    "docker:up": "docker compose -f docker-compose.dev.yml up --build",
+    "docker:up": "docker compose -f docker-compose.dev.yml up --build --renew-anon-volumes",
     "docker:down": "docker compose -f docker-compose.dev.yml down",
     "db:up": "docker compose -f docker-compose.dev.yml up db -d",
     "db:generate": "npm run db:generate -w api",
     "db:migrate": "npm run db:migrate -w api",
+    "db:seed": "npm run db:seed -w api",
+    "db:reset-catalog": "npm run db:reset-catalog -w api",
+    "admin:grant": "npm run admin:grant -w api --",
     "auth:generate": "npm run auth:generate -w api"
   },
   "devDependencies": {
