@@ -1,13 +1,14 @@
 import { Link } from "react-router-dom";
 
-import { ClothPanel } from "@/components/ClothPanel";
+import { ProductImage } from "@/components/common/ProductImage";
 import { Shirt } from "@/components/icons";
-import { PageHeader } from "@/components/PageHeader";
-import { PageShell } from "@/components/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
-import { products } from "@/data/products";
+import { useCollectionInfo } from "@/features/catalog/api";
 
 export function About() {
+  const tees = useCollectionInfo("tees");
   return (
     <PageShell>
       <section className="grid gap-12 lg:grid-cols-2 lg:items-start lg:gap-16">
@@ -19,8 +20,8 @@ export function About() {
           />
           <div className="max-w-xl space-y-4 leading-relaxed text-muted-foreground">
             <p>
-              Heavyweight cotton, regular and boxy cuts. No extra SKUs — tees,
-              and the ones we print for you.
+              Heavyweight cotton, regular and boxy cuts. Tees, long sleeves for
+              winter, and the ones we print for you.
             </p>
             <p>
               Custom is the same tee with your art or a line of type. Send the
@@ -34,11 +35,7 @@ export function About() {
             </Link>
           </Button>
         </div>
-        <ClothPanel
-          swatch={products[0].swatch}
-          className="aspect-4/5"
-          label="Black tee"
-        />
+        <ProductImage src={tees?.imageUrl} alt="Our tees on a rail" className="aspect-4/5 rounded-xl" />
       </section>
     </PageShell>
   );
