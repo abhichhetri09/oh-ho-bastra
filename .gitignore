@@ -22,3 +22,6 @@ dist-ssr
 
 .env
 .env.local
+
+# Uploaded product photos (seed photos live in api/seed/images)
+api/uploads/
