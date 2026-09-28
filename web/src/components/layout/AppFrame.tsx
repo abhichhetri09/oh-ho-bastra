@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
-import { Header } from "@/components/Header";
-import { SiteFooter } from "@/components/SiteFooter";
+import { Header } from "@/components/layout/header/Header";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 function ScrollToHash() {
   const { pathname, hash } = useLocation();
