@@ -1,0 +1,20 @@
+# Next runs on Node, the runtime it's built and tested on. In a bun-only
+# image `node` is a shim for Bun, and the dev server ran on Bun's engine
+# and reached 3.4GB within a few routes. Bun is copied in only for
+# installs and scripts.
+FROM node:24-alpine
+
+COPY --from=oven/bun:1.3.9-alpine /usr/local/bin/bun /usr/local/bin/bun
+
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat
+
+COPY bun.lock package.json turbo.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/ ./packages/
+RUN bun install
+
+EXPOSE 3000
+
+CMD ["bun", "run", "dev", "--filter=@repo/web"]

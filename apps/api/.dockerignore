@@ -1,0 +1,8 @@
+tmp/
+*.exe
+*.test
+node_modules/
+.git/
+.gitignore
+**/*.env*
+**/*.md

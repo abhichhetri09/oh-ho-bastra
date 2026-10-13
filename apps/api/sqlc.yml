@@ -1,0 +1,32 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "migrations"
+    queries: "internal/database/queries"
+    gen:
+      go:
+        package: "db"
+        out: "internal/database/generated"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        json_tags_case_style: snake
+        emit_empty_slices: true
+        overrides:
+          - column: "users.password_hash"
+            go_struct_tag: 'json:"-"'
+          # bookkeeping for restocks, not part of what was bought
+          - column: "order_items.stock_shortfall"
+            go_struct_tag: 'json:"-"'
+          # active_offer_price returns NULL without an active offer; sqlc
+          # can't infer a function's nullability.
+          - column: "storefront_products.offer_price"
+            go_type: "github.com/jackc/pgx/v5/pgtype.Int4"
+          - column: "storefront_variants.offer_price"
+            go_type: "github.com/jackc/pgx/v5/pgtype.Int4"
+          - column: "variant_prices.offer_price"
+            go_type: "github.com/jackc/pgx/v5/pgtype.Int4"
+          # JSONB snapshots go out as JSON, not base64 bytes.
+          - column: "orders.shipping_address"
+            go_type: "encoding/json.RawMessage"
+          - column: "order_items.options"
+            go_type: "encoding/json.RawMessage"

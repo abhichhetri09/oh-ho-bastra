@@ -1,0 +1,45 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "server"],
+      "env": [
+        "NODE_ENV",
+        "NEXT_PUBLIC_API_URL",
+        "INTERNAL_API_URL",
+        "COOKIE_DOMAIN",
+        "STORE_THEME",
+        "DEMO_THEME_PICKER",
+        "FRONTEND_URL",
+        "VERCEL_ENV",
+        "VERCEL_PROJECT_PRODUCTION_URL"
+      ]
+    },
+    "generate": {
+      "dependsOn": ["^generate"],
+      "cache": false
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "env": [
+        "INTERNAL_API_URL",
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_DIST_DIR",
+        "TURBOPACK_MEMORY_LIMIT_MB",
+        "STORE_THEME",
+        "DEMO_THEME_PICKER",
+        "FRONTEND_URL"
+      ]
+    }
+  }
+}

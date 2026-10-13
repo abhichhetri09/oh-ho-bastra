@@ -1,0 +1,3 @@
+DROP VIEW IF EXISTS variant_prices;
+ALTER TABLE cart_items ADD COLUMN unit_price INT NOT NULL DEFAULT 0;
+ALTER TABLE cart_items ALTER COLUMN unit_price DROP DEFAULT;

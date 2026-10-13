@@ -1,0 +1,13 @@
+node_modules
+.turbo
+.next
+.next-docker
+dist
+build
+coverage
+bun.lock
+apps/api/internal/database/generated
+apps/api/openapi.json
+packages/api-client/src/generated
+packages/api-client/src/generated-server
+*.md

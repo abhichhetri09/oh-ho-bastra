@@ -1,0 +1,8 @@
+# Reject AI attribution trailers (Co-Authored-By: Claude / Anthropic, Claude-Session).
+if grep -qiE '^[[:space:]]*(co-authored-by:.*(claude|anthropic)|claude-session:)' "$1"; then
+  echo "commit-msg: AI attribution trailers (Co-Authored-By: Claude, Claude-Session) are not allowed." >&2
+  echo "commit-msg: remove them from the commit message and try again." >&2
+  exit 1
+fi
+
+bunx --no -- commitlint --edit "$1"

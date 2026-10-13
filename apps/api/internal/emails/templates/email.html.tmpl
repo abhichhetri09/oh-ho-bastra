@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>{{.Heading}}</title>
+</head>
+<body style="margin:0;padding:0;background:#faf8f4;color:#24201c;-webkit-text-size-adjust:100%;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">{{.Preheader}}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#faf8f4;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;">
+
+<tr><td style="padding:0 0 28px;">
+<a href="{{.ShopURL}}" style="font-family:Georgia,'Times New Roman',serif;font-size:24px;color:#24201c;text-decoration:none;"><img src="{{.ShopURL}}/email/mark.png" width="17" height="17" alt="" style="display:inline-block;width:17px;height:17px;margin-right:7px;border:0;vertical-align:baseline;">{{.StoreName}}</a>
+</td></tr>
+
+<tr><td style="background:#ffffff;border:1px solid #e6e1d8;padding:32px 28px;">
+<p style="margin:0 0 6px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#7a6f63;">Order {{.Label}}{{with .PlacedOn}} · {{.}}{{end}}</p>
+<h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',serif;font-weight:normal;font-size:28px;line-height:1.2;color:#24201c;">{{.Heading}}</h1>
+<p style="margin:0 0 12px;">{{.Greeting}}</p>
+<p style="margin:0 0 24px;color:#4a423a;">{{.Intro}}</p>
+
+{{- if .Tracking}}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;background:#f3efe8;">
+<tr><td style="padding:14px 16px;">
+<p style="margin:0;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#7a6f63;">Tracking number</p>
+<p style="margin:2px 0 0;font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:15px;color:#24201c;">{{.Tracking}}</p>
+</td></tr>
+</table>
+{{- end}}
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
+<tr><td style="background:#24201c;">
+<a href="{{.URL}}" style="display:inline-block;padding:12px 22px;font-size:14px;color:#faf8f4;text-decoration:none;">View your order</a>
+</td></tr>
+</table>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid #e6e1d8;">
+{{- range .Items}}
+<tr>
+<td width="64" valign="top" style="padding:16px 14px 16px 0;">
+{{- if .Image}}<img src="{{.Image}}" width="64" height="80" alt="" style="display:block;width:64px;height:80px;object-fit:cover;background:#f3efe8;border:0;">{{else}}<div style="width:64px;height:80px;background:#f3efe8;"></div>{{end}}
+</td>
+<td valign="top" style="padding:16px 0;">
+<p style="margin:0;color:#24201c;">{{.Name}}</p>
+{{- with .Options}}<p style="margin:2px 0 0;font-size:13px;color:#7a6f63;">{{.}}</p>{{end}}
+<p style="margin:2px 0 0;font-size:13px;color:#7a6f63;">Qty {{.Quantity}}</p>
+</td>
+<td valign="top" align="right" style="padding:16px 0 16px 12px;white-space:nowrap;">{{.LineTotal}}</td>
+</tr>
+<tr><td colspan="3" style="border-bottom:1px solid #e6e1d8;font-size:0;line-height:0;">&nbsp;</td></tr>
+{{- end}}
+</table>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:16px 0 0;font-size:14px;">
+<tr><td style="padding:3px 0;color:#4a423a;">Subtotal</td><td align="right" style="padding:3px 0;">{{.Subtotal}}</td></tr>
+<tr><td style="padding:3px 0;color:#4a423a;">Shipping</td><td align="right" style="padding:3px 0;">{{.Shipping}}</td></tr>
+<tr><td style="padding:10px 0 0;font-size:15px;color:#24201c;"><strong>Total</strong></td><td align="right" style="padding:10px 0 0;font-size:15px;"><strong>{{.Total}}</strong></td></tr>
+</table>
+
+{{- if .Address}}
+<p style="margin:28px 0 4px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#7a6f63;">Shipping to</p>
+<p style="margin:0;font-size:14px;color:#4a423a;">{{range $i, $line := .Address}}{{if $i}}<br>{{end}}{{$line}}{{end}}</p>
+{{- end}}
+</td></tr>
+
+<tr><td style="padding:24px 4px 0;font-size:12px;line-height:1.6;color:#7a6f63;">
+You're receiving this email because you placed an order at {{.StoreName}}. Your orders and their status are always in <a href="{{.ShopURL}}/account/orders" style="color:#7a6f63;">your account</a>.
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

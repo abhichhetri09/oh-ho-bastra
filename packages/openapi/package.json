@@ -1,0 +1,21 @@
+{
+  "name": "@repo/openapi",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "tsx src/generate.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "9.1.0",
+    "@repo/types": "*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "*",
+    "@types/node": "^22.15.3",
+    "tsx": "^4.19.2",
+    "typescript": "5.9.2"
+  }
+}

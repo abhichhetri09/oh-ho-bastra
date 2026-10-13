@@ -1,6 +1,68 @@
-name: oh-ho-bastra
+name: ohhobastra
 
 services:
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+    container_name: ohhobastra-api
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env.local
+    volumes:
+      - ./apps/api:/app
+      - /app/tmp
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # first start compiles the api with air, so allow time and poll fast meanwhile
+      start_period: 120s
+      start_interval: 2s
+
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile.dev
+    container_name: ohhobastra-web
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    environment:
+      NEXT_DIST_DIR: .next-docker
+      # Turbopack keeps every compiled route in memory and grows past 4GB
+      # over a long session. This is a soft target: past it, Turbopack drops
+      # cached work instead of growing.
+      TURBOPACK_MEMORY_LIMIT_MB: "2048"
+    # The hard cap, for when the soft one isn't enough. Without it, a dev
+    # server that keeps growing pushes an 8GB machine into swap until
+    # systemd-oomd kills the whole desktop session. With it, only this
+    # container is killed and comes back by itself. memswap_limit equal to
+    # mem_limit means it gets no swap.
+    mem_limit: 3500m
+    memswap_limit: 3500m
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      - ./turbo.json:/app/turbo.json
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next-docker
+    networks:
+      - app-network
+
   db:
     image: postgres:17-alpine
     container_name: ohhobastra-db
@@ -10,62 +72,31 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     env_file:
-      - .env
+      - .env.local
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
 
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile.dev
-    container_name: ohhobastra-api
-    depends_on:
-      db:
-        condition: service_healthy
+  # Catches every email the api sends (SMTP mailpit:1025); read them at
+  # http://localhost:8025. Nothing leaves the machine.
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    container_name: ohhobastra-mailpit
     ports:
-      - "5000:5000"
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-    volumes:
-      - ./api:/app
-      - /app/node_modules
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:5000/api/v1/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
+      - "127.0.0.1:8025:8025"
+    networks:
+      - app-network
 
-  web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile.dev
-    container_name: ohhobastra-web
-    depends_on:
-      api:
-        condition: service_healthy
-    ports:
-      - "5173:5173"
-    environment:
-      API_PROXY_TARGET: http://api:5000
-      CHOKIDAR_USEPOLLING: "true"
-    volumes:
-      - ./web:/app
-      - /app/node_modules
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   pgdata:

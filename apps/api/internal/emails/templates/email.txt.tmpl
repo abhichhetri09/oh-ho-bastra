@@ -1,0 +1,24 @@
+{{.Heading}}
+Order {{.Label}}{{with .PlacedOn}} · {{.}}{{end}}
+
+{{.Greeting}}
+
+{{.Intro}}
+{{if .Tracking}}
+Tracking number: {{.Tracking}}
+{{end}}
+View your order: {{.URL}}
+
+{{range .Items -}}
+{{.Quantity}} × {{.Name}}{{with .Options}} ({{.}}){{end}}  {{.LineTotal}}
+{{end}}
+Subtotal  {{.Subtotal}}
+Shipping  {{.Shipping}}
+Total     {{.Total}}
+{{if .Address}}
+Shipping to:
+{{range .Address}}{{.}}
+{{end}}{{end}}
+--
+{{.StoreName}}
+{{.ShopURL}}

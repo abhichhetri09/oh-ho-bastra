@@ -1,0 +1,58 @@
+// Store-wide copy and editorial imagery in one place, so rebranding or
+// swapping the photography is a one-file change. Editorial photos live in
+// public/editorial (credits in CREDITS.md there); product images are
+// Cloudinary uploads.
+
+const IMG = "/editorial";
+
+export const site = {
+  name: "Oh Ho Bastra",
+  tagline: "Tees, and the ones we print for you",
+  description:
+    "Heavyweight cotton t-shirts in a few good colours, plus custom prints and text when you want something that isn't on the rack.",
+  announcement: [
+    "Free shipping on orders over €60",
+    "30-day returns, no questions asked",
+    "Custom prints: send your art or a line of type",
+  ],
+  hero: {
+    eyebrow: "Oh Ho Bastra",
+    title: ["Tees. And the ones", "we print for you."],
+    body: "Heavyweight cotton, a few colours. Custom prints and text when you want something that isn't on the rack.",
+    image: `${IMG}/rack-colours.jpg`,
+    imageAlt: "Tees in assorted colours hanging on a rail",
+    secondaryImage: `${IMG}/custom-text.jpg`,
+    secondaryAlt: "Two tees printed with custom text",
+  },
+  story: {
+    eyebrow: "Custom",
+    title: "Your art. Our tee.",
+    body: "Custom is the same heavyweight tee with your artwork or a line of type. Pick a colour and a size, then send the file or the words after you order.",
+    image: `${IMG}/sage-rack.jpg`,
+    imageAlt: "A row of sage green tees on wooden hangers",
+    href: "/shop",
+    cta: "Shop tees",
+  },
+  values: [
+    {
+      title: "Free shipping over €60",
+      body: "Delivered in two to four working days.",
+    },
+    {
+      title: "30-day returns",
+      body: "Wrong size? Send it back, on us.",
+    },
+    {
+      title: "Secure checkout",
+      body: "Payments handled by Stripe. We never see your card.",
+    },
+    {
+      title: "Heavyweight cotton",
+      body: "Regular and boxy cuts that keep their shape wash after wash.",
+    },
+  ],
+  shippingCopy:
+    "Free standard shipping on orders over €60; otherwise a flat €4.90. Orders ship in two to four working days. Returns are free within 30 days of delivery.",
+  authImage: `${IMG}/white-hanger.jpg`,
+  authImageAlt: "A plain white tee on a wooden hanger",
+} as const;
