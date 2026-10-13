@@ -5,7 +5,9 @@
 
 # Oh Ho Bastra
 
-a full-stack e-commerce store: a go/gin api and a next.js storefront with an admin panel, stripe checkout, reviews, wishlists and search, held together by one typed api contract.
+the online shop for oh ho bastra: heavyweight cotton tees in a few colours, plus custom prints and text printed to order. prices are in euros and checkout ships to finland first.
+
+under the hood it's a full-stack store: a go/gin api and a next.js storefront with an admin panel, stripe checkout, reviews, wishlists and search, held together by one typed api contract. it started from the [cartspace](https://github.com/SuprimKhatri77/cartspace) boilerplate.
 
 ![landing page](docs/screenshots/home.jpg)
 
@@ -17,6 +19,13 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 | -------------------------------------------------- | ------------------------------------------------ |
 | ![admin dashboard](docs/screenshots/admin.jpg)     | ![admin order](docs/screenshots/admin-order.jpg) |
 
+## the shop
+
+- **catalog**: ten tees in two categories, **tees** (short sleeve, long sleeve) and **custom** (custom text, custom print), sized s to xxl, €25–45. `bun run db:seed:catalog` creates them; their photos are in `scripts/catalog-images`.
+- **money**: euros (`apps/web/lib/money.ts`, `apps/api/internal/constants/shipping.go`). shipping is €4.90 flat and free from €60; the web shows the same rule from `apps/web/lib/shipping.ts`, so change both together.
+- **orders** are numbered `OHB-1001`, `OHB-1002`…
+- **brand**: the ओho mark is `apps/web/components/brand/logo-mark.tsx` (also in `docs/brand`), with the favicon and app icons in `apps/web/app` and `apps/web/public/brand`. store copy and editorial photos live in `apps/web/lib/site.ts` and `apps/web/public/editorial`.
+
 ## features
 
 **storefront**
@@ -25,7 +34,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 - full-text product search (⌘K dialog with live results, and `/shop?q=`)
 - product pages with a gallery, colour swatches and size pills (sold-out variants struck through, `?variant=` links), offers with expiry
 - a bag drawer and `/cart` with live prices and quantities capped to stock
-- stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold
+- stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold (€4.90, free from €60)
 - order history with a status timeline, tracking number and refund date
 - order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
@@ -45,10 +54,10 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 
 | layer        | what                                                                                                       |
 | ------------ | ---------------------------------------------------------------------------------------------------------- |
-| api          | go 1.24, gin, postgres 17 with pgx, sqlc, golang-migrate, stripe-go, cloudinary, go-mail, scalar api docs |
+| api          | go 1.26, gin, postgres 17 with pgx, sqlc, golang-migrate, stripe-go, cloudinary, go-mail, scalar api docs |
 | web          | next.js 16 (app router, `proxy.ts`), react 19, tanstack query 5, tailwind v4, shadcn (base ui), motion    |
 | contract     | zod schemas → openapi 3.1 (zod-to-openapi) → typed clients (hey-api), checked both ways in ci              |
-| tooling      | turborepo + bun workspaces, docker compose, husky + commitlint + lint-staged, golangci-lint, github actions |
+| tooling      | turborepo + bun workspaces, docker compose, husky + commitlint + lint-staged, golangci-lint                |
 
 ## architecture
 
@@ -147,7 +156,7 @@ sequenceDiagram
 
 ## getting started
 
-**prerequisites**: [bun](https://bun.sh) 1.3, [go](https://go.dev) 1.24, docker. for work outside docker also [sqlc](https://sqlc.dev) 1.30 and [golangci-lint](https://golangci-lint.run) v2. for payments, the [stripe cli](https://docs.stripe.com/stripe-cli).
+**prerequisites**: [bun](https://bun.sh) 1.3, [go](https://go.dev) 1.26 (the dev container's version; one validator test fails on go 1.27, so with a newer go installed run go commands and pushes with `GOTOOLCHAIN=go1.26.1`), docker. for work outside docker also [sqlc](https://sqlc.dev) 1.30 and [golangci-lint](https://golangci-lint.run) v2. for payments, the [stripe cli](https://docs.stripe.com/stripe-cli).
 
 ```sh
 bun install
@@ -252,7 +261,7 @@ a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`:
 
 - **go**: unit and handler tests, including the order transition table, session rotation, validators, middleware and the contract test (`bun run test:go`).
 - **web**: bun tests for the proxy guards, the refresh interceptor, filter and url parsing, the image loader, cart and order helpers (`bun run test:web`).
-- **ci** (github actions, `.github/workflows/ci.yml`) runs the same steps as `bun run ci` on every pull request and on `main`. dependabot keeps the bun, go and actions dependencies current.
+- **ci**: there's no hosted ci yet. `bun run ci` runs every check locally (drift checks, types, lint, tests, build), and the pre-push hook runs most of them.
 
 ## deploy
 
@@ -289,5 +298,12 @@ if order emails time out on render, its free instances may be blocking the stand
 
 - guest carts (the bag needs an account)
 - partial refunds and returns
-- emails beyond orders (password reset, verifying the address)
+- emails beyond orders and password reset (for example verifying the address)
+- finnish payment methods (paytrail, mobilepay): checkout is stripe only
 - redis or a job queue (expired checkouts, old sessions and the email outbox are handled by loops inside the api process)
+
+## credits
+
+- built on [cartspace](https://github.com/SuprimKhatri77/cartspace) by suprim khatri
+- product and editorial photos from [unsplash](https://unsplash.com), under the unsplash license; photographers are listed in `scripts/catalog-images/CREDITS.md` and `apps/web/public/editorial/CREDITS.md`
+- the screenshots show demo data: the seeded catalog, with made-up customers and orders
