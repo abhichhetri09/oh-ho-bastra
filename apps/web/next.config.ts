@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
     appNewScrollHandler: true,
     ...(turbopackMemoryMb > 0 && {
       turbopackMemoryLimit: turbopackMemoryMb * 1024 * 1024,
+      // The on-disk cache lives in the container's .next-docker volume, so
+      // it survives restarts and grew past 2GB. Loading it pushed the dev
+      // server into the container's memory cap within seconds of starting,
+      // and it exited, restarted and 404'd in a loop.
+      turbopackFileSystemCacheForDev: false,
     }),
   },
 };
