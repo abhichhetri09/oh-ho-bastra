@@ -65,7 +65,7 @@ export function VariantSelector({
                   aria-label={label}
                   onClick={() => onChoose(group.name, value)}
                   className={cn(
-                    "relative h-11 min-w-14 border px-4 text-[0.8125rem] tabular-nums transition-[color,background-color,border-color] duration-200",
+                    "relative h-11 min-w-14 rounded-control border px-4 text-[0.8125rem] tabular-nums transition-[color,background-color,border-color] duration-200",
                     selected
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border hover:border-foreground",

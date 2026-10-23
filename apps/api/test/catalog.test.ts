@@ -826,6 +826,7 @@ describe("GET /settings", () => {
           "30-day returns, no questions asked",
           "Custom prints: send your art or a line of type",
         ],
+        announcements_enabled: true,
         updated_at: expect.any(String),
       },
     });

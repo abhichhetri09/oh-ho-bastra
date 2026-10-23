@@ -39,12 +39,24 @@ export async function savedStoreTheme(): Promise<string | undefined> {
   return (await storeSettings())?.theme ?? process.env.STORE_THEME;
 }
 
-/**
- * The top banner's messages an admin saved (empty hides the banner), or the
- * store's default ones when the API can't answer.
- */
+/** The top banner as an admin saved it, or the store's default one when the API can't answer. */
+export async function storeBanner(): Promise<{
+  enabled: boolean;
+  announcements: string[];
+}> {
+  const settings = await storeSettings();
+  if (!settings)
+    return { enabled: true, announcements: [...site.announcement] };
+  return {
+    enabled: settings.announcements_enabled,
+    announcements: settings.announcements,
+  };
+}
+
+/** The messages the top banner shows now: none when it's switched off. */
 export async function storeAnnouncements(): Promise<string[]> {
-  return (await storeSettings())?.announcements ?? [...site.announcement];
+  const banner = await storeBanner();
+  return banner.enabled ? banner.announcements : [];
 }
 
 /** The theme this request renders with (see resolveTheme). */

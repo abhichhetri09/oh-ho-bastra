@@ -3,7 +3,12 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRightIcon, CheckIcon } from "@phosphor-icons/react";
+import {
+  ArrowRightIcon,
+  CheckIcon,
+  HouseLineIcon,
+  TruckIcon,
+} from "@phosphor-icons/react";
 import type { OrderStatus } from "@repo/types";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -18,12 +23,10 @@ import {
   formatOrderDate,
   orderLabel,
   STATUS_LABELS,
-  TIMELINE,
-  formatShortDate,
-  stepDate,
   timelineStep,
 } from "../lib/orders";
 import { useOrder, useOrders } from "../queries";
+import { OrderProgress, TrackingNumber } from "./order-timeline";
 import { OrderTotals } from "./success-view";
 
 function StatusBadge({ status }: { status: OrderStatus }) {
@@ -248,29 +251,49 @@ export function OrderView({ number }: { number: number }) {
       </header>
 
       {step >= 0 ? (
-        <ol className="grid grid-cols-3 gap-2" aria-label="Order progress">
-          {TIMELINE.map((status, i) => (
-            <li key={status} className="space-y-2">
-              <div
-                className={cn(
-                  "h-0.5 transition-colors duration-700",
-                  i <= step ? "bg-foreground" : "bg-border",
-                )}
-              />
-              <p
-                className={cn(
-                  "flex items-center gap-1.5 text-xs",
-                  i <= step ? "text-foreground" : "text-muted-foreground",
-                )}
-                aria-current={i === step ? "step" : undefined}
-              >
-                {i <= step && <CheckIcon weight="bold" className="size-3" />}
-                {STATUS_LABELS[status]}
-              </p>
-              <StepDate iso={stepDate(order, status)} />
-            </li>
-          ))}
-        </ol>
+        <section className="space-y-6 rounded-panel border border-border bg-card p-6 sm:p-8">
+          <OrderProgress order={order} />
+          {(order.status === "shipped" || order.status === "delivered") && (
+            <div className="flex flex-col gap-3 rounded-panel bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span
+                  className={cn(
+                    "flex size-9 shrink-0 items-center justify-center rounded-full bg-background",
+                    order.status === "delivered" ? "text-success" : "text-clay",
+                  )}
+                >
+                  {order.status === "delivered" ? (
+                    <HouseLineIcon weight="bold" className="size-4" />
+                  ) : (
+                    <TruckIcon weight="bold" className="size-4" />
+                  )}
+                </span>
+                <div>
+                  <p className="text-sm font-medium">
+                    {order.status === "delivered"
+                      ? `Delivered${order.delivered_at ? ` on ${formatOrderDate(order.delivered_at)}` : ""}`
+                      : "Your parcel is on its way"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {order.status === "delivered"
+                      ? order.tracking_number
+                        ? "Its tracking number, kept here for your records."
+                        : "We hope you enjoy it."
+                      : order.tracking_number
+                        ? "Follow it with this tracking number on the carrier's site."
+                        : "The tracking number shows here once we add it."}
+                  </p>
+                </div>
+              </div>
+              {order.tracking_number && (
+                <TrackingNumber
+                  value={order.tracking_number}
+                  className="self-start bg-background sm:self-auto"
+                />
+              )}
+            </div>
+          )}
+        </section>
       ) : (
         <p className="rounded-panel border border-border p-4 text-sm text-muted-foreground">
           {order.status === "cancelled"
@@ -364,26 +387,9 @@ export function OrderView({ number }: { number: number }) {
               {countryName(a.country)}
             </p>
           </div>
-          {order.tracking_number && (
-            <div>
-              <p className="eyebrow mb-2">Tracking number</p>
-              <p className="font-mono text-xs break-all select-all">
-                {order.tracking_number}
-              </p>
-            </div>
-          )}
           <OrderTotals order={order} />
         </aside>
       </div>
     </div>
-  );
-}
-
-function StepDate({ iso }: { iso: string | null }) {
-  if (!iso) return null;
-  return (
-    <p className="text-[0.6875rem] text-muted-foreground tabular-nums">
-      {formatShortDate(iso)}
-    </p>
   );
 }

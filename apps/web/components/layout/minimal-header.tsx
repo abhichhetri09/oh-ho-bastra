@@ -7,7 +7,10 @@ import { cn } from "@/lib/utils";
 export function MinimalHeader({ className }: { className?: string }) {
   return (
     <div className={cn("flex h-16 items-center", className)}>
-      <Link href="/" className="font-serif text-[1.65rem] leading-none">
+      <Link
+        href="/"
+        className="font-serif text-[1.65rem] leading-none whitespace-nowrap"
+      >
         <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
         {site.name}
       </Link>

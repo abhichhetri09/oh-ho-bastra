@@ -6,21 +6,26 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowCounterClockwiseIcon,
+  ArrowRightIcon,
   CheckCircleIcon,
+  ClockIcon,
+  CreditCardIcon,
+  EnvelopeSimpleIcon,
+  HouseLineIcon,
+  MapPinIcon,
+  PackageIcon,
+  PencilSimpleIcon,
+  PhoneIcon,
+  PlusIcon,
   TruckIcon,
   WarningIcon,
   XCircleIcon,
+  type Icon,
 } from "@phosphor-icons/react";
-import type { AdminOrderDetail, OrderStatus } from "@repo/types";
+import type { AdminOrderDetail } from "@repo/types";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,29 +34,33 @@ import {
   adminCancelOrder,
   adminDeliverOrder,
   adminRefundOrder,
+  adminSetOrderTracking,
   adminShipOrder,
 } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { optionSummary } from "@/modules/cart/lib/cart-math";
+import {
+  OrderProgress,
+  OrderTimeline,
+  TrackingNumber,
+} from "@/modules/checkout/components/order-timeline";
 import { countryName } from "@/modules/checkout/lib/countries";
 import { formatOrderDate, orderLabel } from "@/modules/checkout/lib/orders";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { adminKeys } from "../keys";
 import { useAdminOrder } from "../queries";
-import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
-import { AdminPageHeader } from "./page-header";
 import { BackLink } from "./page-back";
 import { Panel } from "./panel";
 import { OrderStatusBadge } from "./status-badge";
 
-type Dialogs = "ship" | "deliver" | "cancel" | "refund" | null;
+type Action = "ship" | "deliver" | "cancel" | "refund";
+type Confirm = Exclude<Action, "ship"> | null;
 
 const timeFormat = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
-  year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
   // UTC like the order's other dates, so they agree around midnight.
@@ -59,18 +68,22 @@ const timeFormat = new Intl.DateTimeFormat("en-GB", {
   timeZoneName: "short",
 });
 
-/** One order as the shop sees it, with the next steps it can take. */
+/**
+ * One order as the shop sees it. The card at the top says where the order
+ * is and offers its next step (ship it, mark it delivered…); below are the
+ * items and what happened, and beside them the customer, the address and
+ * the payment.
+ */
 export function OrderDetailView({ number }: { number: number }) {
   const queryClient = useQueryClient();
   const order = useAdminOrder(number);
-  const [open, setOpen] = useState<Dialogs>(null);
+  const [confirm, setConfirm] = useState<Confirm>(null);
   const [tracking, setTracking] = useState("");
   const [restock, setRestock] = useState(true);
 
   const act = useAdminMutation({
-    mutationFn: async (action: Exclude<Dialogs, null>) => {
-      const path = { number };
-      const opts = { path, throwOnError: true as const };
+    mutationFn: async (action: Action) => {
+      const opts = { path: { number }, throwOnError: true as const };
       const { data } =
         action === "ship"
           ? await adminShipOrder({
@@ -86,7 +99,7 @@ export function OrderDetailView({ number }: { number: number }) {
     },
     success: (_, action) =>
       ({
-        ship: "Marked as shipped",
+        ship: "Marked as shipped; the customer is emailed",
         deliver: "Marked as delivered",
         cancel: "Order cancelled; its stock is back",
         refund: "Refunded in full",
@@ -103,16 +116,17 @@ export function OrderDetailView({ number }: { number: number }) {
     ],
     onSuccess: (updated) => {
       queryClient.setQueryData(adminKeys.order(number), updated);
-      setOpen(null);
+      setConfirm(null);
+      setTracking("");
     },
   });
 
-  function run(action: Exclude<Dialogs, null>) {
+  function run(action: Action) {
     // A refused change (paid meanwhile, already shipped) means the page
     // is behind: close the dialog and show the order as it is now.
     act.mutate(action, {
       onError: () => {
-        setOpen(null);
+        setConfirm(null);
         void order.refetch();
       },
     });
@@ -122,10 +136,11 @@ export function OrderDetailView({ number }: { number: number }) {
     return (
       <div aria-busy="true" aria-label="Loading the order">
         <BackLink href="/admin/orders">Orders</BackLink>
-        <Skeleton className="mb-8 h-14 w-64" />
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-          <Skeleton className="h-80" />
-          <Skeleton className="h-96" />
+        <Skeleton className="mb-6 h-14 w-64" />
+        <Skeleton className="mb-6 h-48 rounded-panel" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <Skeleton className="h-80 rounded-panel" />
+          <Skeleton className="h-96 rounded-panel" />
         </div>
       </div>
     );
@@ -155,49 +170,31 @@ export function OrderDetailView({ number }: { number: number }) {
   }
 
   const o = order.data;
-  const a = o.shipping_address;
   const items = o.items.reduce((n, item) => n + item.quantity, 0);
-  const canShip = o.status === "paid";
-  const canDeliver = o.status === "shipped";
   const canCancel = o.status === "pending";
   const canRefund = ["paid", "shipped", "delivered"].includes(o.status);
 
   return (
-    <div>
-      <BackLink href="/admin/orders">Orders</BackLink>
-      <AdminPageHeader
-        eyebrow="Order"
-        title={orderLabel(o.number)}
-        description={
-          <span className="inline-flex flex-wrap items-center gap-3">
-            <OrderStatusBadge status={o.status} />
-            <span>
+    <div className="space-y-6">
+      <div>
+        <BackLink href="/admin/orders">Orders</BackLink>
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="display text-5xl">{orderLabel(o.number)}</h1>
+              <OrderStatusBadge status={o.status} />
+            </div>
+            <p className="text-[0.8125rem] text-muted-foreground">
               Placed {formatOrderDate(o.created_at)} · {items}{" "}
-              {items === 1 ? "item" : "items"}
-            </span>
-          </span>
-        }
-        actions={
+              {items === 1 ? "item" : "items"} ·{" "}
+              <span className="text-foreground tabular-nums">
+                {formatPrice(o.total)}
+              </span>
+            </p>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {canShip && (
-              <Button
-                onClick={() => {
-                  setTracking("");
-                  setOpen("ship");
-                }}
-              >
-                <TruckIcon data-icon="inline-start" />
-                Mark shipped
-              </Button>
-            )}
-            {canDeliver && (
-              <Button onClick={() => setOpen("deliver")}>
-                <CheckCircleIcon data-icon="inline-start" />
-                Mark delivered
-              </Button>
-            )}
             {canCancel && (
-              <Button variant="destructive" onClick={() => setOpen("cancel")}>
+              <Button variant="outline" onClick={() => setConfirm("cancel")}>
                 <XCircleIcon data-icon="inline-start" />
                 Cancel order
               </Button>
@@ -208,7 +205,7 @@ export function OrderDetailView({ number }: { number: number }) {
                 onClick={() => {
                   // Stock goes back by default only if nothing left the shop.
                   setRestock(o.status === "paid");
-                  setOpen("refund");
+                  setConfirm("refund");
                 }}
               >
                 <ArrowCounterClockwiseIcon data-icon="inline-start" />
@@ -216,186 +213,43 @@ export function OrderDetailView({ number }: { number: number }) {
               </Button>
             )}
           </div>
-        }
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
-        <Panel title="Items" hint={String(items)} className="[&>div]:p-0">
-          <ul className="divide-y divide-border">
-            {o.items.map((item) => (
-              <li key={item.id} className="flex gap-4 px-5 py-4">
-                <div className="relative aspect-[4/5] w-14 shrink-0 overflow-hidden rounded-media bg-surface">
-                  {item.image && (
-                    <Image
-                      src={item.image}
-                      alt=""
-                      fill
-                      sizes="56px"
-                      className="object-cover"
-                    />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1 text-[0.8125rem]">
-                  {item.product_id ? (
-                    <Link
-                      href={`/admin/products/${item.product_id}`}
-                      className="hover:underline"
-                    >
-                      {item.product_name}
-                    </Link>
-                  ) : (
-                    <span>
-                      {item.product_name}{" "}
-                      <span className="text-xs text-muted-foreground">
-                        (deleted)
-                      </span>
-                    </span>
-                  )}
-                  {item.options.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {optionSummary(item)}
-                    </p>
-                  )}
-                  <p className="font-mono text-[0.625rem] text-muted-foreground">
-                    {item.sku ?? "No SKU"}
-                  </p>
-                  {item.stock_shortfall > 0 && (
-                    <p className="mt-1.5 inline-flex items-center gap-1 border border-destructive/40 px-1.5 py-0.5 font-mono text-[0.5625rem] tracking-[0.14em] text-destructive uppercase">
-                      <WarningIcon className="size-3" />
-                      {item.stock_shortfall} not in stock when paid
-                    </p>
-                  )}
-                </div>
-                <div className="shrink-0 text-right text-[0.8125rem] tabular-nums">
-                  <p>{formatPrice(item.line_total)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.quantity} × {formatPrice(item.unit_price)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <dl className="space-y-2 border-t border-border px-5 py-4 text-[0.8125rem]">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Subtotal</dt>
-              <dd className="tabular-nums">{formatPrice(o.subtotal)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Shipping</dt>
-              <dd className="tabular-nums">
-                {o.shipping === 0 ? "Free" : formatPrice(o.shipping)}
-              </dd>
-            </div>
-            <div className="flex justify-between pt-1 text-base">
-              <dt>Total</dt>
-              <dd className="tabular-nums">{formatPrice(o.total)}</dd>
-            </div>
-          </dl>
-        </Panel>
-
-        <div className="space-y-6">
-          <Panel title="Customer">
-            <Link
-              href={`/admin/customers/${o.customer.id}`}
-              className="text-[0.8125rem] hover:underline"
-            >
-              {o.customer.name}
-            </Link>
-            <br />
-            <a
-              href={`mailto:${o.email}`}
-              className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-            >
-              {o.email}
-            </a>
-            <p className="eyebrow mt-5 mb-2">Ship to</p>
-            <address className="text-[0.8125rem] leading-relaxed not-italic">
-              {a.full_name}
-              <br />
-              {a.line1}
-              {a.line2 && `, ${a.line2}`}
-              <br />
-              {a.city}
-              {a.region && `, ${a.region}`} {a.postal_code}
-              <br />
-              {countryName(a.country)}
-              <br />
-              <span className="text-muted-foreground">{a.phone}</span>
-            </address>
-          </Panel>
-
-          <Panel title="Payment">
-            <Payment order={o} />
-          </Panel>
-
-          <Panel title="Timeline">
-            <Timeline order={o} />
-          </Panel>
-        </div>
+        </header>
       </div>
 
-      <Dialog
-        open={open === "ship"}
-        onOpenChange={(v) => !v && !act.isPending && setOpen(null)}
-      >
-        <DialogContent className="gap-6 p-6 sm:max-w-md">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              run("ship");
-            }}
-            className="grid gap-6"
-          >
-            <DialogHeader className="gap-2">
-              <DialogTitle className="font-serif text-2xl font-normal">
-                Mark {orderLabel(o.number)} shipped
-              </DialogTitle>
-              <DialogDescription className="text-[0.8125rem]">
-                The customer sees it as shipped on their order page.
-              </DialogDescription>
-            </DialogHeader>
-            <Field>
-              <FieldLabel
-                htmlFor="tracking"
-                className="eyebrow !text-foreground"
-              >
-                Tracking number
-                <span className="ml-1 tracking-normal normal-case text-muted-foreground">
-                  (optional)
-                </span>
-              </FieldLabel>
-              <Input
-                id="tracking"
-                value={tracking}
-                onChange={(e) => setTracking(e.target.value)}
-                maxLength={64}
-                autoComplete="off"
-                className="font-mono"
-              />
-              <FieldDescription className="text-xs">
-                Shown to the customer with the order.
-              </FieldDescription>
-            </Field>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(null)}
-                disabled={act.isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={act.isPending}>
-                {act.isPending ? "Saving…" : "Mark shipped"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <section className="space-y-6 rounded-panel border border-border bg-card p-6">
+        {o.status !== "cancelled" && o.status !== "refunded" && (
+          <OrderProgress order={o} admin />
+        )}
+        <NextStep
+          order={o}
+          items={items}
+          tracking={tracking}
+          setTracking={setTracking}
+          pending={act.isPending}
+          onShip={() => run("ship")}
+          onDeliver={() => setConfirm("deliver")}
+          onCancel={() => setConfirm("cancel")}
+        />
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+        <div className="space-y-6">
+          <Items order={o} items={items} />
+          <Panel title="Activity">
+            <OrderTimeline order={o} />
+          </Panel>
+        </div>
+
+        <aside className="space-y-6">
+          <Customer order={o} />
+          <ShipTo order={o} />
+          <Payment order={o} />
+        </aside>
+      </div>
 
       <ConfirmDialog
-        open={open === "deliver"}
-        onOpenChange={(v) => !v && setOpen(null)}
+        open={confirm === "deliver"}
+        onOpenChange={(v) => !v && setConfirm(null)}
         title={`Mark ${orderLabel(o.number)} delivered?`}
         description="For when the carrier confirms it arrived."
         confirmLabel="Mark delivered"
@@ -406,8 +260,8 @@ export function OrderDetailView({ number }: { number: number }) {
       />
 
       <ConfirmDialog
-        open={open === "cancel"}
-        onOpenChange={(v) => !v && setOpen(null)}
+        open={confirm === "cancel"}
+        onOpenChange={(v) => !v && setConfirm(null)}
         title={`Cancel ${orderLabel(o.number)}?`}
         description="Its checkout page stops working, so it can't be paid any more, and the stock it was holding goes back on sale."
         confirmLabel="Cancel order"
@@ -417,8 +271,8 @@ export function OrderDetailView({ number }: { number: number }) {
       />
 
       <ConfirmDialog
-        open={open === "refund"}
-        onOpenChange={(v) => !v && setOpen(null)}
+        open={confirm === "refund"}
+        onOpenChange={(v) => !v && setConfirm(null)}
         title={`Refund ${formatPrice(o.total)}?`}
         description={`The full amount of ${orderLabel(o.number)} goes back to the customer's card through Stripe. This can't be undone.`}
         confirmLabel="Refund in full"
@@ -447,86 +301,506 @@ export function OrderDetailView({ number }: { number: number }) {
   );
 }
 
-function Payment({ order }: { order: AdminOrderDetail }) {
-  const p = order.payment;
-  if (!p) {
-    return (
-      <p className="text-[0.8125rem] text-muted-foreground">
-        {order.status === "pending"
-          ? "Not paid yet: the customer is at checkout."
-          : "No payment was taken."}
-      </p>
-    );
-  }
+/** A soft rounded tile with an icon, a title and a line under it. */
+function Callout({
+  icon: Icon,
+  tone,
+  title,
+  children,
+  aside,
+}: {
+  icon: Icon;
+  tone: string;
+  title: string;
+  children?: React.ReactNode;
+  aside?: React.ReactNode;
+}) {
   return (
-    <dl className="space-y-3 text-[0.8125rem]">
-      <div className="flex justify-between gap-3">
-        <dt className="text-muted-foreground">Paid</dt>
-        <dd className="tabular-nums">{formatPrice(p.amount)}</dd>
+    <div className="flex flex-col gap-4 rounded-panel bg-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <div className="flex min-w-0 items-start gap-3.5">
+        <span
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-full bg-background",
+            tone,
+          )}
+        >
+          <Icon weight="bold" className="size-4.5" />
+        </span>
+        <div className="min-w-0 pt-0.5">
+          <p className="text-sm font-medium">{title}</p>
+          {children && (
+            <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              {children}
+            </div>
+          )}
+        </div>
       </div>
-      {p.stripe_payment_intent_id && (
-        <div className="space-y-1">
-          <dt className="text-muted-foreground">Stripe payment</dt>
-          <dd className="font-mono text-[0.6875rem] break-all select-all">
-            {p.stripe_payment_intent_id}
-          </dd>
-        </div>
-      )}
-      {p.stripe_refund_id && (
-        <div className="space-y-1">
-          <dt className="text-muted-foreground">Refund</dt>
-          <dd className="font-mono text-[0.6875rem] break-all select-all">
-            {p.stripe_refund_id}
-          </dd>
-        </div>
-      )}
-    </dl>
+      {aside && <div className="shrink-0">{aside}</div>}
+    </div>
   );
 }
 
-const steps: {
-  status: OrderStatus | "placed";
-  label: string;
-  at: (o: AdminOrderDetail) => string | null;
-}[] = [
-  { status: "placed", label: "Placed", at: (o) => o.created_at },
-  { status: "paid", label: "Paid", at: (o) => o.paid_at },
-  { status: "shipped", label: "Shipped", at: (o) => o.shipped_at },
-  { status: "delivered", label: "Delivered", at: (o) => o.delivered_at },
-  { status: "cancelled", label: "Cancelled", at: (o) => o.cancelled_at },
-  { status: "refunded", label: "Refunded", at: (o) => o.refunded_at },
-];
+/** Where the order is now, and the step it's waiting for. */
+function NextStep({
+  order: o,
+  items,
+  tracking,
+  setTracking,
+  pending,
+  onShip,
+  onDeliver,
+  onCancel,
+}: {
+  order: AdminOrderDetail;
+  items: number;
+  tracking: string;
+  setTracking: (v: string) => void;
+  pending: boolean;
+  onShip: () => void;
+  onDeliver: () => void;
+  onCancel: () => void;
+}) {
+  switch (o.status) {
+    case "pending":
+      return (
+        <Callout
+          icon={ClockIcon}
+          tone="text-muted-foreground"
+          title="Waiting for payment"
+          aside={
+            <Button variant="outline" onClick={onCancel}>
+              <XCircleIcon data-icon="inline-start" />
+              Cancel order
+            </Button>
+          }
+        >
+          The customer is at checkout. The page expires{" "}
+          {timeFormat.format(new Date(o.expires_at))}, and the stock it holds
+          goes back on sale then.
+        </Callout>
+      );
+    case "paid":
+      return (
+        <div className="space-y-4 rounded-panel bg-surface p-4 sm:p-5">
+          <div className="flex items-start gap-3.5">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-background text-clay">
+              <PackageIcon weight="bold" className="size-4.5" />
+            </span>
+            <div className="pt-0.5">
+              <p className="text-sm font-medium">Ready to ship</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Pack {items} {items === 1 ? "item" : "items"} for{" "}
+                {o.shipping_address.full_name}. Add the carrier&apos;s tracking
+                number so the customer can follow the parcel; they&apos;re
+                emailed when it ships.
+              </p>
+            </div>
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onShip();
+            }}
+            className="flex flex-col gap-2 sm:flex-row sm:pl-13.5"
+          >
+            <Input
+              value={tracking}
+              onChange={(e) => setTracking(e.target.value)}
+              maxLength={64}
+              autoComplete="off"
+              placeholder="Tracking number (optional)"
+              aria-label="Tracking number"
+              className="h-10 bg-background font-mono sm:max-w-xs"
+              disabled={pending}
+            />
+            <Button type="submit" disabled={pending}>
+              <TruckIcon data-icon="inline-start" />
+              {pending ? "Saving…" : "Mark shipped"}
+            </Button>
+          </form>
+        </div>
+      );
+    case "shipped":
+      return (
+        <Callout
+          icon={TruckIcon}
+          tone="text-clay"
+          title={`On its way since ${formatOrderDate(o.shipped_at ?? o.created_at)}`}
+          aside={
+            <Button onClick={onDeliver}>
+              <CheckCircleIcon data-icon="inline-start" />
+              Mark delivered
+            </Button>
+          }
+        >
+          <TrackingEditor order={o} />
+        </Callout>
+      );
+    case "delivered":
+      return (
+        <Callout
+          icon={HouseLineIcon}
+          tone="text-success"
+          title={`Delivered on ${formatOrderDate(o.delivered_at ?? o.created_at)}`}
+        >
+          <TrackingEditor order={o} />
+        </Callout>
+      );
+    case "cancelled":
+      return (
+        <Callout
+          icon={XCircleIcon}
+          tone="text-muted-foreground"
+          title={`Cancelled${o.cancelled_at ? ` on ${formatOrderDate(o.cancelled_at)}` : ""}`}
+        >
+          It was never paid, so nothing was charged, and its stock went back on
+          sale.
+        </Callout>
+      );
+    case "refunded":
+      return (
+        <Callout
+          icon={ArrowCounterClockwiseIcon}
+          tone="text-destructive"
+          title={`Refunded${o.refunded_at ? ` on ${formatOrderDate(o.refunded_at)}` : ""}`}
+        >
+          {formatPrice(o.total)} went back to the customer&apos;s card through
+          Stripe.
+        </Callout>
+      );
+  }
+}
 
-/** What happened to the order, oldest first. */
-function Timeline({ order }: { order: AdminOrderDetail }) {
-  const events = steps
-    .map((s) => ({ ...s, time: s.at(order) }))
-    .filter((e): e is typeof e & { time: string } => e.time !== null)
-    .sort((x, y) => x.time.localeCompare(y.time));
+/**
+ * The tracking number of a shipped or delivered order, which the customer
+ * sees on their order page: shown with copy, and editable in place (empty
+ * removes it).
+ */
+function TrackingEditor({ order }: { order: AdminOrderDetail }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+
+  const save = useAdminMutation({
+    mutationFn: async (tracking: string) => {
+      const { data } = await adminSetOrderTracking({
+        path: { number: order.number },
+        body: { tracking_number: tracking },
+        throwOnError: true,
+      });
+      return data.data;
+    },
+    success: (updated) =>
+      updated.tracking_number
+        ? "Tracking number saved; the customer can see it"
+        : "Tracking number removed",
+    failure: "Couldn't save the tracking number.",
+    invalidate: [adminKeys.orders()],
+    onSuccess: (updated) => {
+      queryClient.setQueryData(adminKeys.order(order.number), updated);
+      setEditing(false);
+    },
+  });
+
+  const start = () => {
+    setValue(order.tracking_number ?? "");
+    setEditing(true);
+  };
+
+  if (editing) {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          save.mutate(value.trim());
+        }}
+        className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center"
+      >
+        <Input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          maxLength={64}
+          autoFocus
+          autoComplete="off"
+          placeholder="e.g. JJFI60123456789"
+          aria-label="Tracking number"
+          className="h-9 bg-background font-mono sm:w-64"
+          disabled={save.isPending}
+        />
+        <div className="flex gap-2">
+          <Button
+            type="submit"
+            size="sm"
+            disabled={
+              save.isPending || value.trim() === (order.tracking_number ?? "")
+            }
+          >
+            {save.isPending ? "Saving…" : "Save"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(false)}
+            disabled={save.isPending}
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
+  if (!order.tracking_number) {
+    return (
+      <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+        No tracking number yet, so the customer can&apos;t follow the parcel.
+        <Button variant="outline" size="xs" onClick={start}>
+          <PlusIcon data-icon="inline-start" />
+          Add tracking number
+        </Button>
+      </span>
+    );
+  }
+
   return (
-    <ol className="relative space-y-4 border-l border-border pl-5">
-      {events.map((e, i) => (
-        <li key={e.status} className="relative text-[0.8125rem]">
-          <span
-            aria-hidden
-            className={cn(
-              "absolute top-1.5 -left-[1.6rem] size-2.5 rounded-full border-2 border-background",
-              i === events.length - 1
-                ? "bg-foreground"
-                : "bg-muted-foreground/40",
-            )}
-          />
-          <p>{e.label}</p>
-          <p className="text-xs text-muted-foreground tabular-nums">
-            {timeFormat.format(new Date(e.time))}
+    <span className="mt-2 flex flex-wrap items-center gap-2">
+      <TrackingNumber value={order.tracking_number} className="bg-background" />
+      <Button variant="ghost" size="xs" onClick={start}>
+        <PencilSimpleIcon data-icon="inline-start" />
+        Edit
+      </Button>
+    </span>
+  );
+}
+
+/** The lines of the order with its totals. */
+function Items({
+  order: o,
+  items,
+}: {
+  order: AdminOrderDetail;
+  items: number;
+}) {
+  return (
+    <Panel title="Items" hint={String(items)} className="[&>div]:p-0">
+      <ul className="divide-y divide-border">
+        {o.items.map((item) => (
+          <li key={item.id} className="flex items-center gap-4 px-5 py-4">
+            <div className="relative aspect-[4/5] w-14 shrink-0 overflow-hidden rounded-media bg-surface">
+              {item.image && (
+                <Image
+                  src={item.image}
+                  alt=""
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                />
+              )}
+              {item.quantity > 1 && (
+                <span className="absolute top-0 right-0 flex h-5 min-w-5 items-center justify-center rounded-bl-[0.5rem] bg-foreground px-1 text-[0.625rem] font-medium text-background tabular-nums">
+                  {item.quantity}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1 text-[0.8125rem]">
+              {item.product_id ? (
+                <Link
+                  href={`/admin/products/${item.product_id}`}
+                  className="font-medium hover:underline"
+                >
+                  {item.product_name}
+                </Link>
+              ) : (
+                <span className="font-medium">
+                  {item.product_name}{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (deleted)
+                  </span>
+                </span>
+              )}
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                {item.options.length > 0 && <span>{optionSummary(item)}</span>}
+                <span className="font-mono text-[0.625rem]">
+                  {item.sku ?? "No SKU"}
+                </span>
+              </p>
+              {item.stock_shortfall > 0 && (
+                <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[0.6875rem] text-destructive">
+                  <WarningIcon className="size-3" />
+                  {item.stock_shortfall} not in stock when paid
+                </p>
+              )}
+            </div>
+            <div className="shrink-0 text-right text-[0.8125rem] tabular-nums">
+              <p className="font-medium">{formatPrice(item.line_total)}</p>
+              <p className="text-xs text-muted-foreground">
+                {item.quantity} × {formatPrice(item.unit_price)}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <dl className="space-y-2 rounded-b-panel bg-surface/60 px-5 py-4 text-[0.8125rem]">
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Subtotal</dt>
+          <dd className="tabular-nums">{formatPrice(o.subtotal)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Shipping</dt>
+          <dd className="tabular-nums">
+            {o.shipping === 0 ? "Free" : formatPrice(o.shipping)}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between border-t border-border pt-3">
+          <dt className="font-medium">Total</dt>
+          <dd className="text-lg font-medium tabular-nums">
+            {formatPrice(o.total)}
+          </dd>
+        </div>
+      </dl>
+    </Panel>
+  );
+}
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+
+/** Who ordered, with a way to reach them and their other orders. */
+function Customer({ order: o }: { order: AdminOrderDetail }) {
+  return (
+    <Panel title="Customer">
+      <div className="flex items-center gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-clay/10 text-[0.8125rem] font-medium text-clay">
+          {initials(o.customer.name)}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[0.8125rem] font-medium">
+            {o.customer.name}
           </p>
-          {e.status === "shipped" && order.tracking_number && (
-            <p className="mt-1 font-mono text-[0.6875rem] break-all select-all">
-              {order.tracking_number}
-            </p>
-          )}
-        </li>
-      ))}
-    </ol>
+          <a
+            href={`mailto:${o.email}`}
+            className="flex items-center gap-1 truncate text-xs text-muted-foreground hover:text-foreground"
+          >
+            <EnvelopeSimpleIcon className="size-3 shrink-0" />
+            {o.email}
+          </a>
+        </div>
+      </div>
+      <Link
+        href={`/admin/customers/${o.customer.id}`}
+        className="mt-4 flex items-center justify-between rounded-control bg-surface px-3 py-2 text-xs transition-colors hover:bg-muted"
+      >
+        Profile and other orders
+        <ArrowRightIcon className="size-3.5" />
+      </Link>
+    </Panel>
+  );
+}
+
+/** The shipping address, ready to copy onto a label. */
+function ShipTo({ order: o }: { order: AdminOrderDetail }) {
+  const a = o.shipping_address;
+  const lines = [
+    a.full_name,
+    [a.line1, a.line2].filter(Boolean).join(", "),
+    [`${a.city}${a.region ? `, ${a.region}` : ""}`, a.postal_code].join(" "),
+    countryName(a.country),
+  ];
+  return (
+    <Panel
+      title="Ship to"
+      action={
+        <CopyButton value={lines.join("\n")} label="the shipping address" />
+      }
+    >
+      <div className="flex gap-3">
+        <MapPinIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <address className="text-[0.8125rem] leading-relaxed not-italic">
+          {lines.map((line, i) => (
+            <span key={i} className={cn("block", i === 0 && "font-medium")}>
+              {line}
+            </span>
+          ))}
+        </address>
+      </div>
+      {a.phone && (
+        <a
+          href={`tel:${a.phone}`}
+          className="mt-3 flex items-center gap-3 text-[0.8125rem] text-muted-foreground hover:text-foreground"
+        >
+          <PhoneIcon className="size-4 shrink-0" />
+          {a.phone}
+        </a>
+      )}
+    </Panel>
+  );
+}
+
+/** What was paid through Stripe, and any refund. */
+function Payment({ order }: { order: AdminOrderDetail }) {
+  const p = order.payment;
+  return (
+    <Panel title="Payment">
+      {!p ? (
+        <p className="text-[0.8125rem] text-muted-foreground">
+          {order.status === "pending"
+            ? "Not paid yet: the customer is at checkout."
+            : "No payment was taken."}
+        </p>
+      ) : (
+        <div className="space-y-4 text-[0.8125rem]">
+          <div className="flex items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface">
+              <CreditCardIcon className="size-4.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium tabular-nums">
+                {formatPrice(p.amount)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {p.refunded_at
+                  ? `Refunded ${formatOrderDate(p.refunded_at)}`
+                  : `Paid by card, ${formatOrderDate(p.created_at)}`}
+              </p>
+            </div>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[0.6875rem] font-medium",
+                p.refunded_at
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-success/10 text-success",
+              )}
+            >
+              {p.refunded_at ? "Refunded" : "Paid"}
+            </span>
+          </div>
+          {[
+            ["Stripe payment", p.stripe_payment_intent_id],
+            ["Refund", p.stripe_refund_id],
+          ]
+            .filter((row): row is [string, string] => Boolean(row[1]))
+            .map(([label, id]) => (
+              <div key={label} className="space-y-1">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <div className="flex items-center gap-1 rounded-control bg-surface py-1 pr-1 pl-2.5">
+                  <span className="min-w-0 flex-1 truncate font-mono text-[0.6875rem] select-all">
+                    {id}
+                  </span>
+                  <CopyButton
+                    value={id}
+                    label={`the ${label.toLowerCase()} id`}
+                  />
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+    </Panel>
   );
 }

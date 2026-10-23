@@ -388,6 +388,20 @@ export async function getOrderPayment(db: Queryable, order_id: string): Promise<
   return (rows[0] as Payment | undefined) ?? null;
 }
 
+// Sets or clears (NULL) the tracking number of a shipped or delivered
+// order; no row when the order isn't one.
+export const setOrderTrackingSql = "UPDATE orders SET tracking_number = $1\nWHERE number = $2 AND status IN ('shipped', 'delivered')\nRETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number";
+
+export interface SetOrderTrackingParams {
+  tracking_number: string | null;
+  number: number;
+}
+
+export async function setOrderTracking(db: Queryable, p: SetOrderTrackingParams): Promise<Order | null> {
+  const { rows } = await db.query(setOrderTrackingSql, [p["tracking_number"], p["number"]]);
+  return (rows[0] as Order | undefined) ?? null;
+}
+
 export const shipOrderSql = "UPDATE orders SET status = 'shipped', shipped_at = now(), tracking_number = $1\nWHERE id = $2 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number";
 
 export interface ShipOrderParams {

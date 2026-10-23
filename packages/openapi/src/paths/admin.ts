@@ -294,6 +294,28 @@ export function registerAdminPaths() {
   });
 
   operation({
+    method: "put",
+    path: "/api/v1/admin/orders/{number}/tracking",
+    operationId: "adminSetOrderTracking",
+    tag: "Admin",
+    summary: "Set an order's tracking number",
+    description:
+      "Adds, changes or (with an empty string) removes the tracking number of a shipped or delivered order. The customer sees it on their order page.",
+    auth: "admin",
+    request: { params: number, ...body(schemas.OrderTrackingBodySchema) },
+    success: {
+      status: 200,
+      description: "Tracking number updated",
+      schema: schemas.AdminOrderDetailResponseSchema,
+    },
+    errors: {
+      400: "Invalid order number or body (INVALID_ORDER_NUMBER, VALIDATION_FAILED)",
+      404: orderErrors[404],
+      409: "The order isn't shipped or delivered (INVALID_ORDER_TRANSITION)",
+    },
+  });
+
+  operation({
     method: "post",
     path: "/api/v1/admin/orders/{number}/deliver",
     operationId: "adminDeliverOrder",
@@ -426,9 +448,9 @@ export function registerAdminPaths() {
     path: "/api/v1/admin/settings/announcements",
     operationId: "adminSetAnnouncements",
     tag: "Admin",
-    summary: "Change the top banner's messages",
+    summary: "Change the top banner",
     description:
-      "Replaces the storefront's scrolling banner messages, in order. An empty list hides the banner.",
+      "Turns the storefront's scrolling banner on or off and replaces its messages, in order. Off (or no messages) hides it; the messages are kept.",
     auth: "admin",
     request: body(schemas.AnnouncementsBodySchema),
     success: {

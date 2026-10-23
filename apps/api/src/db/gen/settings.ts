@@ -2,11 +2,12 @@
 
 import type { Queryable } from "../queryable";
 
-export const getStoreSettingsSql = "SELECT theme, announcements, updated_at FROM store_settings WHERE id";
+export const getStoreSettingsSql = "SELECT theme, announcements, announcements_enabled, updated_at\nFROM store_settings WHERE id";
 
 export interface GetStoreSettingsRow {
   theme: string;
   announcements: string[];
+  announcements_enabled: boolean;
   updated_at: Date;
 }
 
@@ -15,11 +16,12 @@ export async function getStoreSettings(db: Queryable): Promise<GetStoreSettingsR
   return (rows[0] as GetStoreSettingsRow | undefined) ?? null;
 }
 
-export const updateStoreThemeSql = "UPDATE store_settings\nSET theme = $1, updated_at = now()\nWHERE id\nRETURNING theme, announcements, updated_at";
+export const updateStoreThemeSql = "UPDATE store_settings\nSET theme = $1, updated_at = now()\nWHERE id\nRETURNING theme, announcements, announcements_enabled, updated_at";
 
 export interface UpdateStoreThemeRow {
   theme: string;
   announcements: string[];
+  announcements_enabled: boolean;
   updated_at: Date;
 }
 
@@ -28,15 +30,21 @@ export async function updateStoreTheme(db: Queryable, theme: string): Promise<Up
   return (rows[0] as UpdateStoreThemeRow | undefined) ?? null;
 }
 
-export const updateAnnouncementsSql = "UPDATE store_settings\nSET announcements = $1::TEXT[], updated_at = now()\nWHERE id\nRETURNING theme, announcements, updated_at";
+export const updateAnnouncementsSql = "UPDATE store_settings\nSET announcements = $1::TEXT[],\n    announcements_enabled = $2,\n    updated_at = now()\nWHERE id\nRETURNING theme, announcements, announcements_enabled, updated_at";
+
+export interface UpdateAnnouncementsParams {
+  announcements: string[];
+  announcements_enabled: boolean;
+}
 
 export interface UpdateAnnouncementsRow {
   theme: string;
   announcements: string[];
+  announcements_enabled: boolean;
   updated_at: Date;
 }
 
-export async function updateAnnouncements(db: Queryable, announcements: string[]): Promise<UpdateAnnouncementsRow | null> {
-  const { rows } = await db.query(updateAnnouncementsSql, [announcements]);
+export async function updateAnnouncements(db: Queryable, p: UpdateAnnouncementsParams): Promise<UpdateAnnouncementsRow | null> {
+  const { rows } = await db.query(updateAnnouncementsSql, [p["announcements"], p["announcements_enabled"]]);
   return (rows[0] as UpdateAnnouncementsRow | undefined) ?? null;
 }

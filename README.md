@@ -228,7 +228,7 @@ the templates are in `apps/api/src/emails/templates.ts` (one layout for all thre
 
 ### themes
 
-the store ships three light themes: **editorial** (warm paper, a light serif, square corners; the default), **studio** (crisp white, bold sans-serif, soft corners) and **botanical** (cream and forest green, a soft serif, rounded shapes).
+the store ships three light themes: **editorial** (warm paper, a light serif, softly rounded corners; the default), **studio** (crisp white, bold sans-serif, soft corners) and **botanical** (cream and forest green, a soft serif, rounded shapes).
 
 - the store owner picks the theme in **admin → settings**. each option shows a live preview in its own theme, and choosing one previews it across the admin before saving. saving applies it to every page at once: the setting is cached in next's data cache, and the cache is expired on save.
 - `STORE_THEME` is the fallback while the api can't be reached (default: editorial).

@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Request, Response } from "express";
 import {
   AnnouncementsBodySchema,
+  OrderTrackingBodySchema,
   RefundOrderBodySchema,
   ShipOrderBodySchema,
   StoreThemeSchema,
@@ -48,6 +49,7 @@ import {
   countAdminCustomers,
   countAdminOrders,
   listAddresses,
+  setOrderTracking,
   updateAnnouncements,
   updateStoreTheme,
 } from "../db/gen";
@@ -407,6 +409,35 @@ export function adminRoutes(api: Group, deps: Deps) {
     );
   });
 
+  /**
+   * SetOrderTracking adds, changes or (with "") removes the tracking number
+   * of a shipped or delivered order; the customer sees it on their order.
+   */
+  admin.put("/orders/:number/tracking", async (req, res) => {
+    const number = pathNumber(req, res);
+    if (number === null) return;
+    const body = parseBody(OrderTrackingBodySchema, req, res);
+    if (body === null) return;
+    const order = await setOrderTracking(db, {
+      tracking_number: body.tracking_number || null,
+      number,
+    });
+    if (order === null) {
+      if ((await adminGetOrder(db, number)) === null) {
+        fail(res, 404, "ORDER_NOT_FOUND", "Order not found");
+      } else {
+        fail(
+          res,
+          409,
+          "INVALID_ORDER_TRANSITION",
+          "Only a shipped or delivered order has a tracking number",
+        );
+      }
+      return;
+    }
+    await respondOrder(req, res, db, order, "Tracking number updated");
+  });
+
   /** DeliverOrder marks a shipped order delivered. */
   admin.post("/orders/:number/deliver", async (req, res) => {
     const number = pathNumber(req, res);
@@ -525,8 +556,8 @@ export function adminRoutes(api: Group, deps: Deps) {
   });
 
   /**
-   * SetAnnouncements replaces the messages in the storefront's scrolling top
-   * banner, in order; an empty list hides the banner.
+   * SetAnnouncements turns the storefront's scrolling top banner on or off
+   * and replaces its messages, in order. Off, or no messages, hides it.
    */
   admin.put("/settings/announcements", async (req, res) => {
     const body = parseBody(AnnouncementsBodySchema, req, res);
@@ -535,7 +566,12 @@ export function adminRoutes(api: Group, deps: Deps) {
       res,
       200,
       "Announcements updated",
-      must(await updateAnnouncements(db, body.announcements)),
+      must(
+        await updateAnnouncements(db, {
+          announcements: body.announcements,
+          announcements_enabled: body.announcements_enabled,
+        }),
+      ),
     );
   });
 }

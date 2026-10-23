@@ -13,35 +13,53 @@ import { toast } from "sonner";
 import { MAX_ANNOUNCEMENT_LENGTH, MAX_ANNOUNCEMENTS } from "@repo/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { adminSetAnnouncements } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
+import { cn } from "@/lib/utils";
 import { revalidateStoreSettings } from "../actions";
 
 /**
- * The messages in the storefront's scrolling top banner, in order. Empty
- * rows are dropped on save, and saving none hides the banner.
+ * The storefront's scrolling top banner: a switch to show or hide it, and
+ * its messages in order. Switching it off keeps the messages for later;
+ * empty rows are dropped on save, and saving none hides the banner too.
  */
-export function AnnouncementSettings({ initial }: { initial: string[] }) {
+export function AnnouncementSettings({
+  initial,
+  initialEnabled,
+}: {
+  initial: string[];
+  initialEnabled: boolean;
+}) {
   const router = useRouter();
   const [saved, setSaved] = useState(initial);
+  const [savedEnabled, setSavedEnabled] = useState(initialEnabled);
+  const [enabled, setEnabled] = useState(initialEnabled);
   // Each row keeps its id when moved, so its input moves with it.
   const [rows, setRows] = useState(() => toRows(initial));
 
   const save = useMutation({
-    mutationFn: async (announcements: string[]) => {
+    mutationFn: async (body: {
+      announcements_enabled: boolean;
+      announcements: string[];
+    }) => {
       const { data } = await adminSetAnnouncements({
-        body: { announcements },
+        body,
         throwOnError: true,
       });
-      return data.data.announcements;
+      return data.data;
     },
-    onSuccess: async (announcements) => {
+    onSuccess: async ({ announcements, announcements_enabled }) => {
       setSaved(announcements);
+      setSavedEnabled(announcements_enabled);
+      setEnabled(announcements_enabled);
       setRows(toRows(announcements));
       toast.success(
-        announcements.length
-          ? "The top banner is updated"
-          : "The top banner is hidden",
+        !announcements_enabled
+          ? "The top banner is off; its messages are kept"
+          : announcements.length
+            ? "The top banner is updated"
+            : "The top banner is hidden",
       );
       await revalidateStoreSettings().catch(() => undefined);
       router.refresh();
@@ -55,7 +73,9 @@ export function AnnouncementSettings({ initial }: { initial: string[] }) {
 
   const texts = rows.map((row) => row.text);
   const cleaned = texts.map((t) => t.trim()).filter(Boolean);
-  const dirty = JSON.stringify(cleaned) !== JSON.stringify(saved);
+  const dirty =
+    enabled !== savedEnabled ||
+    JSON.stringify(cleaned) !== JSON.stringify(saved);
   const tooLong = texts.some((t) => t.trim().length > MAX_ANNOUNCEMENT_LENGTH);
   const busy = save.isPending;
 
@@ -72,15 +92,48 @@ export function AnnouncementSettings({ initial }: { initial: string[] }) {
 
   return (
     <section className="mt-6 overflow-hidden rounded-panel border border-border bg-card">
-      <header className="space-y-1 border-b border-border px-5 py-4">
-        <h2 className="text-[0.8125rem] font-medium">Announcement bar</h2>
-        <p className="text-xs text-muted-foreground">
-          The messages that scroll across the top of every shop page, in order.
-          Remove them all to hide the bar.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4">
+        <div className="space-y-1">
+          <h2 className="text-[0.8125rem] font-medium">Announcement bar</h2>
+          <p className="text-xs text-muted-foreground">
+            The messages that scroll across the top of every shop page, in
+            order.
+          </p>
+        </div>
+        <label className="flex cursor-pointer items-center gap-3 rounded-full bg-surface py-1.5 pr-1.5 pl-3.5">
+          <span className="text-xs">
+            Show on the shop
+            <span
+              className={cn(
+                "ml-2 font-medium",
+                enabled ? "text-success" : "text-muted-foreground",
+              )}
+            >
+              {enabled ? "On" : "Off"}
+            </span>
+          </span>
+          <Switch
+            checked={enabled}
+            onCheckedChange={setEnabled}
+            disabled={busy}
+            aria-label="Show the announcement bar on the shop"
+          />
+        </label>
       </header>
 
-      <div className="space-y-3 p-5">
+      {!enabled && (
+        <p className="mx-5 mt-5 rounded-panel bg-surface px-4 py-3 text-xs text-muted-foreground">
+          The bar is off, so shoppers don&apos;t see it. Your messages are kept
+          for when you turn it back on.
+        </p>
+      )}
+
+      <div
+        className={cn(
+          "space-y-3 p-5 transition-opacity",
+          !enabled && "opacity-60",
+        )}
+      >
         {rows.length === 0 && (
           <p className="text-xs text-muted-foreground">
             No messages: the bar is hidden.
@@ -168,14 +221,26 @@ export function AnnouncementSettings({ initial }: { initial: string[] }) {
         )}
         <Button
           variant="outline"
-          disabled={busy || JSON.stringify(texts) === JSON.stringify(saved)}
-          onClick={() => setRows(toRows(saved))}
+          disabled={
+            busy ||
+            (enabled === savedEnabled &&
+              JSON.stringify(texts) === JSON.stringify(saved))
+          }
+          onClick={() => {
+            setRows(toRows(saved));
+            setEnabled(savedEnabled);
+          }}
         >
           Discard
         </Button>
         <Button
           disabled={!dirty || tooLong || busy}
-          onClick={() => save.mutate(cleaned)}
+          onClick={() =>
+            save.mutate({
+              announcements_enabled: enabled,
+              announcements: cleaned,
+            })
+          }
         >
           {busy ? "Saving…" : "Save banner"}
         </Button>

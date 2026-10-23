@@ -207,6 +207,13 @@ SELECT * FROM orders WHERE number = $1 FOR UPDATE;
 -- name: GetOrderPayment :one
 SELECT * FROM payments WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1;
 
+-- name: SetOrderTracking :one
+-- Sets or clears (NULL) the tracking number of a shipped or delivered
+-- order; no row when the order isn't one.
+UPDATE orders SET tracking_number = sqlc.narg(tracking_number)
+WHERE number = sqlc.arg(number) AND status IN ('shipped', 'delivered')
+RETURNING *;
+
 -- name: ShipOrder :one
 UPDATE orders SET status = 'shipped', shipped_at = now(), tracking_number = sqlc.narg(tracking_number)
 WHERE id = @id RETURNING *;

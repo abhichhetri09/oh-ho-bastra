@@ -19,6 +19,9 @@ export const StoreSettingsSchema = z
       .describe(
         "The messages in the storefront's scrolling top banner, in order; empty hides it.",
       ),
+    announcements_enabled: z
+      .boolean()
+      .describe("Whether the banner shows; off keeps its messages."),
     updated_at: Timestamp,
   })
   .meta({ id: "StoreSettings", description: "Store-wide settings." });
@@ -31,6 +34,9 @@ export type StoreThemeBody = z.infer<typeof StoreThemeBodySchema>;
 
 export const AnnouncementsBodySchema = z
   .object({
+    announcements_enabled: z
+      .boolean()
+      .describe("Show the banner, or hide it and keep its messages."),
     announcements: z
       .array(
         z
@@ -50,7 +56,7 @@ export const AnnouncementsBodySchema = z
   .meta({
     id: "AnnouncementsBody",
     description:
-      "Replaces the banner's messages, in order. An empty list hides the banner.",
+      "Turns the banner on or off and replaces its messages, in order. An empty list hides it too.",
   });
 export type AnnouncementsBody = z.infer<typeof AnnouncementsBodySchema>;
 

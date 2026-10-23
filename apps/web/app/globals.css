@@ -63,7 +63,7 @@
  * light: product colours read true against a light page.
  *
  * Editorial: warm paper and ink, stone greys and one clay accent for offers,
- * badges and focus; a light serif and square corners. --clay is each
+ * badges and focus; a light serif and softly rounded corners. --clay is each
  * theme's accent and --surface the well behind product photography.
  */
 :root,
@@ -79,10 +79,10 @@
   --heading-size-adjust: none;
   --em-style: italic;
   --em-color: currentColor;
-  --theme-radius-control: 0px;
-  --theme-radius-field: 0px;
-  --theme-radius-panel: 0px;
-  --theme-radius-media: 0px;
+  --theme-radius-control: 0.5rem;
+  --theme-radius-field: 0.625rem;
+  --theme-radius-panel: 1rem;
+  --theme-radius-media: 0.75rem;
   --background: oklch(0.985 0.006 85);
   --foreground: oklch(0.2 0.012 60);
   --card: oklch(0.995 0.003 85);
@@ -110,7 +110,7 @@
   --chart-3: oklch(0.65 0.06 75);
   --chart-4: oklch(0.5 0.09 150);
   --chart-5: oklch(0.78 0.03 80);
-  --radius: 0.25rem;
+  --radius: 0.5rem;
   --sidebar: oklch(0.97 0.007 82);
   --sidebar-foreground: oklch(0.2 0.012 60);
   --sidebar-primary: oklch(0.2 0.012 60);

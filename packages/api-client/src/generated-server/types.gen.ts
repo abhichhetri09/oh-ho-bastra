@@ -999,6 +999,10 @@ export type StoreSettings = {
      * The messages in the storefront's scrolling top banner, in order; empty hides it.
      */
     announcements: Array<string>;
+    /**
+     * Whether the banner shows; off keeps its messages.
+     */
+    announcements_enabled: boolean;
     updated_at: string;
 };
 
@@ -1482,6 +1486,13 @@ export type ShipOrderBody = {
     tracking_number?: string;
 };
 
+export type OrderTrackingBody = {
+    /**
+     * The carrier's tracking number; empty removes it.
+     */
+    tracking_number: string;
+};
+
 export type RefundOrderBody = {
     /**
      * Return the items to stock: yes for an order that never shipped, or came back
@@ -1529,9 +1540,13 @@ export type StoreThemeBody = {
 };
 
 /**
- * Replaces the banner's messages, in order. An empty list hides the banner.
+ * Turns the banner on or off and replaces its messages, in order. An empty list hides it too.
  */
 export type AnnouncementsBody = {
+    /**
+     * Show the banner, or hide it and keep its messages.
+     */
+    announcements_enabled: boolean;
     announcements: Array<string>;
 };
 
@@ -4070,6 +4085,53 @@ export type AdminShipOrderResponses = {
 };
 
 export type AdminShipOrderResponse = AdminShipOrderResponses[keyof AdminShipOrderResponses];
+
+export type AdminSetOrderTrackingData = {
+    body: OrderTrackingBody;
+    path: {
+        number: number;
+    };
+    query?: never;
+    url: '/api/v1/admin/orders/{number}/tracking';
+};
+
+export type AdminSetOrderTrackingErrors = {
+    /**
+     * Invalid order number or body (INVALID_ORDER_NUMBER, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No order with that number (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * The order isn't shipped or delivered (INVALID_ORDER_TRANSITION)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetOrderTrackingError = AdminSetOrderTrackingErrors[keyof AdminSetOrderTrackingErrors];
+
+export type AdminSetOrderTrackingResponses = {
+    /**
+     * Tracking number updated
+     */
+    200: AdminOrderDetailResponse;
+};
+
+export type AdminSetOrderTrackingResponse = AdminSetOrderTrackingResponses[keyof AdminSetOrderTrackingResponses];
 
 export type AdminDeliverOrderData = {
     body?: never;

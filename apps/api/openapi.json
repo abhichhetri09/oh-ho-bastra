@@ -3067,6 +3067,10 @@
             },
             "description": "The messages in the storefront's scrolling top banner, in order; empty hides it."
           },
+          "announcements_enabled": {
+            "type": "boolean",
+            "description": "Whether the banner shows; off keeps its messages."
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time"
@@ -3075,6 +3079,7 @@
         "required": [
           "theme",
           "announcements",
+          "announcements_enabled",
           "updated_at"
         ],
         "description": "Store-wide settings."
@@ -4648,6 +4653,19 @@
           }
         }
       },
+      "OrderTrackingBody": {
+        "type": "object",
+        "properties": {
+          "tracking_number": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The carrier's tracking number; empty removes it."
+          }
+        },
+        "required": [
+          "tracking_number"
+        ]
+      },
       "RefundOrderBody": {
         "type": "object",
         "properties": {
@@ -4798,6 +4816,10 @@
       "AnnouncementsBody": {
         "type": "object",
         "properties": {
+          "announcements_enabled": {
+            "type": "boolean",
+            "description": "Show the banner, or hide it and keep its messages."
+          },
           "announcements": {
             "type": "array",
             "items": {
@@ -4809,9 +4831,10 @@
           }
         },
         "required": [
+          "announcements_enabled",
           "announcements"
         ],
-        "description": "Replaces the banner's messages, in order. An empty list hides the banner."
+        "description": "Turns the banner on or off and replaces its messages, in order. An empty list hides it too."
       }
     },
     "parameters": {}
@@ -10016,6 +10039,114 @@
         }
       }
     },
+    "/api/v1/admin/orders/{number}/tracking": {
+      "put": {
+        "operationId": "adminSetOrderTracking",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Set an order's tracking number",
+        "description": "Adds, changes or (with an empty string) removes the tracking number of a shipped or delivered order. The customer sees it on their order page.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "required": true,
+            "name": "number",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderTrackingBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tracking number updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrderDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid order number or body (INVALID_ORDER_NUMBER, VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No order with that number (ORDER_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The order isn't shipped or delivered (INVALID_ORDER_TRANSITION)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/orders/{number}/deliver": {
       "post": {
         "operationId": "adminDeliverOrder",
@@ -10628,8 +10759,8 @@
         "tags": [
           "Admin"
         ],
-        "summary": "Change the top banner's messages",
-        "description": "Replaces the storefront's scrolling banner messages, in order. An empty list hides the banner.",
+        "summary": "Change the top banner",
+        "description": "Turns the storefront's scrolling banner on or off and replaces its messages, in order. Off (or no messages) hides it; the messages are kept.",
         "security": [
           {
             "accessTokenCookie": []

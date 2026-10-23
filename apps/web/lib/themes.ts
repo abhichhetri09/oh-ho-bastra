@@ -10,7 +10,7 @@ export const THEMES = [
   {
     id: "editorial",
     name: "Editorial",
-    description: "Warm paper, a light serif, square corners.",
+    description: "Warm paper, a light serif, softly rounded corners.",
     // background, foreground, accent: the picker's preview strip
     preview: ["#faf8f4", "#24201c", "#a4502f"],
     themeColor: "#faf8f4",

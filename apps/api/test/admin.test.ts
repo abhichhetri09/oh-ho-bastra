@@ -792,6 +792,7 @@ describe("PUT /admin/settings", () => {
     expect(Object.keys(res.body.data)).toEqual([
       "theme",
       "announcements",
+      "announcements_enabled",
       "updated_at",
     ]);
   });
@@ -863,7 +864,10 @@ describe("PUT /admin/settings/announcements", () => {
       .send(body as object);
 
   it("replaces the messages in order, trimmed, and the storefront sees them", async () => {
-    const res = await put({ announcements: [" Autumn sale ", "New tees in"] });
+    const res = await put({
+      announcements_enabled: true,
+      announcements: [" Autumn sale ", "New tees in"],
+    });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       success: true,
@@ -871,6 +875,7 @@ describe("PUT /admin/settings/announcements", () => {
       data: {
         theme: "editorial",
         announcements: ["Autumn sale", "New tees in"],
+        announcements_enabled: true,
         updated_at: expect.any(String),
       },
     });
@@ -882,13 +887,30 @@ describe("PUT /admin/settings/announcements", () => {
   });
 
   it("takes an empty list, which hides the banner", async () => {
-    const res = await put({ announcements: [] });
+    const res = await put({ announcements_enabled: true, announcements: [] });
     expect(res.status).toBe(200);
     expect(res.body.data.announcements).toEqual([]);
   });
 
+  it("turns the banner off and keeps its messages", async () => {
+    const res = await put({
+      announcements_enabled: false,
+      announcements: ["Kept for later"],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      announcements_enabled: false,
+      announcements: ["Kept for later"],
+    });
+    const settings = await http().get("/api/v1/settings");
+    expect(settings.body.data).toMatchObject({
+      announcements_enabled: false,
+      announcements: ["Kept for later"],
+    });
+  });
+
   it("leaves the theme alone, and a theme change leaves the messages", async () => {
-    await put({ announcements: ["Hello"] });
+    await put({ announcements_enabled: true, announcements: ["Hello"] });
     const theme = await http()
       .put("/api/v1/admin/settings")
       .set("Cookie", admin)
@@ -902,7 +924,7 @@ describe("PUT /admin/settings/announcements", () => {
   it("validates the list and each message", async () => {
     const cases: [unknown, object][] = [
       [
-        {},
+        { announcements_enabled: true },
         {
           code: "REQUIRED_FIELD",
           field: "announcements",
@@ -910,7 +932,15 @@ describe("PUT /admin/settings/announcements", () => {
         },
       ],
       [
-        { announcements: ["ok", "  "] },
+        { announcements: [] },
+        {
+          code: "REQUIRED_FIELD",
+          field: "announcements_enabled",
+          message: "Announcements enabled is required",
+        },
+      ],
+      [
+        { announcements_enabled: true, announcements: ["ok", "  "] },
         {
           code: "REQUIRED_FIELD",
           field: "announcements.1",
@@ -918,7 +948,7 @@ describe("PUT /admin/settings/announcements", () => {
         },
       ],
       [
-        { announcements: ["x".repeat(81)] },
+        { announcements_enabled: true, announcements: ["x".repeat(81)] },
         {
           code: "TOO_LONG",
           field: "announcements.0",
@@ -926,7 +956,10 @@ describe("PUT /admin/settings/announcements", () => {
         },
       ],
       [
-        { announcements: ["a", "b", "c", "d", "e", "f", "g"] },
+        {
+          announcements_enabled: true,
+          announcements: ["a", "b", "c", "d", "e", "f", "g"],
+        },
         {
           code: "TOO_LONG",
           field: "announcements",
@@ -934,7 +967,7 @@ describe("PUT /admin/settings/announcements", () => {
         },
       ],
       [
-        { announcements: "Sale" },
+        { announcements_enabled: true, announcements: "Sale" },
         {
           code: "INVALID_TYPE",
           field: "announcements",
@@ -951,6 +984,9 @@ describe("PUT /admin/settings/announcements", () => {
 
   it("is for admins only", async () => {
     const { cookie } = await signIn(db, cfg);
-    expect((await put({ announcements: [] }, cookie)).status).toBe(403);
+    expect(
+      (await put({ announcements_enabled: true, announcements: [] }, cookie))
+        .status,
+    ).toBe(403);
   });
 });

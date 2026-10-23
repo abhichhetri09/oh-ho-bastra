@@ -240,6 +240,7 @@ export interface StoreSetting {
   theme: string;
   updated_at: Date;
   announcements: string[];
+  announcements_enabled: boolean;
 }
 
 export interface EmailOutbox {

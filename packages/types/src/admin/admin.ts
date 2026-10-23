@@ -221,6 +221,17 @@ export const ShipOrderBodySchema = z
   .meta({ id: "ShipOrderBody" });
 export type ShipOrderBody = z.infer<typeof ShipOrderBodySchema>;
 
+export const OrderTrackingBodySchema = z
+  .object({
+    tracking_number: z
+      .string()
+      .trim()
+      .max(64, "Tracking number cannot exceed 64 characters")
+      .describe("The carrier's tracking number; empty removes it."),
+  })
+  .meta({ id: "OrderTrackingBody" });
+export type OrderTrackingBody = z.infer<typeof OrderTrackingBodySchema>;
+
 export const RefundOrderBodySchema = z
   .object({
     restock: z

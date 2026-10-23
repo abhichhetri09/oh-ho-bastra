@@ -187,3 +187,79 @@ describe("POST /admin/orders/:number/refund", () => {
     });
   });
 });
+
+describe("PUT /admin/orders/:number/tracking", () => {
+  const put = (number: number | string, body: object) =>
+    http()
+      .put(`/api/v1/admin/orders/${number}/tracking`)
+      .set("Cookie", admin)
+      .send(body);
+
+  it("adds a tracking number to an order shipped without one, and the customer sees it", async () => {
+    const { number } = await placeOrder(ctx, shopper.id);
+    await post(`${number}/ship`, {});
+    const res = await put(number, { tracking_number: "  JJFI6012345678  " });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      message: "Tracking number updated",
+      data: { status: "shipped", tracking_number: "JJFI6012345678" },
+    });
+    const mine = await http()
+      .get(`/api/v1/orders/${number}`)
+      .set("Cookie", cookieFor(cfg, shopper));
+    expect(mine.body.data.tracking_number).toBe("JJFI6012345678");
+  });
+
+  it("changes it on a delivered order, and an empty one removes it", async () => {
+    const { number } = await placeOrder(ctx, shopper.id);
+    await post(`${number}/ship`, { tracking_number: "OLD1" });
+    await post(`${number}/deliver`);
+    expect(
+      (await put(number, { tracking_number: "NEW2" })).body.data,
+    ).toMatchObject({ status: "delivered", tracking_number: "NEW2" });
+    const cleared = await put(number, { tracking_number: " " });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.data.tracking_number).toBeNull();
+  });
+
+  it("refuses an order that isn't shipped or delivered", async () => {
+    const { number } = await placeOrder(ctx, shopper.id);
+    const res = await put(number, { tracking_number: "X1" });
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({
+      success: false,
+      code: "INVALID_ORDER_TRANSITION",
+      message: "Only a shipped or delivered order has a tracking number",
+    });
+  });
+
+  it("validates the order number, the body and the order", async () => {
+    expect((await put("abc", { tracking_number: "X" })).body.code).toBe(
+      "INVALID_ORDER_NUMBER",
+    );
+    expect((await put(99999, { tracking_number: "X" })).status).toBe(404);
+    const { number } = await placeOrder(ctx, shopper.id);
+    await post(`${number}/ship`, {});
+    const missing = await put(number, {});
+    expect(missing.body.errors).toEqual([
+      {
+        code: "REQUIRED_FIELD",
+        field: "tracking_number",
+        message: "Tracking number is required",
+      },
+    ]);
+    const long = await put(number, { tracking_number: "x".repeat(65) });
+    expect(long.body.errors[0]).toMatchObject({
+      code: "TOO_LONG",
+      message: "Tracking number cannot exceed 64 characters",
+    });
+  });
+
+  it("is for admins only", async () => {
+    const res = await http()
+      .put("/api/v1/admin/orders/1001/tracking")
+      .set("Cookie", cookieFor(cfg, shopper))
+      .send({ tracking_number: "X" });
+    expect(res.status).toBe(403);
+  });
+});
