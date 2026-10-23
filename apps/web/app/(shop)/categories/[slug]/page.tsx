@@ -4,14 +4,15 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { breadcrumbLd, categoryCrumbs } from "@/lib/seo/structured-data";
 import { site } from "@/lib/site";
 import { siteUrl } from "@/lib/site-url";
-import { getCategories, getListing } from "@/modules/catalog/api";
+import {
+  getCategories,
+  getListing,
+  stockedChildren,
+} from "@/modules/catalog/api";
 import { Breadcrumbs } from "@/modules/catalog/components/breadcrumbs";
 import { CollectionHeader } from "@/modules/catalog/components/collection-header";
 import { ListingPage } from "@/modules/catalog/components/listing-page";
-import {
-  categoryPath,
-  childCategories,
-} from "@/modules/catalog/lib/category-tree";
+import { categoryPath } from "@/modules/catalog/lib/category-tree";
 import {
   DEFAULT_FILTERS,
   type SearchParams,
@@ -51,9 +52,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const category = path.at(-1);
   if (!category) notFound();
 
-  // Subcategories as chips; on a leaf, its siblings (with itself active).
+  // Subcategories with products as chips; on a leaf, its siblings (with
+  // itself active, even if it's empty).
   const parent = path.at(-2);
-  const children = childCategories(categories, slug);
+  const [children, siblings] = await Promise.all([
+    stockedChildren(categories, slug),
+    parent ? stockedChildren(categories, parent.slug, slug) : [],
+  ]);
   const chips =
     children.length > 0
       ? [
@@ -66,7 +71,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       : parent
         ? [
             { label: "All", href: `/categories/${parent.slug}` },
-            ...childCategories(categories, parent.slug).map((c) => ({
+            ...siblings.map((c) => ({
               label: c.name,
               href: `/categories/${c.slug}`,
               active: c.slug === slug,

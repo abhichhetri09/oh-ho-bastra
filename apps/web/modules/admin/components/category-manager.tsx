@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   DotsThreeIcon,
   PencilSimpleIcon,
@@ -41,6 +42,7 @@ import {
   adminUpdateCategory,
 } from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
+import { listCategoryProducts } from "@/lib/api/client";
 import { friendlyFieldErrors } from "@/lib/forms";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { categoryPath, orderTree, subtreeIds } from "../lib/categories";
@@ -146,8 +148,12 @@ export function CategoryManager() {
                         </span>
                       )}
                     </p>
-                    <p className="truncate font-mono text-[0.625rem] text-muted-foreground">
+                    <p className="flex items-center gap-2 truncate font-mono text-[0.625rem] text-muted-foreground">
                       /{category.slug}
+                      <MenuReach
+                        slug={category.slug}
+                        root={category.depth === 0}
+                      />
                     </p>
                   </div>
                 </div>
@@ -447,5 +453,47 @@ function CategoryForm({
         </Button>
       </DialogFooter>
     </form>
+  );
+}
+
+/**
+ * How many visible products a category holds (its subcategories included)
+ * and whether that puts it in the shop's menu: a category with none is
+ * left out, so shoppers never land on an empty page.
+ */
+function MenuReach({ slug, root }: { slug: string; root: boolean }) {
+  const count = useQuery({
+    queryKey: ["admin", "category-reach", slug],
+    queryFn: async () => {
+      const { data } = await listCategoryProducts({
+        path: { slug },
+        throwOnError: true,
+      });
+      return data.meta.total;
+    },
+    staleTime: 30_000,
+  });
+  if (count.data === undefined) return null;
+  const shown = count.data > 0;
+  return (
+    <span
+      className={
+        shown
+          ? "rounded-full bg-success/10 px-2 py-0.5 font-sans text-success"
+          : "rounded-full bg-muted px-2 py-0.5 font-sans"
+      }
+      title={
+        shown
+          ? undefined
+          : "Add a visible product to it (or a subcategory) to show it to shoppers"
+      }
+    >
+      {count.data} {count.data === 1 ? "product" : "products"} ·{" "}
+      {shown
+        ? root
+          ? "in the shop menu"
+          : "in its menu"
+        : "not in the menu yet"}
+    </span>
   );
 }

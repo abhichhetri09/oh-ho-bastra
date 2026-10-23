@@ -7,7 +7,7 @@ import {
   listProducts,
 } from "@repo/api-client/server";
 import { publicClient } from "@/lib/api/public";
-import { buildCategoryTree } from "./lib/category-tree";
+import { buildCategoryTree, childCategories } from "./lib/category-tree";
 import {
   DEFAULT_FILTERS,
   listingQuery,
@@ -72,6 +72,27 @@ export const getProductPage = cache(async (slug: string) => {
   return data?.data ?? notFoundOrThrow(response, "get product");
 });
 
+/** How many visible products a category's subtree holds (0 if unknown). */
+const productCount = cache(async (slug: string): Promise<number> => {
+  const listing = await getListing(slug, DEFAULT_FILTERS);
+  return listing?.meta.total ?? 0;
+});
+
+/**
+ * The direct children of the category with slug that have products, so
+ * shoppers are never sent to an empty page from the menu or the chips.
+ * `keep` stays even when empty (the page the shopper is on).
+ */
+export async function stockedChildren(
+  categories: Awaited<ReturnType<typeof getCategories>>,
+  slug: string,
+  keep?: string,
+) {
+  const children = childCategories(categories, slug);
+  const counts = await Promise.all(children.map((c) => productCount(c.slug)));
+  return children.filter((c, i) => counts[i]! > 0 || c.slug === keep);
+}
+
 /** A root category with its children, product count and a cover photo. */
 export type Collection = {
   name: string;
@@ -83,20 +104,24 @@ export type Collection = {
 };
 
 /**
- * Root categories that have products, largest first, each with its newest
- * product's photo as a cover. Shared by the header menu and the landing page.
+ * Root categories that have products (a category with none, or whose
+ * products are all hidden, stays out of the menu), largest first, each
+ * with its stocked subcategories and its newest product's photo as a
+ * cover. Shared by the header menu and the landing page.
  */
 export const getCollections = cache(async (): Promise<Collection[]> => {
-  const tree = buildCategoryTree(await getCategories());
+  const categories = await getCategories();
+  const tree = buildCategoryTree(categories);
   const collections = await Promise.all(
     tree.map(async (root): Promise<Collection | null> => {
       const listing = await getListing(root.slug, DEFAULT_FILTERS);
       if (!listing || listing.meta.total === 0) return null;
       const product = listing.data.products[0];
+      const children = await stockedChildren(categories, root.slug);
       return {
         name: root.name,
         slug: root.slug,
-        children: root.children.map(({ name, slug }) => ({ name, slug })),
+        children: children.map(({ name, slug }) => ({ name, slug })),
         total: listing.meta.total,
         image: product?.images[0] ?? null,
         imageCaption: product?.name ?? null,
