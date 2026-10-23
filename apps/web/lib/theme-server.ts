@@ -2,7 +2,9 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { getStoreSettings } from "@repo/api-client/server";
+import type { StoreSettings } from "@repo/types";
 import { publicClient, SETTINGS_TAG } from "./api/public";
+import { site } from "./site";
 import {
   resolveTheme,
   THEME_COOKIE,
@@ -15,22 +17,35 @@ const SETTINGS_TTL = 300;
 const SETTINGS_TIMEOUT_MS = 2000;
 
 /**
- * The theme an admin saved (Admin → Settings), through Next's data cache
- * (expired on save). If the API can't answer, STORE_THEME stands in, so
- * pages still render.
+ * What an admin saved in Admin → Settings (the theme and the top banner's
+ * messages), through Next's data cache (expired on save). Null when the API
+ * can't answer, so callers fall back and pages still render.
  */
-export const savedStoreTheme = cache(async (): Promise<string | undefined> => {
+export const storeSettings = cache(async (): Promise<StoreSettings | null> => {
   try {
     const { data } = await getStoreSettings({
       client: publicClient(SETTINGS_TTL, [SETTINGS_TAG]),
       signal: AbortSignal.timeout(SETTINGS_TIMEOUT_MS),
     });
-    if (data) return data.data.theme;
+    if (data) return data.data;
   } catch {
-    // fall through to the env default
+    // the callers' fallbacks
   }
-  return process.env.STORE_THEME;
+  return null;
 });
+
+/** The theme an admin saved, or STORE_THEME when the API can't answer. */
+export async function savedStoreTheme(): Promise<string | undefined> {
+  return (await storeSettings())?.theme ?? process.env.STORE_THEME;
+}
+
+/**
+ * The top banner's messages an admin saved (empty hides the banner), or the
+ * store's default ones when the API can't answer.
+ */
+export async function storeAnnouncements(): Promise<string[]> {
+  return (await storeSettings())?.announcements ?? [...site.announcement];
+}
 
 /** The theme this request renders with (see resolveTheme). */
 export async function currentTheme(): Promise<ThemeId> {

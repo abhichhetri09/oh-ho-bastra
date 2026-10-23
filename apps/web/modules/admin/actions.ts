@@ -22,9 +22,10 @@ export async function revalidateCatalog(): Promise<void> {
 }
 
 /**
- * After an admin saves the store's theme: expires the cached setting, so
- * every page renders the new theme next, and clears this browser's demo
- * picker choice, which would otherwise keep overriding it here. Admins
+ * After an admin saves the store's theme or the top banner: expires the
+ * cached settings, so every page renders them next, and clears this
+ * browser's demo theme picker choice, which would otherwise keep
+ * overriding the theme here. Admins
  * only, checked against the API like revalidateCatalog.
  */
 export async function revalidateStoreSettings(): Promise<void> {

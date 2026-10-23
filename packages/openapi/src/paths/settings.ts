@@ -8,7 +8,8 @@ export function registerSettingsPaths() {
     operationId: "getStoreSettings",
     tag: "Settings",
     summary: "Store settings",
-    description: "Store-wide settings the storefront needs, such as its theme.",
+    description:
+      "Store-wide settings the storefront needs: its theme and the top banner's messages.",
     success: {
       status: 200,
       description: "Settings fetched",

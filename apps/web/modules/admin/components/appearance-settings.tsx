@@ -158,7 +158,7 @@ function ThemePreview({ id }: { id: ThemeId }) {
       </span>
       <span className="grid grid-cols-[1fr_auto] items-end gap-4">
         <span className="display block text-[1.75rem]">
-          Objects for <em>slow living.</em>
+          Tees, printed <em>for you.</em>
         </span>
         <span className="relative block aspect-[4/5] w-16 overflow-hidden rounded-media bg-surface">
           <Image

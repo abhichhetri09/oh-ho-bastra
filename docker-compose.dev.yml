@@ -3,8 +3,8 @@ name: ohhobastra
 services:
   api:
     build:
-      context: ./apps/api
-      dockerfile: Dockerfile.dev
+      context: .
+      dockerfile: ./apps/api/Dockerfile.dev
     container_name: ohhobastra-api
     depends_on:
       db:
@@ -14,8 +14,9 @@ services:
     env_file:
       - .env.local
     volumes:
-      - ./apps/api:/app
-      - /app/tmp
+      - ./apps/api:/app/apps/api
+      - ./packages:/app/packages
+      - /app/apps/api/node_modules
     networks:
       - app-network
     healthcheck:
@@ -24,8 +25,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      # first start compiles the api with air, so allow time and poll fast meanwhile
-      start_period: 120s
+      start_period: 60s
       start_interval: 2s
 
   web:

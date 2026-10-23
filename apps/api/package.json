@@ -2,8 +2,45 @@
   "name": "api",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "go run github.com/air-verse/air@latest",
-    "build": "go build -o server ./cmd/server"
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "migrate": "tsx src/cli/migrate.ts",
+    "seed": "tsx src/cli/seed.ts",
+    "sqlc": "sqlc generate && tsx scripts/sqlc-ts.ts"
+  },
+  "dependencies": {
+    "@repo/types": "workspace:*",
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "express": "^5",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.1.0",
+    "path-to-regexp": "^8",
+    "pg": "^8.23.1",
+    "stripe": "^23.0.0",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.15.3",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.3.1",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.15",
+    "typescript": "5.9.2",
+    "vitest": "^5.0.4"
   }
 }

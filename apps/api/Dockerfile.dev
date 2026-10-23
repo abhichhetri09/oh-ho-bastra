@@ -1,14 +1,18 @@
-FROM golang:1.26.1-alpine
+# The API runs on Node, like the web app; Bun is copied in only for installs.
+FROM node:24-alpine
+
+COPY --from=oven/bun:1.3.9-alpine /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /app
 
-RUN go install github.com/air-verse/air@latest
+COPY bun.lock package.json turbo.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/ ./packages/
+RUN bun install
 
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
+WORKDIR /app/apps/api
 
 EXPOSE 5000
 
-CMD ["sh", "./entrypoint.sh"]
+# Migrations run first; a failed one stops the container before the API starts.
+CMD ["sh", "-c", "bun run migrate && bun run dev"]

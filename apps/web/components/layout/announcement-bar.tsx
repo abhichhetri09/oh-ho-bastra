@@ -1,18 +1,32 @@
-import { site } from "@/lib/site";
+import { storeAnnouncements } from "@/lib/theme-server";
 
 /**
- * A slow ticker of store notices; static for reduced-motion users. It
- * pauses on hover, and a toggle (a checkbox, so no client script) stops it
- * for good, as moving content must be pausable.
+ * A slow ticker of store notices, edited in Admin → Settings (none hides
+ * it); static for reduced-motion users. It pauses on hover, and a toggle (a
+ * checkbox, so no client script) stops it for good, as moving content must
+ * be pausable.
  */
-export function AnnouncementBar() {
-  // Two copies side by side make the -50% marquee loop seamless.
-  const items = [...site.announcement, ...site.announcement];
+export async function AnnouncementBar() {
+  const announcements = await storeAnnouncements();
+  if (announcements.length === 0) return null;
+  // Two copies side by side make the -50% marquee loop seamless, as long as
+  // each copy is wider than the screen: a few short messages are repeated
+  // until a copy spans ~1920px (11px mono caps are about 7.6px a letter,
+  // plus 128px of padding and the separator per item).
+  const width = announcements.reduce(
+    (sum, text) => sum + text.length * 7.6 + 128,
+    0,
+  );
+  const repeat = Math.max(2, Math.ceil(1920 / width));
+  const items = Array.from({ length: repeat }, () => announcements).flat();
+  // A steady reading speed (~60px/s) however much there is to read.
+  const duration = `${Math.round((width * repeat) / 60)}s`;
   return (
     <div className="group/ticker relative overflow-hidden bg-primary text-primary-foreground">
-      <p className="sr-only">{site.announcement.join(". ")}</p>
+      <p className="sr-only">{announcements.join(". ")}</p>
       <div
         aria-hidden
+        style={{ animationDuration: duration }}
         className="animate-marquee flex w-max group-hover/ticker:[animation-play-state:paused] group-has-checked/ticker:[animation-play-state:paused]"
       >
         {[0, 1].map((copy) => (

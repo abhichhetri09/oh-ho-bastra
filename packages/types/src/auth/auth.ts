@@ -2,7 +2,7 @@ import { z } from "zod";
 import { successResponse } from "../api/response";
 import { PublicUserSchema } from "../user/user";
 
-// Mirrors apps/api/internal/types/auth.go. Emails are trimmed and lowercased
+// Request bodies of the auth endpoints. Emails are trimmed and lowercased
 // by the API; passwords are never trimmed (bcrypt reads at most 72 bytes).
 
 // Messages match the API's validator, so client and server errors read alike.

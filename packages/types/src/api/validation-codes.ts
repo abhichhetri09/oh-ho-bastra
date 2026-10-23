@@ -2,8 +2,7 @@ import { z } from "zod";
 
 /**
  * Codes of the per-field items in a VALIDATION_FAILED response's `errors`.
- * Must list exactly the Go constants in
- * apps/api/internal/constants/validation_codes.go.
+ * The API takes them from here, so the spec and the server always agree.
  */
 export const ValidationCodeSchema = z
   .enum([

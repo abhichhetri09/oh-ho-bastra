@@ -995,6 +995,10 @@ export type StoreSettingsResponse = {
  */
 export type StoreSettings = {
     theme: StoreTheme;
+    /**
+     * The messages in the storefront's scrolling top banner, in order; empty hides it.
+     */
+    announcements: Array<string>;
     updated_at: string;
 };
 
@@ -1522,6 +1526,13 @@ export type ReviewStatusBody = {
 
 export type StoreThemeBody = {
     theme: StoreTheme;
+};
+
+/**
+ * Replaces the banner's messages, in order. An empty list hides the banner.
+ */
+export type AnnouncementsBody = {
+    announcements: Array<string>;
 };
 
 export type GetHealthData = {
@@ -4333,3 +4344,40 @@ export type AdminSetStoreThemeResponses = {
 };
 
 export type AdminSetStoreThemeResponse = AdminSetStoreThemeResponses[keyof AdminSetStoreThemeResponses];
+
+export type AdminSetAnnouncementsData = {
+    body: AnnouncementsBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/settings/announcements';
+};
+
+export type AdminSetAnnouncementsErrors = {
+    /**
+     * Too many messages, or an empty or too long one (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetAnnouncementsError = AdminSetAnnouncementsErrors[keyof AdminSetAnnouncementsErrors];
+
+export type AdminSetAnnouncementsResponses = {
+    /**
+     * Announcements updated
+     */
+    200: StoreSettingsResponse;
+};
+
+export type AdminSetAnnouncementsResponse = AdminSetAnnouncementsResponses[keyof AdminSetAnnouncementsResponses];

@@ -16,25 +16,20 @@ export default {
       "git add apps/api/openapi.json packages/api-client/src/generated packages/api-client/src/generated-server",
     ];
   },
-  // Keep sqlc Go output in sync when queries/schema change.
-  "apps/api/{sqlc.yml,internal/database/queries/**/*.sql,migrations/**/*.sql}":
-    () => ["bun run db:sqlc", "git add apps/api/internal/database/generated"],
+  // Keep the typed queries in sync when queries/schema change.
+  "apps/api/{sqlc.yml,queries/**/*.sql,migrations/**/*.sql}": () => [
+    "bun run db:sqlc",
+    "git add apps/api/src/db/gen",
+  ],
   // Skips files another rule already formats, so two prettier runs never
   // write the same file concurrently.
   "*.{js,jsx,ts,tsx,mjs,cjs,json,yml,yaml,css}": (filenames) => {
     const files = filenames.filter(
       (f) =>
         !/\/packages\/(types\/src|openapi\/src|api-client)\/.*\.ts$/.test(f) &&
-        !/\/apps\/web\/.*\.(js|jsx|ts|tsx|mjs|cjs)$/.test(f),
+        !/\/apps\/web\/.*\.(js|jsx|ts|tsx|mjs|cjs)$/.test(f) &&
+        !/\/apps\/api\/src\/db\/gen\//.test(f),
     );
     return files.length ? [`bunx prettier --write ${files.join(" ")}`] : [];
-  },
-  // sqlc output is already gofmt'd, and formatting it here would race the
-  // sqlc task above, which regenerates that directory concurrently.
-  "*.go": (filenames) => {
-    const files = filenames.filter(
-      (f) => !f.includes("/internal/database/generated/"),
-    );
-    return files.length ? [`gofmt -w ${files.join(" ")}`] : [];
   },
 };

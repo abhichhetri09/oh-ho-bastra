@@ -3,7 +3,7 @@
   "info": {
     "title": "Oh Ho Bastra API",
     "version": "1.0.0",
-    "description": "REST API of the Oh Ho Bastra storefront (Go + Gin).\n\n- Auth uses HTTP-only cookies; browsers must send credentials.\n- Request and response bodies are snake_case JSON.\n- Money is always an integer amount in cents.\n- Every response has `success` and `message`. Failures add a machine-readable `code`, and validation failures list `errors` with a react-hook-form style `field` path.\n- Every response carries an `X-Request-ID` header (a valid incoming one is reused)."
+    "description": "REST API of the Oh Ho Bastra storefront (Express + TypeScript).\n\n- Auth uses HTTP-only cookies; browsers must send credentials.\n- Request and response bodies are snake_case JSON.\n- Money is always an integer amount in cents.\n- Every response has `success` and `message`. Failures add a machine-readable `code`, and validation failures list `errors` with a react-hook-form style `field` path.\n- Every response carries an `X-Request-ID` header (a valid incoming one is reused)."
   },
   "servers": [
     {
@@ -3060,6 +3060,13 @@
           "theme": {
             "$ref": "#/components/schemas/StoreTheme"
           },
+          "announcements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The messages in the storefront's scrolling top banner, in order; empty hides it."
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time"
@@ -3067,6 +3074,7 @@
         },
         "required": [
           "theme",
+          "announcements",
           "updated_at"
         ],
         "description": "Store-wide settings."
@@ -4786,6 +4794,24 @@
         "required": [
           "theme"
         ]
+      },
+      "AnnouncementsBody": {
+        "type": "object",
+        "properties": {
+          "announcements": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "maxItems": 6
+          }
+        },
+        "required": [
+          "announcements"
+        ],
+        "description": "Replaces the banner's messages, in order. An empty list hides the banner."
       }
     },
     "parameters": {}
@@ -8729,7 +8755,7 @@
           "Settings"
         ],
         "summary": "Store settings",
-        "description": "Store-wide settings the storefront needs, such as its theme.",
+        "description": "Store-wide settings the storefront needs: its theme and the top banner's messages.",
         "responses": {
           "200": {
             "description": "Settings fetched",
@@ -10555,6 +10581,83 @@
           },
           "400": {
             "description": "Unknown theme (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/settings/announcements": {
+      "put": {
+        "operationId": "adminSetAnnouncements",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Change the top banner's messages",
+        "description": "Replaces the storefront's scrolling banner messages, in order. An empty list hides the banner.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Announcements updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Too many messages, or an empty or too long one (VALIDATION_FAILED)",
             "content": {
               "application/json": {
                 "schema": {

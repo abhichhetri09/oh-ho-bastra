@@ -10,6 +10,8 @@ export const site = {
   tagline: "Tees, and the ones we print for you",
   description:
     "Heavyweight cotton t-shirts in a few good colours, plus custom prints and text when you want something that isn't on the rack.",
+  // The top banner's messages until an admin edits them (Admin → Settings),
+  // and its fallback while the API can't be reached.
   announcement: [
     "Free shipping on orders over €60",
     "30-day returns, no questions asked",

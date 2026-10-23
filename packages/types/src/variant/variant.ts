@@ -98,6 +98,7 @@ const checkVariant = (b: VariantFields, ctx: z.RefinementCtx) => {
       code: "custom",
       path: ["image_public_ids"],
       message: "Provide one public ID per image",
+      params: { code: "LENGTH_MISMATCH" },
     });
   }
   if (b.offer_price !== undefined && b.offer_price >= b.selling_price) {
@@ -105,6 +106,7 @@ const checkVariant = (b: VariantFields, ctx: z.RefinementCtx) => {
       code: "custom",
       path: ["offer_price"],
       message: "Offer price must be less than selling price",
+      params: { code: "OUT_OF_RANGE" },
     });
   }
 };
@@ -118,6 +120,7 @@ export const CreateVariantBodySchema = z
       .max(10)
       .refine((p) => new Set(p.map((x) => x.name)).size === p.length, {
         message: "Properties must not contain duplicates",
+        params: { code: "DUPLICATE_ITEM" },
       })
       .optional()
       .describe(

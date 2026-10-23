@@ -6,7 +6,7 @@ import {
   Uuid,
 } from "../api/response";
 
-// Mirrors ReviewRequest in apps/api/internal/types/review.go.
+// A review as a verified buyer writes it.
 export const ReviewBodySchema = z
   .object({
     rating: z.int().min(1).max(5),

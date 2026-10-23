@@ -4,7 +4,11 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
-  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
@@ -20,29 +24,6 @@
   "[jsonc]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "[go]": {
-    "editor.defaultFormatter": "golang.go",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit"
-    }
-  },
-  "go.useLanguageServer": true,
-  "go.lintTool": "golangci-lint",
-  "go.lintOnSave": "package",
-  "go.toolsEnvVars": {
-    "PATH": "${env:HOME}/go/bin:${env:PATH}"
-  },
-  "go.alternateTools": {
-    "golangci-lint": "${env:HOME}/go/bin/golangci-lint"
-  },
-  "go.lintFlags": [
-    "--fast-only",
-    "--config=${workspaceFolder}/apps/api/.golangci.yml"
-  ],
-  "gopls": {
-    "ui.semanticTokens": true
-  },
   "files.exclude": {
     "**/.turbo": true,
     "**/node_modules": true
@@ -50,7 +31,7 @@
   "search.exclude": {
     "**/.next": true,
     "**/bun.lock": true,
-    "apps/api/internal/database/generated": true
+    "apps/api/src/db/gen": true
   },
   "tailwindCSS.experimental.classRegex": [
     ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],

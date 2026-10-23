@@ -1,67 +1,51 @@
 #!/usr/bin/env bun
 /**
- * Runs sqlc generate, then fails if generated Go would change.
- * Keeps apps/api/internal/database/generated in sync with queries + migrations.
+ * Regenerates the typed queries (sqlc + scripts/sqlc-ts.ts), then fails if
+ * apps/api/src/db/gen would change. Keeps it in sync with
+ * apps/api/queries and apps/api/migrations.
  */
 import { spawnSync } from "node:child_process";
-import { readdirSync, rmSync } from "node:fs";
-import { join } from "node:path";
 
-const generatedPath = "apps/api/internal/database/generated";
+const generatedPath = "apps/api/src/db/gen";
 
-function run(command: string, args: string[], cwd?: string): number {
-  const result = spawnSync(command, args, {
-    cwd,
-    stdio: "inherit",
-    shell: false,
-  });
-  return result.status ?? 1;
-}
-
-function hasGeneratedDrift(path: string): boolean {
-  const diff = spawnSync("git", ["diff", "--exit-code", "--", path], {
-    stdio: "inherit",
-    shell: false,
-  });
-  if ((diff.status ?? 1) !== 0) {
-    return true;
-  }
-
-  const status = spawnSync(
-    "git",
-    ["status", "--porcelain", "--untracked-files=all", "--", path],
-    { encoding: "utf8", shell: false },
-  );
-  return (status.stdout ?? "")
-    .split("\n")
-    .some((line) => line.startsWith("??"));
-}
-
-// sqlc never deletes output for removed query files, so clear the generated
-// dir first; a stale file then shows up as a deletion in the drift check.
-for (const file of readdirSync(generatedPath)) {
-  if (file.endsWith(".go")) rmSync(join(generatedPath, file));
-}
-
-const generateStatus = run("sqlc", ["generate"], "apps/api");
-if (generateStatus !== 0) {
+const generate = spawnSync("bun", ["run", "sqlc"], {
+  cwd: "apps/api",
+  stdio: "inherit",
+});
+if ((generate.status ?? 1) !== 0) {
   console.error(`
-sqlc generate failed. Install sqlc:
-  go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0
+Generating the queries failed. Install sqlc (https://docs.sqlc.dev):
+  brew install sqlc
 `);
-  process.exit(generateStatus);
+  process.exit(generate.status ?? 1);
 }
 
-if (hasGeneratedDrift(generatedPath)) {
+// The generator rewrites the whole directory, so a removed query file shows
+// up as a deletion and a new one as an untracked file.
+const diff = spawnSync("git", ["diff", "--exit-code", "--", generatedPath], {
+  stdio: "inherit",
+});
+const untracked = spawnSync(
+  "git",
+  ["status", "--porcelain", "--untracked-files=all", "--", generatedPath],
+  {
+    encoding: "utf8",
+  },
+);
+const drift =
+  (diff.status ?? 1) !== 0 ||
+  (untracked.stdout ?? "").split("\n").some((line) => line.startsWith("??"));
+
+if (drift) {
   console.error(`
-sqlc generated code is out of date.
+The generated queries are out of date.
 
 Run:
   bun run db:sqlc
 
-Then commit apps/api/internal/database/generated.
+Then commit ${generatedPath}.
 `);
   process.exit(1);
 }
 
-console.log("sqlc generated code is up to date.");
+console.log("Generated queries are up to date.");

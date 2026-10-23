@@ -126,6 +126,7 @@ export const ProductBodySchema = z
   .refine((b) => b.image_public_ids.length === b.images.length, {
     path: ["image_public_ids"],
     message: "Provide one public ID per image",
+    params: { code: "LENGTH_MISMATCH" },
   })
   .meta({
     id: "ProductBody",

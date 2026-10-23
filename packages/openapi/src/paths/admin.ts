@@ -420,4 +420,24 @@ export function registerAdminPaths() {
     },
     errors: { 400: "Unknown theme (VALIDATION_FAILED)" },
   });
+
+  operation({
+    method: "put",
+    path: "/api/v1/admin/settings/announcements",
+    operationId: "adminSetAnnouncements",
+    tag: "Admin",
+    summary: "Change the top banner's messages",
+    description:
+      "Replaces the storefront's scrolling banner messages, in order. An empty list hides the banner.",
+    auth: "admin",
+    request: body(schemas.AnnouncementsBodySchema),
+    success: {
+      status: 200,
+      description: "Announcements updated",
+      schema: schemas.StoreSettingsResponseSchema,
+    },
+    errors: {
+      400: "Too many messages, or an empty or too long one (VALIDATION_FAILED)",
+    },
+  });
 }

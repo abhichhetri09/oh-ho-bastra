@@ -1,93 +1,10 @@
-/server
-# deploy builds (README: deploy)
-/main
-/migrate
-build-errors.log
-
-
-# ========================
-# Go build artifacts
-# ========================
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-
-# Output binary
-/bin/
-/build/
-
-# ========================
-# Go modules
-# ========================
-/vendor/
-
-# ========================
-# Environment / secrets
-# ========================
-.env*
-!.env.example
-
-
-
-# ========================
-# Logs
-# ========================
-*.log
-logs/
-*.log.*
-
-# ========================
-# IDE / Editor files
-# ========================
-# VS Code
-.vscode/
-.history/
-
-# JetBrains IDEs
-*.iml
-.idea/
-
-# MacOS
-.DS_Store
-
-# Linux
-*~
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# ========================
-# PostgreSQL / SQLite / DB
-# ========================
-*.sqlite
-*.db
-*.dump
-
-# ========================
-# Node / frontend (if any)
-# ========================
 node_modules/
 dist/
-build/
-
-# ========================
-# Temporary / backup files
-# ========================
-*.swp
-*.bak
-*.tmp
-
-
-# Go test cache
-.cache/
-
-# Air live reload tool (if you use it)
+coverage/
+# left by the old Go dev container
 tmp/
-
-
-*.md
+# sqlc's JSON for scripts/sqlc-ts.ts
+.sqlc/
+.env*
+!.env.example
+*.log

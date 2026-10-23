@@ -1,0 +1,1 @@
+ALTER TYPE "order_event_type" ADD VALUE 'tracking_updated';

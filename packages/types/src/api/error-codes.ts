@@ -1,9 +1,8 @@
 import { z } from "zod";
 
 /**
- * Codes in the `code` field of failed responses. Must list exactly the Go
- * constants in apps/api/internal/constants/error_codes.go; the API's
- * contract test fails otherwise.
+ * Codes in the `code` field of failed responses. The API takes them from here,
+ * so the spec and the server always agree.
  */
 export const ErrorCodeSchema = z
   .enum([

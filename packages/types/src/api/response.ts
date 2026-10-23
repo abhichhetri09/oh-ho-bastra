@@ -59,7 +59,7 @@ export const paginatedResponse = <T extends z.ZodType>(item: T) =>
     meta: PaginationMetaSchema,
   });
 
-/** Shared scalars, matching how the Go API serializes them. */
+/** Shared scalars, as the API serializes them. */
 export const Uuid = z.uuid();
 export const Timestamp = z.iso.datetime({ offset: true });
 /** An amount of money in integer minor units (cents). */

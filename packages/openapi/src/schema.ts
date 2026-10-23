@@ -13,7 +13,7 @@ export function generateOpenAPIDocument() {
       title: "Oh Ho Bastra API",
       version: "1.0.0",
       description: [
-        "REST API of the Oh Ho Bastra storefront (Go + Gin).",
+        "REST API of the Oh Ho Bastra storefront (Express + TypeScript).",
         "",
         "- Auth uses HTTP-only cookies; browsers must send credentials.",
         "- Request and response bodies are snake_case JSON.",

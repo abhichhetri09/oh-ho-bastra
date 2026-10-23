@@ -213,7 +213,7 @@ export const AdminOrderDetailResponseSchema = successResponse(
   AdminOrderDetailSchema,
 ).meta({ id: "AdminOrderDetailResponse" });
 
-// Mirror apps/api/internal/types/admin.go.
+// Bodies of the admin order actions.
 export const ShipOrderBodySchema = z
   .object({
     tracking_number: z.string().trim().max(64).optional(),

@@ -1,7 +1,9 @@
 apps/web/.next/
 apps/web/node_modules/
 apps/api/tmp/
-apps/api/*.exe
+apps/api/dist/
+apps/api/node_modules/
+apps/api/.sqlc/
 node_modules/
 .git/
 **/.env*

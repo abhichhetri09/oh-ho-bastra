@@ -30,7 +30,7 @@ export const CountrySchema = z.enum(SHIPPING_COUNTRIES).meta({
 });
 export type Country = z.infer<typeof CountrySchema>;
 
-// Mirrors AddressInput in apps/api/internal/types/checkout.go.
+// The address a checkout ships to (apps/api/src/checkout/address.ts).
 export const AddressInputSchema = z
   .object({
     full_name: z.string().trim().min(1).max(80),
