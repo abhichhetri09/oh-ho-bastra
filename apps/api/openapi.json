@@ -85,6 +85,7 @@
           "INVALID_QUERY_PARAMETER",
           "ROUTE_NOT_FOUND",
           "METHOD_NOT_ALLOWED",
+          "TOO_MANY_REQUESTS",
           "INVALID_CREDENTIALS",
           "MISSING_REFRESH_TOKEN",
           "INVALID_REFRESH_TOKEN",
@@ -4921,6 +4922,16 @@
               }
             }
           },
+          "429": {
+            "description": "Too many sign-ups from this address (TOO_MANY_REQUESTS); see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
             "content": {
@@ -4975,6 +4986,16 @@
           },
           "401": {
             "description": "Unknown email or wrong password (INVALID_CREDENTIALS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failed attempts for this account or address (TOO_MANY_REQUESTS); see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -5160,6 +5181,16 @@
               }
             }
           },
+          "429": {
+            "description": "Too many requests from this address (TOO_MANY_REQUESTS); see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
             "content": {
@@ -5214,6 +5245,16 @@
           },
           "400": {
             "description": "Invalid body (VALIDATION_FAILED), or an unknown, used or expired link (INVALID_RESET_TOKEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failed attempts from this address (TOO_MANY_REQUESTS); see Retry-After",
             "content": {
               "application/json": {
                 "schema": {
@@ -5508,6 +5549,16 @@
           },
           "404": {
             "description": "The user no longer exists (USER_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many wrong current passwords (TOO_MANY_REQUESTS); see Retry-After",
             "content": {
               "application/json": {
                 "schema": {

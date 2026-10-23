@@ -26,8 +26,13 @@ export interface Config {
   stripeWebhookSecrets: string[];
   cookieDomain: string;
   openapiPath: string;
-  /** Proxies allowed to set X-Forwarded-For; none by default. */
-  trustedProxies: string[];
+  /**
+   * Who may set X-Forwarded-For: proxy ips/subnets, or a number of proxy
+   * hops in front of the API (Render, most PaaS: 1). None by default.
+   */
+  trustedProxies: string[] | number;
+  /** Limits on the auth endpoints (AUTH_RATE_LIMITS=off turns them off). */
+  authRateLimits: boolean;
   // Order emails go out over SMTP; without SMTP_HOST they stay queued.
   smtpHost: string;
   smtpPort: number;
@@ -95,7 +100,10 @@ export function loadConfig(): Config {
       .filter(Boolean),
     cookieDomain: env("COOKIE_DOMAIN"),
     openapiPath: env("OPENAPI_PATH") || "openapi.json",
-    trustedProxies: list(env("TRUSTED_PROXIES")),
+    trustedProxies: /^\d+$/.test(env("TRUSTED_PROXIES"))
+      ? Number(env("TRUSTED_PROXIES"))
+      : list(env("TRUSTED_PROXIES")),
+    authRateLimits: env("AUTH_RATE_LIMITS").toLowerCase() !== "off",
     smtpHost: env("SMTP_HOST"),
     smtpPort,
     smtpUsername: process.env.SMTP_USERNAME ?? "",

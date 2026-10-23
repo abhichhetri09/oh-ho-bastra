@@ -14,6 +14,7 @@ export const ErrorCodeSchema = z
     "INVALID_QUERY_PARAMETER",
     "ROUTE_NOT_FOUND",
     "METHOD_NOT_ALLOWED",
+    "TOO_MANY_REQUESTS",
     // auth
     "INVALID_CREDENTIALS",
     "MISSING_REFRESH_TOKEN",

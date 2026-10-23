@@ -33,7 +33,11 @@ export function buildApp(deps: Deps): App {
   // socket address, so clients can't spoof the ip we log and store.
   app.set(
     "trust proxy",
-    deps.cfg.trustedProxies.length ? deps.cfg.trustedProxies : false,
+    typeof deps.cfg.trustedProxies === "number"
+      ? deps.cfg.trustedProxies
+      : deps.cfg.trustedProxies.length
+        ? deps.cfg.trustedProxies
+        : false,
   );
 
   app.use(requestId);

@@ -27,6 +27,8 @@ export const testConfig = (): Config => ({
   smtpHost: "",
   cookieDomain: "",
   trustedProxies: [],
+  // Suites sign in many times from one ip; test/rate-limit.test.ts turns them on.
+  authRateLimits: false,
   openapiPath: "openapi.json",
 });
 

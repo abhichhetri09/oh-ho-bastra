@@ -78,6 +78,7 @@ import { requireAuth } from "../http/middleware";
 import { isUuid, userId } from "../http/params";
 import { fail, ok, validationFailed } from "../http/response";
 import type { Group } from "../http/router";
+import { authLimits } from "../http/rate-limit";
 import { parseBody } from "../http/validate";
 import { log, rlog } from "../log";
 
@@ -87,6 +88,8 @@ const RESET_LINK_LIFE = 60 * 60_000;
 export function authRoutes(api: Group, deps: Deps) {
   const { db, cfg, mailer } = deps;
   const auth = api.group("/auth");
+  // Against password guessing, account spam and email flooding.
+  const limits = authLimits(cfg.authRateLimits);
   const signedIn = requireAuth(cfg);
 
   // compute now, so the first unknown-email login isn't slower
@@ -94,7 +97,7 @@ export function authRoutes(api: Group, deps: Deps) {
     log.error("failed to hash the dummy password", err),
   );
 
-  auth.post("/register", async (req, res) => {
+  auth.post("/register", limits.register, async (req, res) => {
     const body = parseBody(RegisterBody, req, res);
     if (!body) return;
     const email = normalizeEmail(body.email);
@@ -147,7 +150,7 @@ export function authRoutes(api: Group, deps: Deps) {
     ok(res, 201, "Registration successful", publicUser(user));
   });
 
-  auth.post("/login", async (req, res) => {
+  auth.post("/login", ...limits.login, async (req, res) => {
     const body = parseBody(LoginBody, req, res);
     if (!body) return;
     const email = normalizeEmail(body.email);
@@ -511,52 +514,57 @@ export function authRoutes(api: Group, deps: Deps) {
   // signs out every other session (this one stays), in one transaction. A
   // wrong current password is a field error, not a 401: the client would
   // read a 401 as an expired session and try to refresh.
-  auth.post("/me/password", signedIn, async (req, res) => {
-    const body = parseBody(ChangePasswordBody, req, res);
-    if (!body) return;
-    const id = userId(req);
+  auth.post(
+    "/me/password",
+    signedIn,
+    limits.changePassword,
+    async (req, res) => {
+      const body = parseBody(ChangePasswordBody, req, res);
+      if (!body) return;
+      const id = userId(req);
 
-    const user = await getUserByID(db, id);
-    if (!user) {
-      userNotFound(res);
-      return;
-    }
-    if (!(await checkPassword(user.password_hash, body.current_password))) {
-      rlog.warn(req, "change password: wrong current password", {
-        user_id: id,
+      const user = await getUserByID(db, id);
+      if (!user) {
+        userNotFound(res);
+        return;
+      }
+      if (!(await checkPassword(user.password_hash, body.current_password))) {
+        rlog.warn(req, "change password: wrong current password", {
+          user_id: id,
+        });
+        fieldError(
+          res,
+          "current_password",
+          "VALIDATION_ERROR",
+          "Your current password is incorrect",
+        );
+        return;
+      }
+      if (passwordTooLong(body.new_password)) {
+        fieldError(res, "new_password", "TOO_LONG", "Password is too long");
+        return;
+      }
+      const hash = await hashPassword(body.new_password);
+
+      // The session of the refresh cookie (its family id), or null, which
+      // no session has, when there is none: then every session is signed
+      // out, this one at its next refresh.
+      const keepId = refreshFamily(refreshCookie(req), cfg);
+      await withTx(db, async (tx) => {
+        await updateUserPassword(tx, { id, password_hash: hash });
+        await revokeOtherUserSessions(tx, { user_id: id, keep_id: keepId });
       });
-      fieldError(
-        res,
-        "current_password",
-        "VALIDATION_ERROR",
-        "Your current password is incorrect",
-      );
-      return;
-    }
-    if (passwordTooLong(body.new_password)) {
-      fieldError(res, "new_password", "TOO_LONG", "Password is too long");
-      return;
-    }
-    const hash = await hashPassword(body.new_password);
 
-    // The session of the refresh cookie (its family id), or null, which
-    // no session has, when there is none: then every session is signed
-    // out, this one at its next refresh.
-    const keepId = refreshFamily(refreshCookie(req), cfg);
-    await withTx(db, async (tx) => {
-      await updateUserPassword(tx, { id, password_hash: hash });
-      await revokeOtherUserSessions(tx, { user_id: id, keep_id: keepId });
-    });
-
-    rlog.info(req, "password changed", { user_id: id });
-    ok(res, 200, "Password changed. Your other devices are signed out.");
-  });
+      rlog.info(req, "password changed", { user_id: id });
+      ok(res, 200, "Password changed. Your other devices are signed out.");
+    },
+  );
 
   // ForgotPassword emails a link to choose a new password. It answers the
   // same 202 whether or not the email has an account, and does the work
   // after answering, so neither the reply nor its timing tells which emails
   // are registered. An account gets at most one email a minute.
-  auth.post("/password/forgot", (req, res) => {
+  auth.post("/password/forgot", limits.forgotPassword, (req, res) => {
     const body = parseBody(ForgotPasswordBody, req, res);
     if (!body) return;
     if (!mailer || !cfg.frontendUrl) {
@@ -586,7 +594,7 @@ export function authRoutes(api: Group, deps: Deps) {
   // ResetPassword sets a new password from an emailed link. The link works
   // once; the change signs the account out everywhere, all in one
   // transaction, so a stolen session can't outlive it.
-  auth.post("/password/reset", async (req, res) => {
+  auth.post("/password/reset", limits.resetPassword, async (req, res) => {
     const body = parseBody(ResetPasswordBody, req, res);
     if (!body) return;
 

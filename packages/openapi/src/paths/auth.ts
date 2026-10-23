@@ -21,6 +21,7 @@ export function registerAuthPaths() {
       schema: schemas.UserResponseSchema,
     },
     errors: {
+      429: "Too many sign-ups from this address (TOO_MANY_REQUESTS); see Retry-After",
       400: "Invalid body (VALIDATION_FAILED)",
       409: "Email already registered (USER_ALREADY_EXISTS)",
     },
@@ -40,6 +41,7 @@ export function registerAuthPaths() {
       schema: schemas.UserResponseSchema,
     },
     errors: {
+      429: "Too many failed attempts for this account or address (TOO_MANY_REQUESTS); see Retry-After",
       400: "Invalid body (VALIDATION_FAILED)",
       401: "Unknown email or wrong password (INVALID_CREDENTIALS)",
     },
@@ -103,6 +105,7 @@ export function registerAuthPaths() {
       schema: schemas.MessageResponseSchema,
     },
     errors: {
+      429: "Too many requests from this address (TOO_MANY_REQUESTS); see Retry-After",
       400: "Invalid body (VALIDATION_FAILED)",
       503: "Mail isn't configured on this server (MAIL_UNAVAILABLE)",
     },
@@ -123,6 +126,7 @@ export function registerAuthPaths() {
       schema: schemas.MessageResponseSchema,
     },
     errors: {
+      429: "Too many failed attempts from this address (TOO_MANY_REQUESTS); see Retry-After",
       400: "Invalid body (VALIDATION_FAILED), or an unknown, used or expired link (INVALID_RESET_TOKEN)",
     },
   });
@@ -216,6 +220,7 @@ export function registerAuthPaths() {
       schema: schemas.MessageResponseSchema,
     },
     errors: {
+      429: "Too many wrong current passwords (TOO_MANY_REQUESTS); see Retry-After",
       400: "Invalid body, or a wrong current password (VALIDATION_FAILED)",
       404: "The user no longer exists (USER_NOT_FOUND)",
     },

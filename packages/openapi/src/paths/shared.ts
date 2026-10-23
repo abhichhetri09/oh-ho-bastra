@@ -31,7 +31,9 @@ type Operation = {
         description: string;
       };
   /** Endpoint-specific errors; auth and 500 errors are added from `auth`. */
-  errors?: Partial<Record<400 | 401 | 403 | 404 | 409 | 502 | 503, string>>;
+  errors?: Partial<
+    Record<400 | 401 | 403 | 404 | 409 | 429 | 502 | 503, string>
+  >;
 };
 
 const json = (schema: ZodType, description: string) => ({
