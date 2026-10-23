@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { useFocusFirstError } from "@/hooks/use-focus-first-error";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
 import { safeNextPath } from "@/lib/auth/redirect";
+import { GoogleButton } from "./google-button";
 
 type AuthFormProps =
   | {
@@ -245,6 +246,13 @@ export function AuthForm(props: AuthFormProps) {
               ? "Create account"
               : "Sign in"}
         </Button>
+
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          or
+          <span className="h-px flex-1 bg-border" />
+        </div>
+        <GoogleButton next={next} />
       </FieldGroup>
 
       <p className="mt-8 border-t border-border pt-6 text-sm text-muted-foreground">

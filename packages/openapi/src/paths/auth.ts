@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { schemas } from "../schemas.ts";
 import { body, operation } from "./shared.ts";
 
@@ -41,6 +42,49 @@ export function registerAuthPaths() {
     errors: {
       400: "Invalid body (VALIDATION_FAILED)",
       401: "Unknown email or wrong password (INVALID_CREDENTIALS)",
+    },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/auth/google",
+    operationId: "googleSignIn",
+    tag,
+    summary: "Sign in with Google",
+    description:
+      "For the browser to navigate to, not to fetch: redirects to Google's account picker (OpenID Connect with PKCE), keeping its state in a 10-minute `google_oauth` cookie. When Google sign-in isn't configured, redirects to the login page with `?google_error=unavailable`.",
+    request: {
+      query: z.object({
+        next: z.string().optional().openapi({
+          description:
+            "A storefront path to return to after signing in; anything else is ignored",
+          example: "/checkout",
+        }),
+      }),
+    },
+    success: { status: 302, description: "Off to Google" },
+    errors: {
+      503: "Google sign-in and FRONTEND_URL aren't configured (GOOGLE_UNAVAILABLE)",
+    },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/auth/google/callback",
+    operationId: "googleCallback",
+    tag,
+    summary: "Google sign-in callback",
+    description: `Where Google sends the browser back. Checks the state against the \`google_oauth\` cookie, trades the code for the Google profile and signs in the customer linked to that Google account, creating one for a new email. ${sessionCookies} Then redirects to \`?next=\` from the start (else the home page, or /admin for an admin). Any failure redirects to the login page with \`?google_error=\` set to \`cancelled\`, \`failed\`, \`unverified\` (the Google email isn't verified) or \`exists\` (a password account already uses the email).`,
+    request: {
+      query: z.object({
+        code: z.string().optional(),
+        state: z.string().optional(),
+        error: z.string().optional(),
+      }),
+    },
+    success: { status: 302, description: "Back to the storefront" },
+    errors: {
+      503: "Google sign-in isn't configured (GOOGLE_UNAVAILABLE)",
     },
   });
 

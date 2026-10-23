@@ -98,6 +98,7 @@
           "INVALID_ACCESS_TOKEN",
           "INVALID_RESET_TOKEN",
           "MAIL_UNAVAILABLE",
+          "GOOGLE_UNAVAILABLE",
           "PRODUCT_NOT_FOUND",
           "INVALID_PRODUCT_ID",
           "VARIANT_NOT_FOUND",
@@ -4984,6 +4985,131 @@
           },
           "500": {
             "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/google": {
+      "get": {
+        "operationId": "googleSignIn",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Sign in with Google",
+        "description": "For the browser to navigate to, not to fetch: redirects to Google's account picker (OpenID Connect with PKCE), keeping its state in a 10-minute `google_oauth` cookie. When Google sign-in isn't configured, redirects to the login page with `?google_error=unavailable`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "A storefront path to return to after signing in; anything else is ignored",
+              "example": "/checkout"
+            },
+            "required": false,
+            "description": "A storefront path to return to after signing in; anything else is ignored",
+            "name": "next",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Off to Google",
+            "headers": {
+              "Location": {
+                "description": "Where the browser goes next",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Google sign-in and FRONTEND_URL aren't configured (GOOGLE_UNAVAILABLE)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/google/callback": {
+      "get": {
+        "operationId": "googleCallback",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Google sign-in callback",
+        "description": "Where Google sends the browser back. Checks the state against the `google_oauth` cookie, trades the code for the Google profile and signs in the customer linked to that Google account, creating one for a new email. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. Then redirects to `?next=` from the start (else the home page, or /admin for an admin). Any failure redirects to the login page with `?google_error=` set to `cancelled`, `failed`, `unverified` (the Google email isn't verified) or `exists` (a password account already uses the email).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "code",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "state",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "error",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Back to the storefront",
+            "headers": {
+              "Location": {
+                "description": "Where the browser goes next",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Google sign-in isn't configured (GOOGLE_UNAVAILABLE)",
             "content": {
               "application/json": {
                 "schema": {

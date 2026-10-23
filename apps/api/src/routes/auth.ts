@@ -2,6 +2,16 @@ import { createHash, randomBytes } from "node:crypto";
 import type { Request, Response } from "express";
 import type { ErrorCode, ValidationCode } from "@repo/types";
 import {
+  displayName,
+  exchangeGoogleCode,
+  GOOGLE_STATE_COOKIE,
+  readGoogleState,
+  safeNextPath,
+  startGoogleSignIn,
+  stateCookieOptions,
+  type GoogleProfile,
+} from "../auth/google";
+import {
   checkPassword,
   dummyHash,
   hashPassword,
@@ -33,13 +43,15 @@ import {
   newTokens,
   parseRefresh,
 } from "../auth/tokens";
-import type { Config } from "../config";
+import { googleEnabled, type Config } from "../config";
 import {
   consumePasswordReset,
+  createGoogleUser,
   createPasswordReset,
   createUser,
   getActiveSessionByID,
   getUserByEmail,
+  getUserByGoogleID,
   getUserByID,
   revokeAllUserSessions,
   revokeOtherUserSessions,
@@ -159,6 +171,128 @@ export function authRoutes(api: Group, deps: Deps) {
     rlog.info(req, "user logged in", { user_id: user.id });
     ok(res, 200, "Logged in successfully", publicUser(user));
   });
+
+  // Google sends the browser to Google to pick an account. Every outcome
+  // ends on the storefront: the page to return to (?next=) when signed in,
+  // else the login page with ?google_error=.
+  auth.get("/google", (req, res) => {
+    const next = safeNextPath(req.query.next);
+    if (!googleEnabled(cfg)) {
+      rlog.warn(req, "google sign-in asked for, but it is not set up");
+      if (cfg.frontendUrl) {
+        res.redirect(302, googleErrorUrl(cfg, "unavailable", next));
+        return;
+      }
+      fail(
+        res,
+        503,
+        "GOOGLE_UNAVAILABLE",
+        "Sign in with Google isn't available right now",
+      );
+      return;
+    }
+    const { cookie, url } = startGoogleSignIn(cfg, next);
+    res.cookie(GOOGLE_STATE_COOKIE, cookie, stateCookieOptions(cfg));
+    res.redirect(302, url);
+  });
+
+  // GoogleCallback is where Google sends the browser back. The state must
+  // match the cookie set above (so another site can't sign someone in to
+  // its own account); the code is traded for the Google profile, which
+  // finds the user by Google account, then by verified email (linking the
+  // two), else creates a customer.
+  auth.get("/google/callback", async (req, res) => {
+    const st = readGoogleState(cfg, req.cookies?.[GOOGLE_STATE_COOKIE]);
+    const { maxAge: _, ...clearOpts } = stateCookieOptions(cfg);
+    res.clearCookie(GOOGLE_STATE_COOKIE, clearOpts);
+    const next = st?.next ?? null;
+
+    if (!googleEnabled(cfg)) {
+      fail(
+        res,
+        503,
+        "GOOGLE_UNAVAILABLE",
+        "Sign in with Google isn't available right now",
+      );
+      return;
+    }
+    if (typeof req.query.error === "string") {
+      // access_denied: the shopper backed out on Google's page.
+      rlog.info(req, "google sign-in not completed", {
+        error: req.query.error,
+      });
+      res.redirect(
+        302,
+        googleErrorUrl(
+          cfg,
+          req.query.error === "access_denied" ? "cancelled" : "failed",
+          next,
+        ),
+      );
+      return;
+    }
+    const code = req.query.code;
+    if (!st || typeof code !== "string" || req.query.state !== st.state) {
+      rlog.warn(req, "google callback with a missing or wrong state");
+      res.redirect(302, googleErrorUrl(cfg, "failed", next));
+      return;
+    }
+
+    let profile: GoogleProfile;
+    try {
+      profile = await exchangeGoogleCode(cfg, code, st);
+    } catch (err) {
+      rlog.error(req, "google code exchange failed", err);
+      res.redirect(302, googleErrorUrl(cfg, "failed", next));
+      return;
+    }
+    if (!profile.emailVerified) {
+      rlog.warn(req, "google account email is not verified");
+      res.redirect(302, googleErrorUrl(cfg, "unverified", next));
+      return;
+    }
+
+    const user = await googleUser(profile);
+    if (!user) {
+      // Emails aren't verified at registration, so linking would hand
+      // whoever registered the address first a way into this account.
+      rlog.warn(req, "google email already has a password account");
+      res.redirect(302, googleErrorUrl(cfg, "exists", next));
+      return;
+    }
+
+    await issueSession(db, req, res, cfg, user);
+    rlog.info(req, "user signed in with google", { user_id: user.id });
+    res.redirect(
+      302,
+      `${cfg.frontendUrl}${next ?? (user.role === "admin" ? "/admin" : "/")}`,
+    );
+  });
+
+  /**
+   * The user of a Google account: the one already linked to it, else a new
+   * customer. Null when another account already uses the email.
+   */
+  async function googleUser(profile: GoogleProfile): Promise<User | null> {
+    const linked = await getUserByGoogleID(db, profile.sub);
+    if (linked) return linked;
+
+    const email = normalizeEmail(profile.email);
+    if (await getUserByEmail(db, email)) return null;
+    try {
+      return await createGoogleUser(db, {
+        name: displayName(profile),
+        email,
+        google_id: profile.sub,
+      });
+    } catch (err) {
+      // Two callbacks for one new account at once: the other one won.
+      if (pgCode(err) === UNIQUE_VIOLATION) {
+        return getUserByGoogleID(db, profile.sub);
+      }
+      throw err;
+    }
+  }
 
   // Logout always succeeds: cookies are cleared first, then the session is
   // revoked best-effort so a later refresh with a copied token fails.
@@ -553,6 +687,17 @@ export function newResetToken(): { token: string; hash: string } {
 
 export const hashResetToken = (token: string) =>
   createHash("sha256").update(token).digest("hex");
+
+/** The login page with a Google error the page explains. */
+function googleErrorUrl(
+  cfg: Config,
+  error: "unavailable" | "cancelled" | "failed" | "unverified" | "exists",
+  next: string | null,
+): string {
+  const q = new URLSearchParams({ google_error: error });
+  if (next) q.set("next", next);
+  return `${cfg.frontendUrl}/auth/login?${q.toString()}`;
+}
 
 /** The refresh cookie, or "" when there is none. */
 function refreshCookie(req: Request): string {

@@ -28,6 +28,7 @@ export const ErrorCodeSchema = z
     "INVALID_ACCESS_TOKEN",
     "INVALID_RESET_TOKEN",
     "MAIL_UNAVAILABLE",
+    "GOOGLE_UNAVAILABLE",
     // product
     "PRODUCT_NOT_FOUND",
     "INVALID_PRODUCT_ID",

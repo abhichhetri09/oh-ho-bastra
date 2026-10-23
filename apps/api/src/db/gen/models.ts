@@ -9,6 +9,7 @@ export interface User {
   image_url: string | null;
   created_at: Date;
   updated_at: Date;
+  google_id: string | null;
 }
 
 export interface Session {

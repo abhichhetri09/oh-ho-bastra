@@ -19,3 +19,12 @@ UPDATE users SET password_hash = $2 WHERE id = $1;
 -- name: UpdateUserName :one
 UPDATE users SET name = $2 WHERE id = $1
 RETURNING *;
+
+-- name: GetUserByGoogleID :one
+SELECT * FROM users WHERE google_id = $1;
+
+-- name: CreateGoogleUser :one
+INSERT INTO users (name, email, password_hash, role, google_id)
+VALUES ($1, $2, '', 'customer', $3)
+RETURNING *;
+

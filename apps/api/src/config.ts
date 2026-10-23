@@ -35,6 +35,11 @@ export interface Config {
   smtpPassword: string;
   smtpTls: string;
   mailFrom: string;
+  // Sign in with Google; off unless all three are set.
+  googleClientId: string;
+  googleClientSecret: string;
+  /** The API's callback, exactly as registered with Google. */
+  googleRedirectUri: string;
   /** All durations in milliseconds. */
   accessTokenTtl: number;
   refreshTokenTtl: number;
@@ -97,6 +102,9 @@ export function loadConfig(): Config {
     smtpPassword: process.env.SMTP_PASSWORD ?? "",
     smtpTls: env("SMTP_TLS").toLowerCase() || "starttls",
     mailFrom: env("MAIL_FROM"),
+    googleClientId: env("GOOGLE_CLIENT_ID"),
+    googleClientSecret: env("GOOGLE_CLIENT_SECRET"),
+    googleRedirectUri: env("GOOGLE_REDIRECT_URI"),
     accessTokenTtl: 15 * MINUTE,
     refreshTokenTtl: 30 * DAY,
     refreshReuseWindow: 30_000,
@@ -126,6 +134,14 @@ export function validateAuth(cfg: Config): void {
     );
   }
 }
+
+export const googleEnabled = (cfg: Config) =>
+  Boolean(
+    cfg.googleClientId &&
+    cfg.googleClientSecret &&
+    cfg.googleRedirectUri &&
+    cfg.frontendUrl,
+  );
 
 export const mailEnabled = (cfg: Config) => cfg.smtpHost !== "";
 

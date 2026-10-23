@@ -107,6 +107,7 @@ flowchart LR
 ```
 
 - **sessions**: login sets two http-only cookies, a 15-minute access jwt and a refresh token tied to a row in `sessions`. refresh rotates the token with a compare-and-swap; a request that lost a concurrent refresh gets a 30-second grace window instead of a logout. sessions slide for 30 days and end after 90 at most. logout revokes the row, and a background job deletes expired sessions hourly.
+- **google**: "continue with google" sends the browser to `GET /auth/google`, which redirects to google (openid connect with pkce, the state in a 10-minute cookie). google comes back to `/auth/google/callback`, the api trades the code for the profile, and signs in the user linked to that google account, or creates a customer for a new email. a password account with the same email isn't linked, since registration doesn't verify emails; that person signs in with their password. a google-only account has no password until it sets one through "forgot password".
 - **roles**: `customer` and `admin`, checked by `RequireAuth` / `RequireRole` middleware. the web's `proxy.ts` guards `/account`, `/cart`, `/checkout` and `/admin` and refreshes an expired access token before the page renders; in the browser, an axios interceptor queues requests while one refresh runs.
 - **responses**: every response is `{ success, message?, code?, data?, meta?, errors? }`: `meta` carries pagination, `errors` carries per-field validation errors, and `code` is a stable error code (`INSUFFICIENT_STOCK`, `INVALID_ORDER_TRANSITION`…) from one zod enum in `packages/types`, shared by the api and the web.
 
@@ -210,6 +211,28 @@ bun run dev          # api + web through turbo
 
 the success and cancel pages are built from `FRONTEND_URL`. in production, create a dashboard webhook endpoint for `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded` and `checkout.session.async_payment_failed`, and put its secret in `STRIPE_WEBHOOK_SECRET`.
 
+### google sign-in
+
+optional: without it the button explains that google sign-in isn't available.
+
+1. in [google cloud console](https://console.cloud.google.com), create (or pick) a project.
+2. **google auth platform → branding**: set the app name, a support email and your developer email. for production, add your domain under **authorized domains**.
+3. **audience**: user type **external**. while the app is in **testing**, only the test users you add can sign in; **publish app** to open it to everyone (the `openid`, `email` and `profile` scopes need no google review).
+4. **clients → create client**: type **web application**.
+   - authorized javascript origins: `http://localhost:3000` (and your storefront's https url in production)
+   - authorized redirect uris: `http://localhost:5000/api/v1/auth/google/callback` (in production, `https://<api host>/api/v1/auth/google/callback`)
+5. copy the client id and secret into `.env.local`:
+
+   ```sh
+   GOOGLE_CLIENT_ID=….apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=GOCSPX-…
+   GOOGLE_REDIRECT_URI=http://localhost:5000/api/v1/auth/google/callback
+   ```
+
+6. restart the api (`bun run docker:dev:down && bun run docker:dev:up`; migration `000027_google_sign_in` runs on start) and use **continue with google** on `/auth/login`.
+
+`GOOGLE_REDIRECT_URI` must match the one in the console exactly, including `http`/`https` and no trailing slash, or google answers `redirect_uri_mismatch`.
+
 ### cloudinary
 
 the admin uploads images straight from the browser with a signature from `POST /admin/uploads/signature`, into the `ohhobastra/products` folder on your cloud. the api only accepts image urls from that folder, and deleting a product deletes its images unless a past order still shows them. `db:seed:catalog` uploads its photos the same way, so it needs cloudinary set up.
@@ -281,7 +304,7 @@ the api migrates with its own command (`src/cli/migrate.ts`, built to `dist/migr
 
 migrating in the start command works without a pre-deploy step (render's free plan has none). if a migration fails, the server never starts and the previous deploy keeps serving. several instances starting at once are fine: postgres advisory locks let one migrate while the others wait.
 
-env: `NODE_ENV=production`, `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, the `CLOUDINARY_*` keys, `FRONTEND_URL` (the storefront's https url), `COOKIE_DOMAIN`, `TRUSTED_PROXIES`, `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, and for emails `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `MAIL_FROM` (see [emails](#emails)). `COOKIE_DOMAIN` and the `Secure` flag only apply in production.
+env: `NODE_ENV=production`, `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, the `CLOUDINARY_*` keys, `FRONTEND_URL` (the storefront's https url), `COOKIE_DOMAIN`, `TRUSTED_PROXIES`, `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_REDIRECT_URI` (see [google sign-in](#google-sign-in)), and for emails `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `MAIL_FROM` (see [emails](#emails)). `COOKIE_DOMAIN` and the `Secure` flag only apply in production.
 
 if order emails time out on render, its free instances may be blocking the standard smtp ports: resend also accepts `SMTP_PORT=2587` with `SMTP_TLS=starttls`.
 

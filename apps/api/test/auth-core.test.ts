@@ -52,6 +52,7 @@ const testUser = (): User => ({
   image_url: null,
   created_at: new Date(),
   updated_at: new Date(),
+  google_id: null,
 });
 
 describe("decide", () => {

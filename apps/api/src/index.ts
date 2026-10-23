@@ -1,6 +1,7 @@
 import { buildApp } from "./app";
 import { CheckoutService } from "./checkout/service";
 import {
+  googleEnabled,
   loadConfig,
   loadEnvFile,
   mailEnabled,
@@ -44,6 +45,11 @@ async function main() {
   else if (!cfg.frontendUrl)
     log.warn(
       "order emails: FRONTEND_URL is not set, so their order links won't work",
+    );
+
+  if (!googleEnabled(cfg))
+    log.warn(
+      "google sign-in disabled: set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI and FRONTEND_URL",
     );
 
   const deps: Deps = {

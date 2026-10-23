@@ -3,7 +3,7 @@
 import type { Queryable } from "../queryable";
 import type { User } from "./models";
 
-export const createUserSql = "INSERT INTO users (name, email, password_hash, role, image_url)\nVALUES ($1, $2, $3, $4, $5)\nRETURNING id, name, email, password_hash, role, image_url, created_at, updated_at";
+export const createUserSql = "INSERT INTO users (name, email, password_hash, role, image_url)\nVALUES ($1, $2, $3, $4, $5)\nRETURNING id, name, email, password_hash, role, image_url, created_at, updated_at, google_id";
 
 export interface CreateUserParams {
   name: string;
@@ -18,21 +18,21 @@ export async function createUser(db: Queryable, p: CreateUserParams): Promise<Us
   return (rows[0] as User | undefined) ?? null;
 }
 
-export const getUserByEmailSql = "SELECT id, name, email, password_hash, role, image_url, created_at, updated_at FROM users WHERE email = $1";
+export const getUserByEmailSql = "SELECT id, name, email, password_hash, role, image_url, created_at, updated_at, google_id FROM users WHERE email = $1";
 
 export async function getUserByEmail(db: Queryable, email: string): Promise<User | null> {
   const { rows } = await db.query(getUserByEmailSql, [email]);
   return (rows[0] as User | undefined) ?? null;
 }
 
-export const getUserByIDSql = "SELECT id, name, email, password_hash, role, image_url, created_at, updated_at FROM users WHERE id = $1";
+export const getUserByIDSql = "SELECT id, name, email, password_hash, role, image_url, created_at, updated_at, google_id FROM users WHERE id = $1";
 
 export async function getUserByID(db: Queryable, id: string): Promise<User | null> {
   const { rows } = await db.query(getUserByIDSql, [id]);
   return (rows[0] as User | undefined) ?? null;
 }
 
-export const updateUserImageSql = "UPDATE users SET image_url = $2 WHERE id = $1\nRETURNING id, name, email, password_hash, role, image_url, created_at, updated_at";
+export const updateUserImageSql = "UPDATE users SET image_url = $2 WHERE id = $1\nRETURNING id, name, email, password_hash, role, image_url, created_at, updated_at, google_id";
 
 export interface UpdateUserImageParams {
   id: string;
@@ -55,7 +55,7 @@ export async function updateUserPassword(db: Queryable, p: UpdateUserPasswordPar
   await db.query(updateUserPasswordSql, [p["id"], p["password_hash"]]);
 }
 
-export const updateUserNameSql = "UPDATE users SET name = $2 WHERE id = $1\nRETURNING id, name, email, password_hash, role, image_url, created_at, updated_at";
+export const updateUserNameSql = "UPDATE users SET name = $2 WHERE id = $1\nRETURNING id, name, email, password_hash, role, image_url, created_at, updated_at, google_id";
 
 export interface UpdateUserNameParams {
   id: string;
@@ -64,5 +64,25 @@ export interface UpdateUserNameParams {
 
 export async function updateUserName(db: Queryable, p: UpdateUserNameParams): Promise<User | null> {
   const { rows } = await db.query(updateUserNameSql, [p["id"], p["name"]]);
+  return (rows[0] as User | undefined) ?? null;
+}
+
+export const getUserByGoogleIDSql = "SELECT id, name, email, password_hash, role, image_url, created_at, updated_at, google_id FROM users WHERE google_id = $1";
+
+export async function getUserByGoogleID(db: Queryable, google_id: string | null): Promise<User | null> {
+  const { rows } = await db.query(getUserByGoogleIDSql, [google_id]);
+  return (rows[0] as User | undefined) ?? null;
+}
+
+export const createGoogleUserSql = "INSERT INTO users (name, email, password_hash, role, google_id)\nVALUES ($1, $2, '', 'customer', $3)\nRETURNING id, name, email, password_hash, role, image_url, created_at, updated_at, google_id";
+
+export interface CreateGoogleUserParams {
+  name: string;
+  email: string;
+  google_id: string | null;
+}
+
+export async function createGoogleUser(db: Queryable, p: CreateGoogleUserParams): Promise<User | null> {
+  const { rows } = await db.query(createGoogleUserSql, [p["name"], p["email"], p["google_id"]]);
   return (rows[0] as User | undefined) ?? null;
 }
