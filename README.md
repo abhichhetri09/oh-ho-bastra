@@ -328,9 +328,3 @@ if order emails time out on render, its free instances may be blocking the stand
 - emails beyond orders and password reset (for example verifying the address)
 - finnish payment methods (paytrail, mobilepay): checkout is stripe only
 - redis or a job queue (expired checkouts, old sessions and the email outbox are handled by loops inside the api process)
-
-## credits
-
-- built on [cartspace](https://github.com/SuprimKhatri77/cartspace) by suprim khatri
-- product and editorial photos from [unsplash](https://unsplash.com), under the unsplash license; photographers are listed in `scripts/catalog-images/CREDITS.md` and `apps/web/public/editorial/CREDITS.md`
-- the screenshots show demo data: the seeded catalog, with made-up customers and orders
