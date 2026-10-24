@@ -1,0 +1,132 @@
+# Production stack: caddy (https) -> web + api -> postgres.
+#
+#   cp .env.example .env.production   # then fill it in (see the README's deploy section)
+#   bun run docker:prod:up
+#
+# Only caddy publishes ports. It gets certificates from Let's Encrypt for
+# SITE_DOMAIN and API_DOMAIN, so both must point at this host before the
+# first start. The api sits on a subdomain of the storefront so the auth
+# cookies (COOKIE_DOMAIN) reach both.
+name: ohhobastra-prod
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging: *logging
+
+services:
+  caddy:
+    <<: *hardening
+    image: caddy:2.10-alpine
+    container_name: ohhobastra-caddy
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN, e.g. shop.example.com}
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN, e.g. api.shop.example.com}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL for Let's Encrypt notices}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+
+  api:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+    image: ohhobastra-api:latest
+    container_name: ohhobastra-api
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      # Caddy is the one proxy hop in front of the api.
+      TRUSTED_PROXIES: "1"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    networks:
+      - edge
+      - backend
+
+  web:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?set NEXT_PUBLIC_API_URL to https://API_DOMAIN}
+        FRONTEND_URL: ${FRONTEND_URL:?set FRONTEND_URL to https://SITE_DOMAIN}
+    image: ohhobastra-web:latest
+    container_name: ohhobastra-web
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      # Server-side requests skip caddy and go straight to the api container.
+      INTERNAL_API_URL: http://api:5000
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    networks:
+      - edge
+
+  db:
+    <<: *hardening
+    image: postgres:17-alpine
+    container_name: ohhobastra-db
+    # No published port: only the api reaches it, over the backend network.
+    # For a psql shell: docker exec -it ohhobastra-db psql -U <user> <db>
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    shm_size: 128m
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+
+networks:
+  # caddy, web and api
+  edge:
+  # api and postgres; nothing on it can reach the internet
+  backend:
+    internal: true
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

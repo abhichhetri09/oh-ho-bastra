@@ -294,6 +294,17 @@ a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`:
 
 the api migrates with its own command (`src/cli/migrate.ts`, built to `dist/migrate.js`). it runs everywhere the same way: the dev container's start, `bun run db:migrate`, and the deploy's start command. `migrate up` applies what's pending; `down N`, `version` and `force V` (after fixing a migration that failed halfway) cover the rest. new migration files are plain sql (`NNNNNN_name.up.sql` / `.down.sql`). versions are kept in `schema_migrations` the way golang-migrate kept them, so databases set up by the old go api carry on where they were.
 
+**self-hosted with docker compose**: `docker-compose.prod.yml` runs the whole stack on one server: caddy (https from let's encrypt), the web and api production images (`apps/*/Dockerfile`), and postgres on an internal network with no published port.
+
+```bash
+cp .env.example .env.production               # fill it in: see the "self-hosted production" block at the end
+bun run docker:prod:up                        # build and start in the background
+docker exec ohhobastra-api node dist/seed.js  # once: the seed admin + customer
+bun run docker:prod:logs                      # follow the logs
+```
+
+point `SITE_DOMAIN` and `API_DOMAIN` at the server before the first start. the api migrates on start, as on render. `NEXT_PUBLIC_API_URL` is baked into the web image, so changing it means rebuilding (`docker:prod:up` always does). back up the `pgdata` volume, e.g. `docker exec ohhobastra-db pg_dump -U <user> <db> > backup.sql`.
+
 **api on render** (node web service):
 
 | setting        | value                                                                                     |

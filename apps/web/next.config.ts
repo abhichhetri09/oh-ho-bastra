@@ -1,13 +1,23 @@
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
 // Set by the dev container (docker-compose.dev.yml): a soft memory target
 // for Turbopack, in MB. Unset everywhere else.
 const turbopackMemoryMb = Number(process.env.TURBOPACK_MEMORY_LIMIT_MB);
 
+// Set by the production image (apps/web/Dockerfile): a self-contained
+// server in .next/standalone, traced from the repo root so the workspace
+// packages are included. Unset on Vercel, which does its own bundling.
+const standalone = process.env.NEXT_OUTPUT === "standalone";
+
 const nextConfig: NextConfig = {
   // The dev container builds into its own directory: its volume mountpoint
   // is created by Docker as root, which would block host builds of .next.
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  ...(standalone && {
+    output: "standalone",
+    outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
+  }),
   images: {
     // Product images are Cloudinary uploads, resized and converted by
     // Cloudinary itself (lib/image-loader.ts), so Next's optimizer is unused.

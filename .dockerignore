@@ -1,10 +1,11 @@
 apps/web/.next/
-apps/web/node_modules/
+apps/web/.next-docker/
 apps/api/tmp/
 apps/api/dist/
-apps/api/node_modules/
 apps/api/.sqlc/
-node_modules/
+apps/api/coverage/
+**/node_modules/
+**/.turbo/
 .git/
 **/.env*
 **/README.md

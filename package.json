@@ -20,6 +20,9 @@
     "docker:dev:up": "docker compose --env-file .env.local -f docker-compose.dev.yml up --build",
     "docker:dev:down": "docker compose --env-file .env.local -f docker-compose.dev.yml down",
     "docker:dev:reset": "docker compose --env-file .env.local -f docker-compose.dev.yml down -v && bun run docker:dev:up",
+    "docker:prod:up": "docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build",
+    "docker:prod:down": "docker compose --env-file .env.production -f docker-compose.prod.yml down",
+    "docker:prod:logs": "docker compose --env-file .env.production -f docker-compose.prod.yml logs -f",
     "prepush": "bun run check-types && bun run test:api && bun run test:web && bun run build",
     "ci": "bun run generate:check && bun run db:sqlc:check && bun run check-types && bun run lint && bun run test:api && bun run test:web && bun run build",
     "prepare": "husky"
