@@ -28,3 +28,6 @@ INSERT INTO users (name, email, password_hash, role, google_id)
 VALUES ($1, $2, '', 'customer', $3)
 RETURNING *;
 
+
+-- name: ListAdminEmails :many
+SELECT email FROM users WHERE role = 'admin' ORDER BY created_at;

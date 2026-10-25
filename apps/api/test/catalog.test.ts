@@ -823,7 +823,7 @@ describe("GET /settings", () => {
         theme: "editorial",
         announcements: [
           "Free shipping on orders over €60",
-          "30-day returns, no questions asked",
+          "30-day returns on plain tees",
           "Custom prints: send your art or a line of type",
         ],
         announcements_enabled: true,

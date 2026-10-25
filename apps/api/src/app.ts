@@ -16,6 +16,7 @@ import { authRoutes } from "./routes/auth";
 import { catalogRoutes } from "./routes/catalog";
 import { categoryRoutes } from "./routes/categories";
 import { checkoutRoutes } from "./routes/checkout";
+import { contactRoutes } from "./routes/contact";
 import { shoppingRoutes } from "./routes/shopping";
 import { systemRoutes } from "./routes/system";
 
@@ -64,6 +65,7 @@ export function buildApp(deps: Deps): App {
   adminCatalogRoutes(api, deps);
   shoppingRoutes(api, deps);
   checkoutRoutes(api, deps);
+  contactRoutes(api, deps);
   adminEmailRoutes(api, deps);
   adminRoutes(api, deps);
 

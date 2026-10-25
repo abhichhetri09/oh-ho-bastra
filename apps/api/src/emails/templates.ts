@@ -39,6 +39,16 @@ export interface ResetView {
   shopUrl: string;
 }
 
+export interface ContactView {
+  storeName: string;
+  shopUrl: string;
+  topic: string;
+  name: string;
+  email: string;
+  orderNumber: string;
+  message: string;
+}
+
 const HEAD = (title: string) => `<!doctype html>
 <html lang="en">
 <head>
@@ -216,5 +226,44 @@ If you didn't ask for this, ignore this email: your password stays as it is.
 --
 ${v.storeName}
 ${v.shopUrl}
+`;
+}
+
+/** A contact form message, to the store. Replying answers the shopper. */
+export function contactHtml(v: ContactView): string {
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:6px 16px 6px 0;color:#7a6f63;white-space:nowrap;vertical-align:top;">${h(label)}</td><td style="padding:6px 0;">${value}</td></tr>`;
+  return (
+    HEAD("New contact message") +
+    LAYOUT_TOP(
+      `${h(v.name)} wrote about ${h(v.topic.toLowerCase())}.`,
+      v.shopUrl,
+      v.storeName,
+    ) +
+    `
+<tr><td style="background:#ffffff;border:1px solid #e6e1d8;padding:32px 28px;">
+<h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',serif;font-weight:normal;font-size:28px;line-height:1.2;color:#24201c;">New message from the shop</h1>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;font-size:14px;">
+${row("From", `${h(v.name)} &lt;<a href="mailto:${h(v.email)}" style="color:#24201c;">${h(v.email)}</a>&gt;`)}
+${row("About", h(v.topic))}
+${v.orderNumber ? row("Order", h(v.orderNumber)) : ""}
+</table>
+<div style="margin:0 0 24px;padding:16px 18px;background:#faf8f4;border-left:3px solid #24201c;white-space:pre-wrap;color:#24201c;">${h(v.message)}</div>
+<p style="margin:0;font-size:13px;color:#7a6f63;">Reply to this email to answer ${h(v.name)} directly.</p>
+</td></tr>
+` +
+    LAYOUT_BOTTOM
+  );
+}
+
+export function contactText(v: ContactView): string {
+  return `New message from the shop
+
+From: ${v.name} <${v.email}>
+About: ${v.topic}
+${v.orderNumber ? `Order: ${v.orderNumber}\n` : ""}
+${v.message}
+
+Reply to this email to answer ${v.name} directly.
 `;
 }

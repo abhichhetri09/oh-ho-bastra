@@ -65,15 +65,7 @@ export function AppearanceSettings({ initial }: { initial: ThemeId }) {
   const dirty = selected !== saved;
 
   return (
-    <section className="overflow-hidden rounded-panel border border-border bg-card">
-      <header className="space-y-1 border-b border-border px-5 py-4">
-        <h2 className="text-[0.8125rem] font-medium">Appearance</h2>
-        <p className="text-xs text-muted-foreground">
-          The look of your storefront: colours, type and shapes. Choosing one
-          previews it here; save to show it to shoppers.
-        </p>
-      </header>
-
+    <div className="overflow-hidden rounded-panel border border-border bg-card">
       <RadioGroup
         value={selected}
         onValueChange={(value) => {
@@ -136,7 +128,7 @@ export function AppearanceSettings({ initial }: { initial: ThemeId }) {
           {save.isPending ? "Saving…" : "Save theme"}
         </Button>
       </footer>
-    </section>
+    </div>
   );
 }
 

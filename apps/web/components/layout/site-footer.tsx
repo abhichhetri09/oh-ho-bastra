@@ -66,11 +66,11 @@ export async function SiteFooter() {
         ))}
       </div>
 
-      <div className="container-page overflow-hidden">
-        {/* The oversized wordmark, cropped by the page edge. */}
+      <div className="container-page overflow-hidden pb-6">
+        {/* The wordmark, one line, scaled to the page width. */}
         <p
           aria-hidden
-          className="font-serif text-[clamp(5rem,22vw,22rem)] leading-[0.75] tracking-[-0.04em] text-foreground/[0.07] select-none"
+          className="font-serif text-[clamp(3rem,10vw,9rem)] leading-[0.85] tracking-[-0.03em] whitespace-nowrap text-foreground/[0.08] select-none"
         >
           {site.name}
         </p>

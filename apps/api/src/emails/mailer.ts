@@ -8,6 +8,8 @@ export interface Message {
   subject: string;
   html: string;
   text: string;
+  /** Where replies go, when not the From address (a contact form's sender). */
+  replyTo?: string;
 }
 
 /** Delivers an email; rejects on failure. */
@@ -79,6 +81,7 @@ export function createMailer(cfg: Config): Mailer | null {
           subject: m.subject,
           text: m.text,
           html: m.html,
+          replyTo: m.replyTo,
         });
       } catch (e) {
         const err = e as SmtpError;

@@ -840,6 +840,23 @@ export type AddressResponse = {
     data: Address;
 };
 
+/**
+ * A message from the storefront's contact form to the store.
+ */
+export type ContactBody = {
+    name: string;
+    email: string;
+    topic: ContactTopic;
+    order_number?: string;
+    message: string;
+    /**
+     * Leave empty. A hidden field that only bots fill in.
+     */
+    website?: string;
+};
+
+export type ContactTopic = 'order' | 'return' | 'custom' | 'other';
+
 export type WishlistResponse = {
     success: true;
     message: string;
@@ -3310,6 +3327,43 @@ export type SetDefaultAddressResponses = {
 };
 
 export type SetDefaultAddressResponse = SetDefaultAddressResponses[keyof SetDefaultAddressResponses];
+
+export type SendContactMessageData = {
+    body: ContactBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/contact';
+};
+
+export type SendContactMessageErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Too many messages from this address (TOO_MANY_REQUESTS); see Retry-After
+     */
+    429: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+    /**
+     * Mail isn't configured or the send failed (MAIL_UNAVAILABLE)
+     */
+    503: ApiError;
+};
+
+export type SendContactMessageError = SendContactMessageErrors[keyof SendContactMessageErrors];
+
+export type SendContactMessageResponses = {
+    /**
+     * The message was sent
+     */
+    202: MessageResponse;
+};
+
+export type SendContactMessageResponse = SendContactMessageResponses[keyof SendContactMessageResponses];
 
 export type ListWishlistData = {
     body?: never;

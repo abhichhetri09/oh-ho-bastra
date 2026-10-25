@@ -91,15 +91,11 @@ export function AnnouncementSettings({
     });
 
   return (
-    <section className="mt-6 overflow-hidden rounded-panel border border-border bg-card">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-5 py-4">
-        <div className="space-y-1">
-          <h2 className="text-[0.8125rem] font-medium">Announcement bar</h2>
-          <p className="text-xs text-muted-foreground">
-            The messages that scroll across the top of every shop page, in
-            order.
-          </p>
-        </div>
+    <div className="overflow-hidden rounded-panel border border-border bg-card">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-3">
+        <p className="font-mono text-[0.6875rem] tracking-[0.12em] text-muted-foreground uppercase">
+          {rows.length} of {MAX_ANNOUNCEMENTS} messages
+        </p>
         <label className="flex cursor-pointer items-center gap-3 rounded-full bg-surface py-1.5 pr-1.5 pl-3.5">
           <span className="text-xs">
             Show on the shop
@@ -245,7 +241,7 @@ export function AnnouncementSettings({
           {busy ? "Saving…" : "Save banner"}
         </Button>
       </footer>
-    </section>
+    </div>
   );
 }
 

@@ -86,3 +86,14 @@ export async function createGoogleUser(db: Queryable, p: CreateGoogleUserParams)
   const { rows } = await db.query(createGoogleUserSql, [p["name"], p["email"], p["google_id"]]);
   return (rows[0] as User | undefined) ?? null;
 }
+
+export const listAdminEmailsSql = "SELECT email FROM users WHERE role = 'admin' ORDER BY created_at";
+
+export interface ListAdminEmailsRow {
+  email: string;
+}
+
+export async function listAdminEmails(db: Queryable): Promise<ListAdminEmailsRow[]> {
+  const { rows } = await db.query(listAdminEmailsSql, []);
+  return rows as ListAdminEmailsRow[];
+}

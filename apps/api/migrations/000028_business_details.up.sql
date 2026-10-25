@@ -8,3 +8,18 @@ ALTER TABLE store_settings
     ADD COLUMN business_address TEXT NOT NULL DEFAULT '' CHECK (length(business_address) <= 300),
     ADD COLUMN business_email   TEXT NOT NULL DEFAULT '' CHECK (length(business_email) <= 254),
     ADD COLUMN business_phone   TEXT NOT NULL DEFAULT '' CHECK (length(business_phone) <= 40);
+
+-- Returns are now 30 days on plain tees only (custom prints excluded), so
+-- the old promise comes out of the banner, if an admin hasn't changed it.
+UPDATE store_settings
+SET announcements = array_replace(
+    announcements,
+    '30-day returns, no questions asked',
+    '30-day returns on plain tees'
+);
+ALTER TABLE store_settings
+    ALTER COLUMN announcements SET DEFAULT ARRAY[
+        'Free shipping on orders over €60',
+        '30-day returns on plain tees',
+        'Custom prints: send your art or a line of type'
+    ]::TEXT[];

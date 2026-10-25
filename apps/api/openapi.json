@@ -2595,6 +2595,53 @@
           "data"
         ]
       },
+      "ContactBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "topic": {
+            "$ref": "#/components/schemas/ContactTopic"
+          },
+          "order_number": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "message": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 4000
+          },
+          "website": {
+            "type": "string",
+            "description": "Leave empty. A hidden field that only bots fill in."
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "topic",
+          "message"
+        ],
+        "description": "A message from the storefront's contact form to the store."
+      },
+      "ContactTopic": {
+        "type": "string",
+        "enum": [
+          "order",
+          "return",
+          "custom",
+          "other"
+        ]
+      },
       "WishlistResponse": {
         "type": "object",
         "properties": {
@@ -8427,6 +8474,78 @@
           },
           "500": {
             "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contact": {
+      "post": {
+        "operationId": "sendContactMessage",
+        "tags": [
+          "Contact"
+        ],
+        "summary": "Send a message to the store",
+        "description": "Emails the message to the store's business email (or every admin when none is set), with Reply-To set to the sender. At most 5 messages an hour per address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The message was sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many messages from this address (TOO_MANY_REQUESTS); see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Mail isn't configured or the send failed (MAIL_UNAVAILABLE)",
             "content": {
               "application/json": {
                 "schema": {

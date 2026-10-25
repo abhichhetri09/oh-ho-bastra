@@ -122,3 +122,13 @@ export function authLimits(enabled = true): AuthLimits {
     }),
   };
 }
+
+/** Contact form messages per ip: enough for a shopper, too few for a flood. */
+export function contactLimit(enabled = true): RequestHandler {
+  if (!enabled) return (_req, _res, next) => next();
+  return limiter("contact", {
+    windowMs: 60 * MINUTE,
+    limit: 5,
+    keyGenerator: ip,
+  });
+}
