@@ -450,6 +450,17 @@ function CheckoutForm({
           You&apos;ll pay on Stripe&apos;s secure page. Items are held for you
           for 30 minutes.
         </p>
+        <p className="text-center text-xs text-muted-foreground">
+          By paying you agree to our{" "}
+          <Link href="/terms" className="link-underline text-foreground">
+            terms of sale
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="link-underline text-foreground">
+            privacy policy
+          </Link>
+          . Custom prints can&apos;t be returned.
+        </p>
       </aside>
     </form>
   );

@@ -62,6 +62,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${origin}/`, lastModified: newest, priority: 1 },
     { url: `${origin}/shop`, lastModified: newest, priority: 0.8 },
+    { url: `${origin}/contact`, priority: 0.3 },
+    { url: `${origin}/terms`, priority: 0.2 },
+    { url: `${origin}/privacy`, priority: 0.2 },
     ...stockedCategories(categories, products).map((c) => ({
       url: `${origin}/categories/${c.slug}`,
       lastModified: c.updated_at,

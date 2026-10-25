@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Request, Response } from "express";
 import {
   AnnouncementsBodySchema,
+  BusinessDetailsBodySchema,
   OrderTrackingBodySchema,
   RefundOrderBodySchema,
   ShipOrderBodySchema,
@@ -51,6 +52,7 @@ import {
   listAddresses,
   setOrderTracking,
   updateAnnouncements,
+  updateBusinessDetails,
   updateStoreTheme,
 } from "../db/gen";
 import type { Order } from "../db/gen";
@@ -572,6 +574,21 @@ export function adminRoutes(api: Group, deps: Deps) {
           announcements_enabled: body.announcements_enabled,
         }),
       ),
+    );
+  });
+
+  /**
+   * SetBusinessDetails replaces the seller's details the storefront shows
+   * in its footer, contact page and legal pages.
+   */
+  admin.put("/settings/business", async (req, res) => {
+    const body = parseBody(BusinessDetailsBodySchema, req, res);
+    if (body === null) return;
+    ok(
+      res,
+      200,
+      "Business details updated",
+      must(await updateBusinessDetails(db, body)),
     );
   });
 }

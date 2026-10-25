@@ -242,6 +242,11 @@ export interface StoreSetting {
   updated_at: Date;
   announcements: string[];
   announcements_enabled: boolean;
+  business_name: string;
+  business_id: string;
+  business_address: string;
+  business_email: string;
+  business_phone: string;
 }
 
 export interface EmailOutbox {

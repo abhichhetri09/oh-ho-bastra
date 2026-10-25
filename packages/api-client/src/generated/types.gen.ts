@@ -1003,6 +1003,26 @@ export type StoreSettings = {
      * Whether the banner shows; off keeps its messages.
      */
     announcements_enabled: boolean;
+    /**
+     * The seller's registered name; empty until an admin sets it.
+     */
+    business_name: string;
+    /**
+     * The seller's business ID (Finnish Y-tunnus).
+     */
+    business_id: string;
+    /**
+     * The seller's address, one line per line.
+     */
+    business_address: string;
+    /**
+     * Where customers can reach the seller.
+     */
+    business_email: string;
+    /**
+     * The seller's phone number; optional.
+     */
+    business_phone: string;
     updated_at: string;
 };
 
@@ -1548,6 +1568,17 @@ export type AnnouncementsBody = {
      */
     announcements_enabled: boolean;
     announcements: Array<string>;
+};
+
+/**
+ * Replaces the seller's details shown in the footer, contact page and legal pages. Empty strings clear a field.
+ */
+export type BusinessDetailsBody = {
+    business_name: string;
+    business_id: string;
+    business_address: string;
+    business_email: string;
+    business_phone: string;
 };
 
 export type GetHealthData = {
@@ -4512,3 +4543,40 @@ export type AdminSetAnnouncementsResponses = {
 };
 
 export type AdminSetAnnouncementsResponse = AdminSetAnnouncementsResponses[keyof AdminSetAnnouncementsResponses];
+
+export type AdminSetBusinessDetailsData = {
+    body: BusinessDetailsBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/settings/business';
+};
+
+export type AdminSetBusinessDetailsErrors = {
+    /**
+     * A field too long, or an invalid email (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetBusinessDetailsError = AdminSetBusinessDetailsErrors[keyof AdminSetBusinessDetailsErrors];
+
+export type AdminSetBusinessDetailsResponses = {
+    /**
+     * Business details updated
+     */
+    200: StoreSettingsResponse;
+};
+
+export type AdminSetBusinessDetailsResponse = AdminSetBusinessDetailsResponses[keyof AdminSetBusinessDetailsResponses];

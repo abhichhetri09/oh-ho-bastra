@@ -827,6 +827,11 @@ describe("GET /settings", () => {
           "Custom prints: send your art or a line of type",
         ],
         announcements_enabled: true,
+        business_name: "",
+        business_id: "",
+        business_address: "",
+        business_email: "",
+        business_phone: "",
         updated_at: expect.any(String),
       },
     });

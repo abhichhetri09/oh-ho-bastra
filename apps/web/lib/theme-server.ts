@@ -71,3 +71,25 @@ export async function currentTheme(): Promise<ThemeId> {
     pickerEnabled: themePickerEnabled(),
   });
 }
+
+/** The seller's details as Admin → Settings holds them. */
+export type BusinessDetails = Pick<
+  StoreSettings,
+  | "business_name"
+  | "business_id"
+  | "business_address"
+  | "business_email"
+  | "business_phone"
+>;
+
+/** The seller's details an admin saved; all empty when the API can't answer. */
+export async function storeBusiness(): Promise<BusinessDetails> {
+  const s = await storeSettings();
+  return {
+    business_name: s?.business_name ?? "",
+    business_id: s?.business_id ?? "",
+    business_address: s?.business_address ?? "",
+    business_email: s?.business_email ?? "",
+    business_phone: s?.business_phone ?? "",
+  };
+}

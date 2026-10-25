@@ -7,6 +7,9 @@ const IMG = "/editorial";
 
 export const site = {
   name: "Oh Ho Bastra",
+  // When the terms and privacy policy last changed (shown on both pages).
+  // The seller's details live in Admin → Settings (storeBusiness).
+  legalUpdated: "2026-10-25",
   tagline: "Tees, and the ones we print for you",
   description:
     "Heavyweight cotton t-shirts in a few good colours, plus custom prints and text when you want something that isn't on the rack.",
@@ -14,7 +17,7 @@ export const site = {
   // and its fallback while the API can't be reached.
   announcement: [
     "Free shipping on orders over €60",
-    "30-day returns, no questions asked",
+    "30-day returns on plain tees",
     "Custom prints: send your art or a line of type",
   ],
   hero: {
@@ -38,11 +41,11 @@ export const site = {
   values: [
     {
       title: "Free shipping over €60",
-      body: "Delivered in two to four working days.",
+      body: "Dispatched in two to four working days.",
     },
     {
       title: "30-day returns",
-      body: "Wrong size? Send it back, on us.",
+      body: "Wrong size? Send plain tees back within 30 days.",
     },
     {
       title: "Secure checkout",
@@ -54,7 +57,7 @@ export const site = {
     },
   ],
   shippingCopy:
-    "Free standard shipping on orders over €60; otherwise a flat €4.90. Orders ship in two to four working days. Returns are free within 30 days of delivery.",
+    "Free standard shipping on orders over €60; otherwise a flat €4.90. Orders ship in two to four working days. Plain tees can be returned within 30 days of delivery (return postage is yours); custom prints are made for you and can't be returned unless faulty.",
   authImage: `${IMG}/white-hanger.jpg`,
   authImageAlt: "A plain white tee on a wooden hanger",
 } as const;

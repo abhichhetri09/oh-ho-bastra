@@ -793,6 +793,11 @@ describe("PUT /admin/settings", () => {
       "theme",
       "announcements",
       "announcements_enabled",
+      "business_name",
+      "business_id",
+      "business_address",
+      "business_email",
+      "business_phone",
       "updated_at",
     ]);
   });
@@ -876,6 +881,11 @@ describe("PUT /admin/settings/announcements", () => {
         theme: "editorial",
         announcements: ["Autumn sale", "New tees in"],
         announcements_enabled: true,
+        business_name: "",
+        business_id: "",
+        business_address: "",
+        business_email: "",
+        business_phone: "",
         updated_at: expect.any(String),
       },
     });
@@ -988,5 +998,75 @@ describe("PUT /admin/settings/announcements", () => {
       (await put({ announcements_enabled: true, announcements: [] }, cookie))
         .status,
     ).toBe(403);
+  });
+});
+
+describe("PUT /admin/settings/business", () => {
+  beforeEach(async () => {
+    await db.query(
+      "INSERT INTO store_settings DEFAULT VALUES ON CONFLICT DO NOTHING",
+    );
+  });
+
+  const details = {
+    business_name: " Oh Ho Bastra ",
+    business_id: "1234567-8",
+    business_address: "Street 1\n00100 Helsinki\nFinland",
+    business_email: "hello@ohhobastra.fi",
+    business_phone: "",
+  };
+
+  const put = (body: unknown, cookie = admin) =>
+    http()
+      .put("/api/v1/admin/settings/business")
+      .set("Cookie", cookie)
+      .send(body as object);
+
+  it("saves the details, trimmed, and the storefront sees them", async () => {
+    const res = await put(details);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      success: true,
+      message: "Business details updated",
+      data: { ...details, business_name: "Oh Ho Bastra" },
+    });
+    const settings = await http().get("/api/v1/settings");
+    expect(settings.body.data).toMatchObject({
+      business_name: "Oh Ho Bastra",
+      business_address: "Street 1\n00100 Helsinki\nFinland",
+    });
+  });
+
+  it("clears fields with empty strings", async () => {
+    await put(details);
+    const res = await put({
+      business_name: "",
+      business_id: "",
+      business_address: "",
+      business_email: "",
+      business_phone: "",
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.business_name).toBe("");
+    expect(res.body.data.business_email).toBe("");
+  });
+
+  it("rejects an invalid email and an over-long field", async () => {
+    const bad = await put({ ...details, business_email: "not-an-email" });
+    expect(bad.status).toBe(400);
+    expect(bad.body.code).toBe("VALIDATION_FAILED");
+    expect(bad.body.errors[0].field).toBe("business_email");
+    const long = await put({ ...details, business_id: "x".repeat(41) });
+    expect(long.status).toBe(400);
+    expect(long.body.errors[0].field).toBe("business_id");
+  });
+
+  it("is for admins only", async () => {
+    const { cookie } = await signIn(db, cfg);
+    expect((await put(details, cookie)).status).toBe(403);
+    expect(
+      (await http().put("/api/v1/admin/settings/business").send(details))
+        .status,
+    ).toBe(401);
   });
 });

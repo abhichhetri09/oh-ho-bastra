@@ -462,4 +462,24 @@ export function registerAdminPaths() {
       400: "Too many messages, or an empty or too long one (VALIDATION_FAILED)",
     },
   });
+
+  operation({
+    method: "put",
+    path: "/api/v1/admin/settings/business",
+    operationId: "adminSetBusinessDetails",
+    tag: "Admin",
+    summary: "Change the business details",
+    description:
+      "Replaces the seller's name, business ID, address, email and phone, which the storefront shows in its footer, contact page and legal pages. Empty strings clear a field.",
+    auth: "admin",
+    request: body(schemas.BusinessDetailsBodySchema),
+    success: {
+      status: 200,
+      description: "Business details updated",
+      schema: schemas.StoreSettingsResponseSchema,
+    },
+    errors: {
+      400: "A field too long, or an invalid email (VALIDATION_FAILED)",
+    },
+  });
 }

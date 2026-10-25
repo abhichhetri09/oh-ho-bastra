@@ -3073,6 +3073,26 @@
             "type": "boolean",
             "description": "Whether the banner shows; off keeps its messages."
           },
+          "business_name": {
+            "type": "string",
+            "description": "The seller's registered name; empty until an admin sets it."
+          },
+          "business_id": {
+            "type": "string",
+            "description": "The seller's business ID (Finnish Y-tunnus)."
+          },
+          "business_address": {
+            "type": "string",
+            "description": "The seller's address, one line per line."
+          },
+          "business_email": {
+            "type": "string",
+            "description": "Where customers can reach the seller."
+          },
+          "business_phone": {
+            "type": "string",
+            "description": "The seller's phone number; optional."
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time"
@@ -3082,6 +3102,11 @@
           "theme",
           "announcements",
           "announcements_enabled",
+          "business_name",
+          "business_id",
+          "business_address",
+          "business_email",
+          "business_phone",
           "updated_at"
         ],
         "description": "Store-wide settings."
@@ -4837,6 +4862,39 @@
           "announcements"
         ],
         "description": "Turns the banner on or off and replaces its messages, in order. An empty list hides it too."
+      },
+      "BusinessDetailsBody": {
+        "type": "object",
+        "properties": {
+          "business_name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "business_id": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "business_address": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "business_email": {
+            "type": "string",
+            "maxLength": 254
+          },
+          "business_phone": {
+            "type": "string",
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "business_name",
+          "business_id",
+          "business_address",
+          "business_email",
+          "business_phone"
+        ],
+        "description": "Replaces the seller's details shown in the footer, contact page and legal pages. Empty strings clear a field."
       }
     },
     "parameters": {}
@@ -8955,7 +9013,7 @@
           "Settings"
         ],
         "summary": "Store settings",
-        "description": "Store-wide settings the storefront needs: its theme and the top banner's messages.",
+        "description": "Store-wide settings the storefront needs: its theme, the top banner's messages and the seller's business details.",
         "responses": {
           "200": {
             "description": "Settings fetched",
@@ -10966,6 +11024,83 @@
           },
           "400": {
             "description": "Too many messages, or an empty or too long one (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/settings/business": {
+      "put": {
+        "operationId": "adminSetBusinessDetails",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Change the business details",
+        "description": "Replaces the seller's name, business ID, address, email and phone, which the storefront shows in its footer, contact page and legal pages. Empty strings clear a field.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessDetailsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Business details updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field too long, or an invalid email (VALIDATION_FAILED)",
             "content": {
               "application/json": {
                 "schema": {
