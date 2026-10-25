@@ -7,12 +7,14 @@ import type { Group } from "../http/router";
 /**
  * The welcome and health routes, and the API docs: openapi.json and the
  * Scalar UI under /api/v1, with /docs as a shortcut. Only health is part of
- * the documented contract.
+ * the documented contract. The docs are not served in production.
  */
 export function systemRoutes(app: Express, api: Group, deps: Deps) {
   app.get("/", (_req, res) => ok(res, 200, "Welcome to the Oh Ho Bastra API"));
 
   api.get("/health", (_req, res) => ok(res, 200, "Server is up and running"));
+
+  if (deps.cfg.production) return;
 
   app.get("/api/v1/openapi.json", async (req, res) => {
     try {

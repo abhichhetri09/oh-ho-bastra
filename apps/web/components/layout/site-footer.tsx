@@ -16,7 +16,6 @@ const signedInLinks = [
 ];
 
 export async function SiteFooter() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const [roots, user] = await Promise.all([
     getCollections().catch(() => []),
     getSessionUser(),
@@ -69,18 +68,8 @@ export async function SiteFooter() {
       <div className="border-t border-border">
         <div className="container-page flex flex-wrap items-center justify-between gap-4 py-5 text-xs text-muted-foreground">
           <span>
-            © {new Date().getUTCFullYear()} {site.name}. A demo store.
+            © {new Date().getUTCFullYear()} {site.name}
           </span>
-          {apiUrl && (
-            <a
-              className="link-underline"
-              href={`${apiUrl}/api/v1/docs/`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              API docs
-            </a>
-          )}
         </div>
       </div>
     </footer>
