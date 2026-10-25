@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { HandbagIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { SignInLink } from "@/modules/auth/components/sign-in-link";
 import { useCart } from "../queries";
 import { unitCount } from "../lib/cart-math";
+import { BAG_BUMP_EVENT, BAG_TARGET } from "../lib/fly-to-bag";
 import { useBagDrawer } from "../store";
 import { CartLine } from "./cart-line";
 import { CartTotals, FreeShippingProgress } from "./cart-summary";
@@ -27,6 +29,23 @@ export function BagButton() {
   const { data: cart } = useCart();
   const setOpen = useBagDrawer((s) => s.setOpen);
   const count = unitCount(cart);
+  const icon = useRef<HTMLSpanElement>(null);
+
+  // A product landing in the bag (fly-to-bag) gives the icon a little bounce.
+  useEffect(() => {
+    const onBump = () =>
+      icon.current?.animate(
+        [
+          { transform: "scale(1)" },
+          { transform: "scale(1.3) rotate(-8deg)" },
+          { transform: "scale(0.92) rotate(4deg)" },
+          { transform: "scale(1)" },
+        ],
+        { duration: 450, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+      );
+    window.addEventListener(BAG_BUMP_EVENT, onBump);
+    return () => window.removeEventListener(BAG_BUMP_EVENT, onBump);
+  }, []);
 
   return (
     <Button
@@ -35,8 +54,11 @@ export function BagButton() {
       className="relative"
       onClick={() => setOpen(true)}
       aria-label={count > 0 ? `Bag, ${count} items` : "Bag"}
+      {...{ [BAG_TARGET]: "" }}
     >
-      <HandbagIcon weight="light" className="size-5" />
+      <span ref={icon} className="inline-flex">
+        <HandbagIcon weight="light" className="size-5" />
+      </span>
       <CountBadge count={count} />
     </Button>
   );

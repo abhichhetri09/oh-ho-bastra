@@ -6,6 +6,7 @@ import type { WishlistProduct } from "@repo/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCartMutations } from "@/modules/cart/hooks/use-cart-mutations";
+import { flyToBag } from "@/modules/cart/lib/fly-to-bag";
 import { savedPreview } from "@/modules/cart/lib/cart-math";
 
 /**
@@ -55,14 +56,16 @@ export function SavedItemAction({
       className={className}
       // In the bag at once; the toast's "View bag" opens it (and closes
       // the wishlist drawer), a refusal rolls back with its reason.
-      onClick={() =>
+      onClick={(event) => {
+        const preview = savedPreview(product);
+        flyToBag(event.currentTarget, preview.image, { fromPhoto: false });
         add.mutate({
           variant_id: product.variant_id,
           quantity: 1,
-          preview: savedPreview(product),
+          preview,
           announce: true,
-        })
-      }
+        });
+      }}
     >
       <HandbagIcon />
       Add to bag

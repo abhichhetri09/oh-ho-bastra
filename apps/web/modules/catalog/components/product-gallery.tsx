@@ -122,6 +122,7 @@ function ZoomImage({
       type="button"
       onClick={onOpen}
       aria-label={`View ${alt} photos full screen`}
+      data-fly-source
       className="relative hidden aspect-[4/5] w-full cursor-zoom-in overflow-hidden rounded-media bg-surface outline-none focus-visible:ring-2 focus-visible:ring-ring lg:block"
       onMouseEnter={() => setZoom(true)}
       onMouseLeave={() => setZoom(false)}
@@ -190,7 +191,7 @@ function MobileStrip({
   }, []);
 
   return (
-    <div className="relative -mx-4 sm:-mx-6 lg:hidden">
+    <div data-fly-source className="relative -mx-4 sm:-mx-6 lg:hidden">
       <div
         ref={strip}
         className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"

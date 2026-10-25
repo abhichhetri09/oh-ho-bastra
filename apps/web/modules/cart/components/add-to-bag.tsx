@@ -10,6 +10,7 @@ import { EASE_OUT } from "@/lib/motion";
 import { rememberIntent } from "@/modules/auth/lib/pending-intent";
 import { useAuth } from "@/providers/auth-provider";
 import { useCartMutations } from "../hooks/use-cart-mutations";
+import { flyToBag } from "../lib/fly-to-bag";
 import type { LinePreview } from "../lib/cart-math";
 
 /** How long the button says "Added" before it resets. */
@@ -47,7 +48,7 @@ export function AddToBag({
   const soldOut = stock === 0;
   const label = soldOut ? "Sold out" : added ? "Added" : "Add to bag";
 
-  function onClick() {
+  function onClick(event: React.MouseEvent<HTMLButtonElement>) {
     if (!user) {
       // Back to this exact variant after signing in, and into the bag.
       rememberIntent({ kind: "bag", path: pathname, preview, at: Date.now() });
@@ -55,6 +56,7 @@ export function AddToBag({
       return;
     }
     setAddedAt(Date.now());
+    flyToBag(event.currentTarget, preview.image);
     add.mutate(
       { variant_id: preview.variant_id, quantity: 1, preview, announce: true },
       // The hook rolls back and says why; the label stops claiming success.
