@@ -11,9 +11,11 @@ type Shape = "feature" | "tile" | "wide";
 /**
  * Desktop layout: the first collection is a tall feature on the left, the
  * rest fill two rows of tiles beside it; a last odd tile goes wide so the
- * grid has no hole.
+ * grid has no hole. With fewer than three there is nothing to stack beside
+ * the feature, so every tile goes wide and they match.
  */
 function shapeOf(index: number, count: number): Shape {
+  if (count < 3) return "wide";
   if (index === 0) return "feature";
   const lastOdd = (count - 1) % 2 === 1 && index === count - 1;
   return lastOdd ? "wide" : "tile";
