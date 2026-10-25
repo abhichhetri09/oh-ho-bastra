@@ -164,7 +164,7 @@ function SearchPanel({
           value={input}
           onValueChange={setInput}
           maxLength={MAX_SEARCH}
-          placeholder="Search for linen, leather, lamps…"
+          placeholder="Search tees, colours, custom prints…"
           aria-label="Search products"
           className="h-full font-serif text-xl tracking-[-0.01em] sm:text-2xl"
           autoFocus

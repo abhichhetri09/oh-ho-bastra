@@ -48,7 +48,7 @@ export function ShopHeader({
     <CollectionHeader
       eyebrow="The collection"
       title="Shop all."
-      description="Clothing, accessories and homewares in natural materials. Filter by size, colour and price."
+      description="Heavyweight cotton tees and custom prints. Filter by size, colour and price."
       links={links}
     />
   );

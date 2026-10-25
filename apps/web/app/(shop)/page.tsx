@@ -34,7 +34,7 @@ export default async function LandingPage() {
         <section className="container-page">
           <SectionHeading
             eyebrow="Collections"
-            title="Shop by room and ritual."
+            title="Find your tee."
           />
           <CollectionTiles collections={collections} />
         </section>
