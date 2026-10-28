@@ -21,7 +21,7 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 
 ## the shop
 
-- **catalog**: ten tees in two categories, **tees** (short sleeve, long sleeve) and **custom** (custom text, custom print), sized s to xxl, €25–45. `bun run db:seed:catalog` creates them; their photos are in `scripts/catalog-images`.
+- **catalog**: fifteen tees in two categories, **tees** (short sleeve, long sleeve) and **custom** (custom text, custom print), sized s to xxl, €25–45. `bun run db:seed:catalog` creates them; their photos are in `scripts/catalog-images`.
 - **money**: euros (`apps/web/lib/money.ts`, `apps/api/src/checkout/shipping.ts`). shipping is €4.90 flat and free from €60, counted on the subtotal after any discount code; the web shows the same rule from `apps/web/lib/shipping.ts`, so change both together.
 - **orders** are numbered `OHB-1001`, `OHB-1002`…
 - **brand**: the ओho mark is `apps/web/components/brand/logo-mark.tsx` (also in `docs/brand`), with the favicon and app icons in `apps/web/app` and `apps/web/public/brand`. store copy and editorial photos live in `apps/web/lib/site.ts` and `apps/web/public/editorial`.
@@ -281,6 +281,7 @@ a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`:
 | `bun run db:sqlc`                          | regenerate the typed queries in `apps/api/src/db/gen`                             |
 | `bun run db:seed`                          | create the seed admin and customer (`SEED_*` in `.env.local`)                     |
 | `bun run db:seed:catalog`                  | add the tees and their categories through the running api as the seed admin      |
+| `bun run db:seed:demo`                    | add demo discount codes (WELCOME10, SUMMER20, FIVEOFF) and a 20% sale on two colours |
 | `bun run generate`                         | regenerate `openapi.json` and the api clients                                     |
 | `bun run generate:check` / `db:sqlc:check` | fail if generated code is out of date                                             |
 | `bun run check-types`                      | typecheck every package                                                           |
