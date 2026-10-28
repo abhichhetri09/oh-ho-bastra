@@ -14,6 +14,7 @@ import {
   writeReview,
 } from "@/lib/api/client";
 import { useAuth } from "@/providers/auth-provider";
+import { accountOf } from "@/lib/auth/redirect";
 import { orderKeys } from "@/modules/checkout/keys";
 import { reviewKeys } from "./keys";
 
@@ -38,7 +39,7 @@ export function useReviews(slug: string) {
 
 /** Whether I may review the product, and my review; idle when signed out. */
 export function useMyReview(slug: string) {
-  const userId = useAuth((s) => s.user?.id ?? "");
+  const userId = useAuth((s) => accountOf(s.user)?.id ?? "");
   return useQuery({
     queryKey: reviewKeys.mine(userId, slug),
     queryFn: async ({ signal }) => {
@@ -59,7 +60,7 @@ export function useMyReview(slug: string) {
  */
 export function useReviewMutations(slug: string) {
   const queryClient = useQueryClient();
-  const userId = useAuth((s) => s.user?.id ?? "");
+  const userId = useAuth((s) => accountOf(s.user)?.id ?? "");
 
   async function refresh() {
     await Promise.all([

@@ -1,6 +1,6 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { NextRequest } from "next/server";
-import { isSignedOutOnlyPath } from "@/lib/proxy/config";
+import { isSignedOutOnlyPath, requiredRoles } from "@/lib/proxy/config";
 import { accessClaims, nowSec, token } from "./jwt";
 
 // Fake POST /auth/refresh: answers with `refreshReply`.
@@ -29,6 +29,7 @@ const { handleProtected, handleSignedOutOnly } =
   await import("@/lib/proxy/handlers");
 
 const customer = token(accessClaims());
+const guest = token(accessClaims({ role: "guest", email: "", name: "Guest" }));
 const admin = token(accessClaims({ role: "admin" }));
 const expired = token(accessClaims({ exp: nowSec() - 5 }));
 
@@ -201,4 +202,77 @@ test("a password reset link opens signed in or out", () => {
   expect(isSignedOutOnlyPath("/auth/reset")).toBe(false);
   expect(isSignedOutOnlyPath("/auth/forgot")).toBe(true);
   expect(isSignedOutOnlyPath("/auth/login")).toBe(true);
+});
+
+test("a guest may use the bag and checkout, nothing else", () => {
+  expect(requiredRoles("/cart")).toContain("guest");
+  expect(requiredRoles("/checkout/success")).toContain("guest");
+  expect(requiredRoles("/account")).not.toContain("guest");
+  expect(requiredRoles("/account/orders/1042")).not.toContain("guest");
+  expect(requiredRoles("/admin")).not.toContain("guest");
+  // order tracking needs no session at all
+  expect(requiredRoles("/orders/track")).toBeUndefined();
+});
+
+test("protected: a guest passes the bag and checkout", async () => {
+  for (const path of ["/cart", "/checkout"]) {
+    const res = await handleProtected(
+      req(path, `access_token=${guest}; refresh_token=r`),
+      requiredRoles(path)!,
+    );
+    expect(location(res)).toBeNull();
+  }
+});
+
+test("protected: a guest goes to sign in for account pages, not home", async () => {
+  const res = await handleProtected(
+    req("/account/orders", `access_token=${guest}; refresh_token=r`),
+    requiredRoles("/account")!,
+  );
+  expect(location(res)).toBe(
+    "http://localhost:3000/auth/login?next=%2Faccount%2Forders",
+  );
+  const admin = await handleProtected(
+    req("/admin", `access_token=${guest}; refresh_token=r`),
+    ["admin"],
+  );
+  expect(location(admin)).toBe(
+    "http://localhost:3000/auth/login?next=%2Fadmin",
+  );
+});
+
+test("protected: a refreshed guest goes to sign in with the new cookies", async () => {
+  refreshReply = {
+    status: 200,
+    setCookies: [`access_token=${guest}; Path=/; HttpOnly`],
+  };
+  const res = await handleProtected(req("/account", "refresh_token=r"), [
+    "admin",
+    "customer",
+  ]);
+  expect(location(res)).toBe(
+    "http://localhost:3000/auth/login?next=%2Faccount",
+  );
+  expect(res.headers.getSetCookie()).toHaveLength(1);
+});
+
+test("signed-out only: a guest counts as signed out", async () => {
+  const res = await handleSignedOutOnly(
+    req(
+      "/auth/register?next=%2Fcheckout",
+      `access_token=${guest}; refresh_token=r`,
+    ),
+  );
+  expect(location(res)).toBeNull();
+  expect(refreshCookieSent).toBeUndefined();
+
+  refreshReply = {
+    status: 200,
+    setCookies: [`access_token=${guest}; Path=/; HttpOnly`],
+  };
+  const refreshed = await handleSignedOutOnly(
+    req("/auth/login", "refresh_token=r"),
+  );
+  expect(location(refreshed)).toBeNull();
+  expect(refreshed.headers.getSetCookie()).toHaveLength(1);
 });

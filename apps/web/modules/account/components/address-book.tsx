@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { deleteAddress, setDefaultAddress } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { useAuth } from "@/providers/auth-provider";
+import { accountOf } from "@/lib/auth/redirect";
 import { DefaultTag } from "@/modules/checkout/components/default-tag";
 import { addressKeys } from "@/modules/checkout/keys";
 import { countryName } from "@/modules/checkout/lib/countries";
@@ -25,7 +26,7 @@ import { useAddresses } from "@/modules/checkout/queries";
 export function AddressBook() {
   const query = useAddresses();
   const queryClient = useQueryClient();
-  const userId = useAuth((s) => s.user?.id ?? "");
+  const userId = useAuth((s) => accountOf(s.user)?.id ?? "");
   const [confirming, setConfirming] = useState<Address | null>(null);
 
   const remove = useMutation({

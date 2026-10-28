@@ -329,9 +329,16 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
                     </Link>
                   </TableCell>
                   <TableCell className="hidden max-w-[16rem] sm:table-cell">
-                    <span className="block truncate">
-                      {order.customer_name}
-                    </span>
+                    {order.guest ? (
+                      // No account: the order's email is all there is.
+                      <span className="eyebrow inline-block rounded-control border border-border px-1.5 py-0.5 !text-[0.5625rem]">
+                        Guest
+                      </span>
+                    ) : (
+                      <span className="block truncate">
+                        {order.customer_name}
+                      </span>
+                    )}
                     <span className="block truncate text-[0.6875rem] text-muted-foreground">
                       {order.email}
                     </span>

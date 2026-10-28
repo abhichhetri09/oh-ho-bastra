@@ -1,13 +1,15 @@
 "use client";
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import type { OrderDetail } from "@repo/types";
+import type { OrderDetail, OrderLookupBody } from "@repo/types";
 import {
   getCheckoutSession,
   getOrder,
   listAddresses,
   listOrders,
+  lookupOrder,
 } from "@/lib/api/client";
+import { accountOf } from "@/lib/auth/redirect";
 import { useAuth } from "@/providers/auth-provider";
 import { addressKeys, orderKeys } from "./keys";
 
@@ -15,8 +17,9 @@ function useUserId() {
   return useAuth((s) => s.user?.id ?? "");
 }
 
+/** The account's saved addresses; idle for a guest, which has none. */
 export function useAddresses() {
-  const userId = useUserId();
+  const userId = useAuth((s) => accountOf(s.user)?.id ?? "");
   return useQuery({
     queryKey: addressKeys.mine(userId),
     queryFn: async ({ signal }) => {
@@ -25,6 +28,17 @@ export function useAddresses() {
     },
     enabled: Boolean(userId),
   });
+}
+
+/**
+ * An order found by its number and email, for shoppers without an account
+ * (read-only: no reviews). Throws the API error, a 404 for no match.
+ */
+export async function lookupOrderByEmail(
+  body: OrderLookupBody,
+): Promise<OrderDetail> {
+  const { data } = await lookupOrder({ body, throwOnError: true });
+  return data.data;
 }
 
 /** Order history, 10 at a time as the list scrolls. */

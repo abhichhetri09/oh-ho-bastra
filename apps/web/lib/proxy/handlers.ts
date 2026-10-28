@@ -47,20 +47,30 @@ function signedInRedirect(req: NextRequest, user: PublicUser): NextResponse {
   return redirect(req, next ?? homeFor(user.role));
 }
 
-/** /auth/*: signed-in users are sent on; everyone else sees the page. */
+/**
+ * /auth/*: signed-in users are sent on; everyone else sees the page. A
+ * guest counts as signed out: signing in or registering from its session
+ * hands its bag and orders to the account.
+ */
 export async function handleSignedOutOnly(
   req: NextRequest,
 ): Promise<NextResponse> {
   if (!req.cookies.has(REFRESH_COOKIE)) return NextResponse.next();
 
   const user = userFromAccessToken(req.cookies.get(ACCESS_COOKIE)?.value);
-  if (user) return signedInRedirect(req, user);
+  if (user) {
+    return user.role === "guest"
+      ? NextResponse.next()
+      : signedInRedirect(req, user);
+  }
 
   const result = await refresh(req);
   switch (result.kind) {
     case "ok":
       return withSetCookies(
-        signedInRedirect(req, result.user),
+        result.user.role === "guest"
+          ? NextResponse.next()
+          : signedInRedirect(req, result.user),
         result.setCookies,
       );
     case "unauthorized":
@@ -68,6 +78,14 @@ export async function handleSignedOutOnly(
     case "error":
       return NextResponse.next();
   }
+}
+
+/**
+ * Where a user whose role isn't let in goes: a guest to sign in (it has
+ * no account yet), anyone else home.
+ */
+function notAllowed(req: NextRequest, user: PublicUser): NextResponse {
+  return user.role === "guest" ? toLogin(req) : redirect(req, "/");
 }
 
 /** Pages that need a session with one of roles. */
@@ -79,7 +97,9 @@ export async function handleProtected(
 
   const user = userFromAccessToken(req.cookies.get(ACCESS_COOKIE)?.value);
   if (user) {
-    return roles.includes(user.role) ? NextResponse.next() : redirect(req, "/");
+    return roles.includes(user.role)
+      ? NextResponse.next()
+      : notAllowed(req, user);
   }
 
   const result = await refresh(req);
@@ -87,7 +107,7 @@ export async function handleProtected(
     case "ok":
       return roles.includes(result.user.role)
         ? continueWithFreshCookies(req, result)
-        : withSetCookies(redirect(req, "/"), result.setCookies);
+        : withSetCookies(notAllowed(req, result.user), result.setCookies);
     case "unauthorized":
       return withSetCookies(toLogin(req), result.setCookies);
     case "error":

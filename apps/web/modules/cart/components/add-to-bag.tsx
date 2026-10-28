@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, m } from "motion/react";
 import { CheckIcon } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { loginPath } from "@/lib/auth/redirect";
+import { ensureGuestSession } from "@/lib/auth/guest";
 import { EASE_OUT } from "@/lib/motion";
 import { rememberIntent } from "@/modules/auth/lib/pending-intent";
 import { useAuth } from "@/providers/auth-provider";
@@ -19,8 +20,9 @@ const ADDED_FOR = 1800;
 /**
  * Adds one of the selected variant. The bag count and the label change at
  * once; a toast confirms with "View bag" once the API agrees, or the add
- * rolls back with its reason. Signed-out shoppers go to sign in and come
- * back to this variant, which is then added for them.
+ * rolls back with its reason. A signed-out shopper's first add starts a
+ * guest session; the add then runs as a pending intent once the session's
+ * user is in the auth store (PendingIntentRunner).
  */
 export function AddToBag({
   preview,
@@ -30,9 +32,9 @@ export function AddToBag({
   preview: LinePreview;
   stock: number;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const user = useAuth((s) => s.user);
+  const setUser = useAuth((s) => s.setUser);
   const { add } = useCartMutations();
   // When the last add was clicked (0: none showing), so another click
   // restarts the "Added" label's timer.
@@ -49,14 +51,19 @@ export function AddToBag({
   const label = soldOut ? "Sold out" : added ? "Added" : "Add to bag";
 
   function onClick(event: React.MouseEvent<HTMLButtonElement>) {
-    if (!user) {
-      // Back to this exact variant after signing in, and into the bag.
-      rememberIntent({ kind: "bag", path: pathname, preview, at: Date.now() });
-      router.push(loginPath(pathname + window.location.search));
-      return;
-    }
     setAddedAt(Date.now());
     flyToBag(event.currentTarget, preview.image);
+    if (!user) {
+      // Added for them as soon as the guest session is there.
+      rememberIntent({ kind: "bag", path: pathname, preview, at: Date.now() });
+      ensureGuestSession()
+        .then(setUser)
+        .catch(() => {
+          setAddedAt(0);
+          toast.error("Couldn't add to your bag. Try again.");
+        });
+      return;
+    }
     add.mutate(
       { variant_id: preview.variant_id, quantity: 1, preview, announce: true },
       // The hook rolls back and says why; the label stops claiming success.

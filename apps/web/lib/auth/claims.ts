@@ -47,7 +47,8 @@ export function userFromAccessToken(
   return {
     id: claims.user_id,
     name: claims.name,
-    email: claims.email,
+    // A guest's token says "": it has no email.
+    email: role.data === "guest" ? null : claims.email,
     role: role.data,
     image_url: typeof claims.image_url === "string" ? claims.image_url : null,
   };

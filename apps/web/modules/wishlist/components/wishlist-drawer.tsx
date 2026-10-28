@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Price } from "@/modules/catalog/components/price";
 import { useAuth } from "@/providers/auth-provider";
+import { accountOf } from "@/lib/auth/redirect";
 import { SignInLink } from "@/modules/auth/components/sign-in-link";
 import { useSavedCount, useSavedProducts, useToggleWishlist } from "../hooks";
 import { useWishlistDrawer } from "../store";
@@ -56,7 +57,7 @@ export function WishlistDrawer() {
 }
 
 function WishlistContents({ close }: { close: () => void }) {
-  const user = useAuth((s) => s.user);
+  const user = useAuth((s) => accountOf(s.user));
   const count = useSavedCount();
   const { query, products } = useSavedProducts();
 

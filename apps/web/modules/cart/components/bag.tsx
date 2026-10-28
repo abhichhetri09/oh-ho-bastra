@@ -15,7 +15,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CountBadge } from "@/components/layout/count-badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
-import { SignInLink } from "@/modules/auth/components/sign-in-link";
 import { useCart } from "../queries";
 import { unitCount } from "../lib/cart-math";
 import { BAG_BUMP_EVENT, BAG_TARGET } from "../lib/fly-to-bag";
@@ -103,12 +102,12 @@ function BagContents({ close }: { close: () => void }) {
       <>
         {header}
         <EmptyBag
-          title="Sign in to start a bag."
-          body="Your bag is saved to your account, so it follows you between devices."
+          title="Your bag is empty."
+          body="Pieces you add will wait here for you. Sign in to see a bag you started on another device."
           action={
-            <SignInLink onClick={close} className={buttonVariants()}>
-              Sign in
-            </SignInLink>
+            <Link href="/shop" onClick={close} className={buttonVariants()}>
+              Start shopping
+            </Link>
           }
         />
       </>

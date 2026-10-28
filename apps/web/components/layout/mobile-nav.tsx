@@ -28,6 +28,7 @@ import { useSavedCount } from "@/modules/wishlist/hooks";
 import { useWishlistDrawer } from "@/modules/wishlist/store";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { cn } from "@/lib/utils";
+import { accountOf } from "@/lib/auth/redirect";
 import { SignInLink } from "@/modules/auth/components/sign-in-link";
 import { useActiveNav } from "./use-active-nav";
 
@@ -37,7 +38,7 @@ const accountLink =
 /** Full-height navigation sheet for small screens. */
 export function MobileNav({ categories }: { categories: NavCategory[] }) {
   const [open, setOpen] = useState(false);
-  const user = useAuth((s) => s.user);
+  const user = useAuth((s) => accountOf(s.user));
   const savedCount = useSavedCount();
   const openWishlist = useWishlistDrawer((s) => s.setOpen);
   const close = () => setOpen(false);

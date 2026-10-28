@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import {
   AddressInputSchema,
+  CheckoutEmailSchema,
   MAX_ADDRESSES,
   type Address,
   type Cart,
@@ -20,11 +21,19 @@ import {
 } from "@repo/types";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFocusFirstError } from "@/hooks/use-focus-first-error";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { startCheckout } from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
+import { loginPath } from "@/lib/auth/redirect";
 import { friendlyFieldErrors } from "@/lib/forms";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -43,11 +52,14 @@ const NEW = "new";
 
 /**
  * Checkout: who it's for, where it goes and what it costs. Paying hands
- * over to Stripe's hosted page, which returns to /checkout/success.
+ * over to Stripe's hosted page, which returns to /checkout/success. A
+ * guest (no account) gives the email its order emails go to and a new
+ * address; nothing is saved for it.
  */
 export function CheckoutView({ seeded }: { seeded: boolean }) {
   const hydrated = useHydrated();
   const user = useAuth((s) => s.user);
+  const guest = user?.role === "guest";
   const cartQuery = useCart();
   const cart = seeded || hydrated ? cartQuery.data : undefined;
   const addresses = useAddresses();
@@ -118,9 +130,10 @@ export function CheckoutView({ seeded }: { seeded: boolean }) {
     <Shell>
       <CheckoutForm
         cart={cart}
+        guest={guest}
         email={user?.email ?? ""}
-        saved={addresses.data}
-        savedLoading={addresses.isPending}
+        saved={guest ? [] : addresses.data}
+        savedLoading={!guest && addresses.isPending}
       />
     </Shell>
   );
@@ -165,15 +178,20 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function CheckoutForm({
   cart,
+  guest,
   email,
   saved,
   savedLoading,
 }: {
   cart: Cart;
+  /** No account: asks for the email, and saves no address. */
+  guest: boolean;
+  /** The account's email (a guest types its own). */
   email: string;
   saved: Address[] | undefined;
   savedLoading: boolean;
 }) {
+  const [guestEmail, setGuestEmail] = useState("");
   // Until the shopper picks, use the first saved address (the default, else
   // the newest) or a new one.
   const [picked, setPicked] = useState<string | null>(null);
@@ -240,6 +258,16 @@ function CheckoutForm({
     });
   }
 
+  function changeEmail(value: string) {
+    setGuestEmail(value);
+    setErrors((current) => {
+      if (!current.email) return current;
+      const rest = { ...current };
+      delete rest.email;
+      return rest;
+    });
+  }
+
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (choice !== NEW) {
@@ -251,21 +279,38 @@ function CheckoutForm({
       line2: address.line2 || undefined,
       region: address.region || undefined,
     });
-    if (!parsed.success) {
-      setErrors(
-        friendlyFieldErrors(parsed.error, {
-          full_name: "your full name",
-          phone: "a phone number",
-          line1: "your street address",
-          city: "a city",
-          postal_code: "a postal code",
-          country: "a country",
-        }),
-      );
+    const parsedEmail = guest
+      ? CheckoutEmailSchema.safeParse(guestEmail.trim())
+      : null;
+    if (!parsed.success || parsedEmail?.success === false) {
+      setErrors({
+        ...(parsed.success
+          ? {}
+          : friendlyFieldErrors(parsed.error, {
+              full_name: "your full name",
+              phone: "a phone number",
+              line1: "your street address",
+              city: "a city",
+              postal_code: "a postal code",
+              country: "a country",
+            })),
+        ...(parsedEmail?.success === false
+          ? {
+              email: guestEmail.trim()
+                ? "Enter a valid email address"
+                : "Enter your email address",
+            }
+          : {}),
+      });
       focusFirstError();
       return;
     }
     setErrors({});
+    if (parsedEmail) {
+      // A guest saves nothing: it has no address book.
+      checkout.mutate({ email: parsedEmail.data, address: parsed.data });
+      return;
+    }
     checkout.mutate({
       address: parsed.data,
       save_address: save && !bookFull,
@@ -284,10 +329,52 @@ function CheckoutForm({
     >
       <div className="space-y-12">
         <Section number={1} title="Contact">
-          <p className="text-sm">{email}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Your receipt and shipping updates go here.
-          </p>
+          {guest ? (
+            <Field data-invalid={Boolean(errors.email)}>
+              <FieldLabel
+                htmlFor="checkout-email"
+                className="eyebrow !text-foreground"
+              >
+                Email
+              </FieldLabel>
+              <Input
+                id="checkout-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={guestEmail}
+                onChange={(e) => changeEmail(e.target.value)}
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={
+                  errors.email ? "checkout-email-error" : undefined
+                }
+              />
+              <FieldError
+                key={errors.email}
+                id="checkout-email-error"
+                className="animate-rise"
+              >
+                {errors.email}
+              </FieldError>
+              <FieldDescription className="text-xs">
+                Your receipt and shipping updates go here. Already have an
+                account?{" "}
+                <Link
+                  href={loginPath("/checkout")}
+                  className="underline underline-offset-4 hover:text-foreground"
+                >
+                  Sign in
+                </Link>
+              </FieldDescription>
+            </Field>
+          ) : (
+            <>
+              <p className="text-sm">{email}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Your receipt and shipping updates go here.
+              </p>
+            </>
+          )}
         </Section>
 
         <Section number={2} title="Shipping address">
@@ -340,7 +427,7 @@ function CheckoutForm({
                     errors={errors}
                     onChange={change}
                   />
-                  {bookFull ? (
+                  {guest ? null : bookFull ? (
                     // The API wouldn't save it, so don't offer to.
                     <p className="text-[0.8125rem] text-muted-foreground">
                       You have {MAX_ADDRESSES} saved addresses, the most we
