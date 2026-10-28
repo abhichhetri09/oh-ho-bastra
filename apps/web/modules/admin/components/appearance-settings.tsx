@@ -36,22 +36,6 @@ import { revalidateStoreSettings } from "../actions";
 // pick from reaching into a preview of the theme's own.
 const THEME_DEFAULT = "theme";
 
-// The theme grid's columns (base, sm, xl). The selected theme's options sit
-// in a full-width row right under its card: cards up to that row come
-// before it, the rest after. Tailwind sees whole class names only, so each
-// breakpoint's are spelt out.
-const COLUMNS = [1, 2, 3];
-const BEFORE = ["order-0", "sm:order-0", "xl:order-0"];
-const AFTER = ["order-2", "sm:order-2", "xl:order-2"];
-
-function placement(index: number, selected: number): string {
-  return COLUMNS.map((columns, i) =>
-    Math.floor(index / columns) <= Math.floor(selected / columns)
-      ? BEFORE[i]
-      : AFTER[i],
-  ).join(" ");
-}
-
 const OPTION =
   "group flex flex-col rounded-field border border-border text-left transition-[border-color,box-shadow] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-checked:border-foreground data-checked:shadow-[0_0_0_1px_var(--foreground)]";
 
@@ -59,8 +43,8 @@ const OPTION =
  * The store's look: a theme, and the headline font and corners it uses in
  * place of the theme's. Each theme card renders a small storefront inside
  * its own [data-theme], so it shows that theme's real colours, type and
- * corners; the selected one opens its font and corner options right under
- * it, and its card shows them. Another theme starts from its own font and
+ * corners; the selected one's card widens to the whole row and holds its
+ * font and corner options beside its preview. Another theme starts from its own font and
  * corners. Choosing anything previews it on this page; Save applies it all
  * to the store, and leaving without saving puts the page back.
  */
@@ -116,67 +100,79 @@ export function AppearanceSettings({ initial }: { initial: Appearance }) {
   });
 
   const dirty = !sameAppearance(selected, saved);
-  const selectedIndex = THEMES.findIndex((t) => t.id === selected.theme);
 
   return (
     <div className="overflow-hidden rounded-panel border border-border bg-card">
-      <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
-        <RadioGroup
-          value={selected.theme}
-          onValueChange={(value) => {
-            if (!isThemeId(value)) return;
-            // back to the saved theme: its saved font and corners
-            setSelected(
-              value === saved.theme
-                ? saved
-                : { theme: value, font: null, corners: null },
-            );
-          }}
-          aria-label="Store theme"
-          className="contents"
-        >
-          {THEMES.map((theme, index) => (
-            <Radio.Root
+      <RadioGroup
+        value={selected.theme}
+        onValueChange={(value) => {
+          if (!isThemeId(value)) return;
+          // back to the saved theme: its saved font and corners
+          setSelected(
+            value === saved.theme
+              ? saved
+              : { theme: value, font: null, corners: null },
+          );
+        }}
+        aria-label="Store theme"
+        // dense: the cards after the widened one fill the gaps it leaves
+        className="grid grid-flow-row-dense gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3"
+      >
+        {THEMES.map((theme) => {
+          const isSelected = theme.id === selected.theme;
+          return (
+            <div
               key={theme.id}
-              value={theme.id}
-              disabled={save.isPending}
               className={cn(
-                placement(index, selectedIndex),
-                "group flex flex-col overflow-hidden rounded-panel border border-border text-left transition-[border-color,box-shadow] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-checked:border-foreground data-checked:shadow-[0_0_0_1px_var(--foreground)]",
+                "overflow-hidden rounded-panel border border-border transition-[border-color,box-shadow]",
+                isSelected
+                  ? "col-span-full grid border-foreground shadow-[0_0_0_1px_var(--foreground)] lg:grid-cols-[minmax(0,22rem)_1fr]"
+                  : "hover:border-foreground/40",
               )}
             >
-              <ThemePreview
-                id={theme.id}
-                appearance={
-                  theme.id === selected.theme
-                    ? selected
-                    : { theme: theme.id, font: null, corners: null }
-                }
-              />
-              <span className="flex items-start justify-between gap-3 border-t border-border p-4">
-                <span className="min-w-0 space-y-1">
-                  <span className="flex items-center gap-2 text-[0.8125rem] font-medium">
-                    {theme.name}
-                    {theme.id === saved.theme && (
-                      <span className="eyebrow !text-[0.5625rem]">Current</span>
-                    )}
+              <Radio.Root
+                value={theme.id}
+                disabled={save.isPending}
+                className="group flex flex-col text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              >
+                <ThemePreview
+                  id={theme.id}
+                  appearance={
+                    isSelected
+                      ? selected
+                      : { theme: theme.id, font: null, corners: null }
+                  }
+                />
+                <span className="flex items-start justify-between gap-3 border-t border-border p-4">
+                  <span className="min-w-0 space-y-1">
+                    <span className="flex items-center gap-2 text-[0.8125rem] font-medium">
+                      {theme.name}
+                      {theme.id === saved.theme && (
+                        <span className="eyebrow !text-[0.5625rem]">
+                          Current
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-xs leading-snug text-muted-foreground">
+                      {theme.description}
+                    </span>
                   </span>
-                  <span className="block text-xs leading-snug text-muted-foreground">
-                    {theme.description}
-                  </span>
+                  <Check />
                 </span>
-                <Check />
-              </span>
-            </Radio.Root>
-          ))}
-        </RadioGroup>
-
-        <Customise
-          selected={selected}
-          disabled={save.isPending}
-          onChange={(change) => setSelected((s) => ({ ...s, ...change }))}
-        />
-      </div>
+              </Radio.Root>
+              {isSelected && (
+                <Customise
+                  selected={selected}
+                  disabled={save.isPending}
+                  onChange={(change) =>
+                    setSelected((s) => ({ ...s, ...change }))
+                  }
+                />
+              )}
+            </div>
+          );
+        })}
+      </RadioGroup>
 
       <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-4">
         {dirty && (
@@ -215,9 +211,10 @@ function Check() {
 }
 
 /**
- * The selected theme's headline font and corners, attached to its card
- * (outlined like it). Each option is drawn in its own font or corners;
- * "Theme default" in the theme's.
+ * The selected theme's headline font and corners, inside its card. Each
+ * option is drawn in its own font or corners; "Theme default" in the
+ * theme's. These radio groups sit inside the theme group, so their arrow
+ * keys stop here instead of also moving the theme.
  */
 function Customise({
   selected,
@@ -234,7 +231,10 @@ function Customise({
   const themeFont = headingFontById(theme.font);
 
   return (
-    <div className="order-1 col-span-full space-y-6 rounded-panel border border-foreground p-5 shadow-[0_0_0_1px_var(--foreground)]">
+    <div
+      onKeyDown={(event) => event.stopPropagation()}
+      className="space-y-6 border-t border-border p-5 lg:border-t-0 lg:border-l"
+    >
       <div className="space-y-1">
         <h3 className="text-[0.8125rem] font-medium">Customise {theme.name}</h3>
         <p className="text-xs leading-snug text-muted-foreground">
