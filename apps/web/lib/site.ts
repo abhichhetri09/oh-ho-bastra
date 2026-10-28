@@ -1,8 +1,8 @@
 // Store-wide copy and editorial imagery in one place, so rebranding or
 // swapping the photography is a one-file change. Editorial photos live in
 // public/editorial (credits in CREDITS.md there); product images are
-// Cloudinary uploads. What shipping costs is the admin's (Admin → Business):
-// the copy that names it takes the store's rule.
+// Cloudinary uploads. What shipping costs is the admin's (Admin → Settings
+// → Delivery): the copy that names it takes the store's rule.
 
 import type { ShippingRule } from "@repo/types";
 import { shippingPerk, shippingSentence } from "./shipping";

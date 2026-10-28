@@ -23,10 +23,10 @@ const SETTINGS_TTL = 300;
 const SETTINGS_TIMEOUT_MS = 2000;
 
 /**
- * What an admin saved in Admin → Settings and Admin → Business (the theme,
- * font and corners, the top banner's messages, the seller's details and
- * the delivery price), through Next's data cache (expired on save). Null
- * when the API can't answer, so callers fall back and pages still render.
+ * What an admin saved in Admin → Settings (the theme, font and corners, the
+ * top banner's messages, the seller's details and the delivery price),
+ * through Next's data cache (expired on save). Null when the API can't
+ * answer, so callers fall back and pages still render.
  */
 export const storeSettings = cache(async (): Promise<StoreSettings | null> => {
   try {
@@ -128,8 +128,9 @@ export async function storeBusiness(): Promise<BusinessDetails> {
 }
 
 /**
- * What delivery costs, as an admin set it in Admin → Business; the store's
- * default while the API can't answer (checkout charges the API's own).
+ * What delivery costs, as an admin set it in Admin → Settings → Delivery;
+ * the store's default while the API can't answer (checkout charges the
+ * API's own).
  */
 export async function storeShipping(): Promise<ShippingRule> {
   return (await storeSettings())?.shipping ?? DEFAULT_SHIPPING;

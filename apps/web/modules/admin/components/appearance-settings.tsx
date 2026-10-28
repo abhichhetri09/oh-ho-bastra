@@ -174,7 +174,7 @@ export function AppearanceSettings({ initial }: { initial: Appearance }) {
         })}
       </RadioGroup>
 
-      <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-4">
+      <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border bg-surface/40 px-5 py-4">
         {dirty && (
           <p className="mr-auto text-xs text-muted-foreground" role="status">
             Previewing {appearanceName(selected)}. Shoppers still see{" "}

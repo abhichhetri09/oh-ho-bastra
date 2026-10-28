@@ -1,30 +1,25 @@
-/**
- * One block of a settings page: what it is on the left, its controls on the
- * right (stacked on small screens).
- */
+import { settingsPage, type SettingsPageId } from "../lib/settings";
+
+/** A settings page's own content, under its heading and one-line description. */
 export function SettingsSection({
-  id,
-  title,
-  description,
+  page,
   children,
 }: {
-  id?: string;
-  title: string;
-  description: React.ReactNode;
+  page: SettingsPageId;
   children: React.ReactNode;
 }) {
+  const { label, description } = settingsPage(page);
   return (
-    <section
-      id={id}
-      className="grid scroll-mt-24 gap-5 border-t border-border py-10 first:border-t-0 first:pt-0 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-12"
-    >
-      <div className="space-y-2 lg:sticky lg:top-24 lg:self-start">
-        <h2 className="text-[0.9375rem] font-medium">{title}</h2>
-        <div className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+    <section aria-labelledby={`settings-${page}`} className="min-w-0">
+      <div className="mb-6 space-y-1.5">
+        <h2 id={`settings-${page}`} className="text-[0.9375rem] font-medium">
+          {label}
+        </h2>
+        <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
           {description}
-        </div>
+        </p>
       </div>
-      <div className="min-w-0">{children}</div>
+      {children}
     </section>
   );
 }

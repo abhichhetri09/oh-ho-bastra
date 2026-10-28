@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BuildingsIcon,
   CaretRightIcon,
   ChatCircleTextIcon,
   EnvelopeSimpleIcon,
@@ -83,7 +82,6 @@ export const groups: { label: string; links: NavLink[] }[] = [
           urgent: true,
         }),
       },
-      { label: "Business", href: "/admin/business", icon: BuildingsIcon },
       { label: "Settings", href: "/admin/settings", icon: GearSixIcon },
     ],
   },

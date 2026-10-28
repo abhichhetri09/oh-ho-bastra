@@ -191,7 +191,7 @@ export function BusinessSettings({
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_18rem]">
       <form
         className="overflow-hidden rounded-panel border border-border bg-card"
         onSubmit={(e) => {
@@ -235,7 +235,7 @@ export function BusinessSettings({
         </footer>
       </form>
 
-      <aside className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+      <aside className="grid items-start gap-6 sm:grid-cols-2 2xl:sticky 2xl:top-24 2xl:grid-cols-1 2xl:self-start">
         <div className="rounded-panel border border-border bg-card p-5">
           <div className="mb-4 flex items-baseline justify-between">
             <h3 className="text-[0.8125rem] font-medium">Required details</h3>

@@ -123,7 +123,7 @@ export function DeliverySettings({ initial }: { initial: ShippingRule }) {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_18rem]">
       <form
         className="overflow-hidden rounded-panel border border-border bg-card"
         onSubmit={submit}
@@ -131,13 +131,6 @@ export function DeliverySettings({ initial }: { initial: ShippingRule }) {
       >
         <fieldset className="p-5 sm:p-6">
           <legend className="sr-only">Delivery</legend>
-          <div className="mb-5 space-y-1">
-            <p className="text-[0.8125rem] font-medium">Delivery</p>
-            <p className="text-xs text-muted-foreground">
-              One price for every order, free from a total you choose. The
-              threshold counts the bag after any discount code.
-            </p>
-          </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field data-invalid={Boolean(errors.flat)}>
               <FieldLabel htmlFor="delivery-flat" className="text-[0.8125rem]">
@@ -223,7 +216,7 @@ export function DeliverySettings({ initial }: { initial: ShippingRule }) {
         </footer>
       </form>
 
-      <aside className="xl:self-start">
+      <aside className="2xl:self-start">
         <div className="overflow-hidden rounded-panel border border-border bg-card">
           <p className="eyebrow border-b border-border px-5 py-3">
             Shoppers see

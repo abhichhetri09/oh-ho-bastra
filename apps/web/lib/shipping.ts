@@ -1,11 +1,11 @@
 import type { ShippingRule } from "@repo/types";
 import { formatPrice, formatPriceShort } from "./money";
 
-// The store's shipping rule, as an admin sets it (Admin → Business) and
-// GET /settings sends it. The API decides what an order is charged (and
-// the cart answers with its shipping and total); the web uses the same rule
-// to price optimistic bag updates, draw the free-shipping bar and word the
-// store's copy. Amounts are cents.
+// The store's shipping rule, as an admin sets it (Admin → Settings →
+// Delivery) and GET /settings sends it. The API decides what an order is
+// charged (and the cart answers with its shipping and total); the web uses
+// the same rule to price optimistic bag updates, draw the free-shipping bar
+// and word the store's copy. Amounts are cents.
 
 /**
  * The rule the store starts with (store_settings' defaults), for pages that
