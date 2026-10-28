@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BuildingsIcon,
+  CaretRightIcon,
   ChatCircleTextIcon,
   EnvelopeSimpleIcon,
   GearSixIcon,
@@ -18,6 +19,7 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import type { AdminCounts } from "@repo/types";
+import { initialsOf } from "@/components/layout/user-menu";
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/modules/auth/hooks/mutations/use-logout";
 import { useAuth } from "@/providers/auth-provider";
@@ -150,22 +152,42 @@ export function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-/** Who is signed in, with a way out. */
-export function AdminAccount() {
+/**
+ * Who is signed in, linking to their account page (the storefront's, where
+ * the admin's own orders and profile live), with a way out.
+ */
+export function AdminAccount({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
   const user = useAuth((s) => s.user);
   const logout = useLogout();
   if (!user) return null;
   return (
-    <div className="space-y-3 px-4">
-      <div className="min-w-0">
-        <p className="truncate text-[0.8125rem]">{user.name}</p>
-        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-      </div>
+    <div className="space-y-3">
+      <Link
+        href="/account"
+        onClick={onNavigate}
+        aria-current={isCurrent(pathname, "/account") ? "page" : undefined}
+        className="flex items-center gap-3 border-l-2 border-transparent px-4 py-2 transition-colors hover:bg-sidebar-accent/60 aria-[current=page]:border-foreground aria-[current=page]:bg-sidebar-accent"
+      >
+        <span
+          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary font-mono text-[0.625rem] tracking-wider text-sidebar-primary-foreground"
+          aria-hidden
+        >
+          {initialsOf(user.name)}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-[0.8125rem]">{user.name}</span>
+          <span className="block truncate text-xs text-muted-foreground">
+            {user.email}
+          </span>
+        </span>
+        <CaretRightIcon className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
+      </Link>
       <button
         type="button"
         onClick={() => logout.mutate()}
         disabled={logout.isPending}
-        className="inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+        className="mx-4 inline-flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
       >
         <SignOutIcon className="size-3.5" />
         {logout.isPending ? "Signing out…" : "Sign out"}
