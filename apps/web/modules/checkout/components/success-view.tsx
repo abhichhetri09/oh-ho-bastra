@@ -8,21 +8,29 @@ import { m } from "motion/react";
 import type { OrderDetail } from "@repo/types";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { buttonVariants } from "@/components/ui/button";
-import { formatPrice } from "@/lib/money";
+import { registerPath } from "@/lib/auth/redirect";
+import { formatDiscount, formatPrice } from "@/lib/money";
 import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
 import { cartKeys } from "@/modules/cart/keys";
 import { countryName } from "../lib/countries";
 import { orderLabel } from "../lib/orders";
 import { orderKeys } from "../keys";
 import { CONFIRM_TIMEOUT, useCheckoutSession } from "../queries";
 
+/** Where a shopper finds their orders: a guest has no account to look in. */
+const ordersHref = (guest: boolean) =>
+  guest ? "/orders/track" : "/account/orders";
+
 /**
  * Where Stripe sends the shopper back. It polls until the payment is
  * confirmed, then celebrates and refreshes the bag (the bought lines left
- * it server-side) and the order history.
+ * it server-side) and the order history. A guest is pointed at order
+ * tracking, and offered an account.
  */
 export function SuccessView({ sessionId }: { sessionId: string }) {
+  const guest = useAuth((s) => s.user?.role === "guest");
   const [startedAt] = useState(() => Date.now());
   const query = useCheckoutSession(sessionId, startedAt);
   const queryClient = useQueryClient();
@@ -47,13 +55,14 @@ export function SuccessView({ sessionId }: { sessionId: string }) {
         eyebrow="Order not found"
         title="We couldn't find this checkout."
         action={
-          <Link href="/account/orders" className={buttonVariants()}>
-            Your orders
+          <Link href={ordersHref(guest)} className={buttonVariants()}>
+            {guest ? "Track an order" : "Your orders"}
           </Link>
         }
       >
-        If you paid, your order is safe: it appears in your orders as soon as
-        the payment is confirmed.
+        {guest
+          ? "If you paid, your order is safe: its confirmation email arrives as soon as the payment is confirmed."
+          : "If you paid, your order is safe: it appears in your orders as soon as the payment is confirmed."}
       </EmptyState>
     );
   }
@@ -75,15 +84,17 @@ export function SuccessView({ sessionId }: { sessionId: string }) {
         </p>
         <p className="max-w-sm text-sm text-muted-foreground">
           {slow
-            ? "This is taking longer than usual. You can leave this page: your order will appear in your account once the payment lands."
+            ? guest
+              ? "This is taking longer than usual. You can leave this page: we'll email you once the payment lands."
+              : "This is taking longer than usual. You can leave this page: your order will appear in your account once the payment lands."
             : "This only takes a moment. Please keep this page open."}
         </p>
         {slow && (
           <Link
-            href="/account/orders"
+            href={ordersHref(guest)}
             className={buttonVariants({ variant: "outline" })}
           >
-            Go to your orders
+            {guest ? "Track your order" : "Go to your orders"}
           </Link>
         )}
       </div>
@@ -106,10 +117,16 @@ export function SuccessView({ sessionId }: { sessionId: string }) {
     );
   }
 
-  return <Confirmation order={order} />;
+  return <Confirmation order={order} guest={guest} />;
 }
 
-function Confirmation({ order }: { order: OrderDetail }) {
+function Confirmation({
+  order,
+  guest,
+}: {
+  order: OrderDetail;
+  guest: boolean;
+}) {
   const a = order.shipping_address;
   return (
     <div className="mx-auto grid max-w-5xl gap-14 py-12 lg:grid-cols-[1fr_22rem] lg:py-20">
@@ -129,8 +146,17 @@ function Confirmation({ order }: { order: OrderDetail }) {
             className="animate-rise max-w-md text-sm leading-relaxed text-muted-foreground"
             style={{ "--i": 2 } as React.CSSProperties}
           >
-            Your order is confirmed and we&apos;re getting it ready. A receipt
-            is on its way to {order.email}.
+            {guest ? (
+              <>
+                Your order is confirmed and we&apos;re getting it ready. We sent
+                the confirmation to {order.email}.
+              </>
+            ) : (
+              <>
+                Your order is confirmed and we&apos;re getting it ready. A
+                receipt is on its way to {order.email}.
+              </>
+            )}
           </p>
         </div>
         <div
@@ -138,15 +164,40 @@ function Confirmation({ order }: { order: OrderDetail }) {
           style={{ "--i": 3 } as React.CSSProperties}
         >
           <Link
-            href={`/account/orders/${order.number}`}
+            href={
+              guest
+                ? `/orders/track?number=${order.number}`
+                : `/account/orders/${order.number}`
+            }
             className={buttonVariants()}
           >
-            View order
+            {guest ? "Track order" : "View order"}
           </Link>
           <Link href="/shop" className={buttonVariants({ variant: "outline" })}>
             Keep shopping
           </Link>
         </div>
+        {guest && (
+          <div
+            className="animate-rise rounded-panel border border-border p-5 text-sm"
+            style={{ "--i": 4 } as React.CSSProperties}
+          >
+            <p>Create an account to track orders.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Use {order.email} and this order moves to your account, with its
+              status and tracking in one place.
+            </p>
+            <Link
+              href={registerPath("/account/orders", order.email)}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "mt-4",
+              )}
+            >
+              Create an account
+            </Link>
+          </div>
+        )}
         <div className="grid gap-6 border-t border-border pt-8 text-sm sm:grid-cols-2">
           <div>
             <p className="eyebrow mb-2">Shipping to</p>
@@ -215,6 +266,19 @@ export function OrderTotals({
         <dt className="text-muted-foreground">Subtotal</dt>
         <dd className="tabular-nums">{formatPrice(order.subtotal)}</dd>
       </div>
+      {order.discount > 0 && (
+        <div className="flex justify-between gap-3">
+          <dt className="text-muted-foreground">
+            Discount
+            {order.coupon_code && (
+              <span className="font-mono text-xs"> ({order.coupon_code})</span>
+            )}
+          </dt>
+          <dd className="text-success tabular-nums">
+            {formatDiscount(order.discount)}
+          </dd>
+        </div>
+      )}
       <div className="flex justify-between">
         <dt className="text-muted-foreground">Shipping</dt>
         <dd className="tabular-nums">

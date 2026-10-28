@@ -26,6 +26,12 @@ export const errAddressNotFound = new Refusal(
   "ADDRESS_NOT_FOUND",
   "Address not found",
 );
+/** A guest's checkout without an email (the handler checks it first). */
+export const errGuestEmail = new Refusal(
+  400,
+  "VALIDATION_FAILED",
+  "Enter your email address",
+);
 export const errProvider = new Refusal(
   502,
   "PAYMENT_PROVIDER_ERROR",

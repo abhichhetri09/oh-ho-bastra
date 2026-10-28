@@ -9,11 +9,13 @@ import {
   MagnifyingGlassIcon,
   PencilSimpleIcon,
   PlusIcon,
+  TagIcon,
   TrashIcon,
   XIcon,
 } from "@phosphor-icons/react";
 import type { AdminProduct, ProductSort, SortDir } from "@repo/types";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +55,7 @@ import {
 import { useAdminProducts, useCategoryTree } from "../queries";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { PageNav } from "./page-nav";
+import { SaleDialog, type SaleMode } from "./sale-dialog";
 import { SortableHead } from "./sortable-head";
 import { ActiveBadge } from "./status-badge";
 
@@ -70,6 +73,12 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
   const [search, setSearch] = useState(initial.q);
   const debounced = useDebouncedValue(search.trim(), 300);
   const [deleting, setDeleting] = useState<AdminProduct | null>(null);
+  // Picked rows by id, kept across pages and filters until cleared, so a
+  // sale can span several pages.
+  const [selected, setSelected] = useState<ReadonlyMap<string, AdminProduct>>(
+    () => new Map(),
+  );
+  const [sale, setSale] = useState<SaleMode | null>(null);
 
   const products = useAdminProducts(filters);
   const tree = useCategoryTree();
@@ -115,7 +124,10 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
     },
     success: (_, product) => `${product.name} was deleted`,
     failure: "Couldn't delete the product.",
-    onSuccess: () => setDeleting(null),
+    onSuccess: (_, product) => {
+      setDeleting(null);
+      toggle(product, false);
+    },
   });
 
   const filtered = Boolean(filters.q || filters.status || filters.category);
@@ -127,6 +139,32 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
   };
   const rows = products.data?.data ?? [];
   const meta = products.data?.meta;
+
+  const pickedOnPage = rows.filter((p) => selected.has(p.id)).length;
+  const allOnPage = rows.length > 0 && pickedOnPage === rows.length;
+  function toggle(product: AdminProduct, on: boolean) {
+    setSelected((m) => {
+      const next = new Map(m);
+      if (on) next.set(product.id, product);
+      else next.delete(product.id);
+      return next;
+    });
+  }
+  function togglePage(on: boolean) {
+    setSelected((m) => {
+      const next = new Map(m);
+      for (const p of rows) {
+        if (on) next.set(p.id, p);
+        else next.delete(p.id);
+      }
+      return next;
+    });
+  }
+  const clearSelection = () => setSelected(new Map());
+  // The preview's price: a picked product's, else one on this page.
+  const examplePrice =
+    [...selected.values(), ...rows].find((p) => p.default_price !== null)
+      ?.default_price ?? 2500;
 
   return (
     <div className="space-y-5">
@@ -202,24 +240,71 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
             ? `${meta.total} ${meta.total === 1 ? "product" : "products"}${filtered ? " found" : ""}`
             : " "}
         </p>
-        {filtered && (
+        <div className="flex items-center gap-4">
+          {filtered && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setFilters((f) => ({
+                  ...EMPTY_FILTERS,
+                  sort: f.sort,
+                  dir: f.dir,
+                }));
+              }}
+              className="inline-flex items-center gap-1 hover:text-foreground"
+            >
+              <XIcon className="size-3" />
+              Clear filters
+            </button>
+          )}
+          {/* A sale on a category or everything needs no selection. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <TagIcon data-icon="inline-start" />
+              Sale
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44 p-1">
+              <DropdownMenuItem onClick={() => setSale("start")}>
+                Put on sale…
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSale("end")}>
+                End a sale…
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {selected.size > 0 && (
+        <div
+          role="region"
+          aria-label="Selected products"
+          className="animate-rise flex flex-wrap items-center gap-3 rounded-panel border border-border bg-surface px-4 py-2.5 text-xs"
+        >
+          <p aria-live="polite" className="tabular-nums">
+            {selected.size} selected
+          </p>
           <button
             type="button"
-            onClick={() => {
-              setSearch("");
-              setFilters((f) => ({
-                ...EMPTY_FILTERS,
-                sort: f.sort,
-                dir: f.dir,
-              }));
-            }}
-            className="inline-flex items-center gap-1 hover:text-foreground"
+            onClick={clearSelection}
+            className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
           >
             <XIcon className="size-3" />
-            Clear filters
+            Clear selection
           </button>
-        )}
-      </div>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" onClick={() => setSale("start")}>
+              Put on sale
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setSale("end")}>
+              End sale
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div
         className={cn(
@@ -230,6 +315,15 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
         <Table className="md:min-w-[48rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={allOnPage}
+                  indeterminate={pickedOnPage > 0 && !allOnPage}
+                  disabled={rows.length === 0}
+                  onCheckedChange={(on) => togglePage(on)}
+                  aria-label="Select all on this page"
+                />
+              </TableHead>
               <SortableHead
                 field="name"
                 label="Product"
@@ -262,14 +356,14 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
             {products.isPending ? (
               Array.from({ length: 6 }, (_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={7}>
                     <Skeleton className="h-12" />
                   </TableCell>
                 </TableRow>
               ))
             ) : products.isError && !outOfRange ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={6} className="py-16 text-center">
+                <TableCell colSpan={7} className="py-16 text-center">
                   <p className="mb-4 text-sm text-muted-foreground">
                     The products couldn&apos;t load.
                   </p>
@@ -280,7 +374,7 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={6} className="py-16 text-center">
+                <TableCell colSpan={7} className="py-16 text-center">
                   <p className="font-serif text-2xl">
                     {filtered ? "Nothing matches." : "No products yet."}
                   </p>
@@ -296,6 +390,8 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
                 <ProductRow
                   key={product.id}
                   product={product}
+                  selected={selected.has(product.id)}
+                  onSelect={(on) => toggle(product, on)}
                   onDelete={() => setDeleting(product)}
                 />
               ))
@@ -315,6 +411,14 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
           }}
         />
       )}
+
+      <SaleDialog
+        mode={sale}
+        selectedIds={[...selected.keys()]}
+        examplePrice={examplePrice}
+        onClose={() => setSale(null)}
+        onDone={clearSelection}
+      />
 
       <ConfirmDialog
         open={deleting !== null}
@@ -340,15 +444,26 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
 
 function ProductRow({
   product,
+  selected,
+  onSelect,
   onDelete,
 }: {
   product: AdminProduct;
+  selected: boolean;
+  onSelect: (selected: boolean) => void;
   onDelete: () => void;
 }) {
   const href = `/admin/products/${product.id}`;
   const [image] = product.images;
   return (
-    <TableRow className="group">
+    <TableRow className="group" data-state={selected ? "selected" : undefined}>
+      <TableCell>
+        <Checkbox
+          checked={selected}
+          onCheckedChange={(on) => onSelect(on)}
+          aria-label={`Select ${product.name}`}
+        />
+      </TableCell>
       <TableCell>
         <Link href={href} className="flex items-center gap-3">
           <span className="relative h-14 w-11 shrink-0 overflow-hidden rounded-media bg-surface">

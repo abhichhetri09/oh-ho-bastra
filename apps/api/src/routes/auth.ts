@@ -11,6 +11,7 @@ import {
   stateCookieOptions,
   type GoogleProfile,
 } from "../auth/google";
+import { adoptGuest } from "../auth/guest";
 import {
   checkPassword,
   dummyHash,
@@ -47,6 +48,7 @@ import { googleEnabled, type Config } from "../config";
 import {
   consumePasswordReset,
   createGoogleUser,
+  createGuestUser,
   createPasswordReset,
   createUser,
   getActiveSessionByID,
@@ -74,7 +76,7 @@ import {
 import type { Deps } from "../deps";
 import { renderPasswordReset } from "../emails/render";
 import type { Mailer } from "../emails/mailer";
-import { requireAuth } from "../http/middleware";
+import { requireAccount, requireAuth } from "../http/middleware";
 import { isUuid, userId } from "../http/params";
 import { fail, ok, validationFailed } from "../http/response";
 import type { Group } from "../http/router";
@@ -91,6 +93,42 @@ export function authRoutes(api: Group, deps: Deps) {
   // Against password guessing, account spam and email flooding.
   const limits = authLimits(cfg.authRateLimits);
   const signedIn = requireAuth(cfg);
+
+  /**
+   * The user of the request's session: its refresh cookie names a live
+   * session of that user, and is the session's current token (or was,
+   * moments ago). Null without one.
+   */
+  async function sessionUser(req: Request): Promise<User | null> {
+    const token = refreshCookie(req);
+    const familyId = refreshFamily(token, cfg);
+    if (!familyId) return null;
+    const sess = await getActiveSessionByID(db, familyId);
+    if (!sess) return null;
+    const { user_id } = parseRefresh(token, cfg.jwtRefreshSecret);
+    const presented = hashRefreshToken(token);
+    if (
+      sess.user_id !== user_id ||
+      decide(sess, presented, new Date(), cfg.refreshReuseWindow) === "reuse"
+    )
+      return null;
+    return getUserByID(db, sess.user_id);
+  }
+
+  /**
+   * Hands the request's guest session, if it has one, to the account
+   * signing in: see adoptGuest. The new session is issued after.
+   */
+  async function adoptRequestGuest(req: Request, account: User) {
+    const guest = await sessionUser(req);
+    if (guest?.role !== "guest") return;
+    const adopted = await adoptGuest(db, guest, account);
+    rlog.info(req, "guest adopted", {
+      guest_id: guest.id,
+      user_id: account.id,
+      ...adopted,
+    });
+  }
 
   // compute now, so the first unknown-email login isn't slower
   dummyHash().catch((err: unknown) =>
@@ -145,9 +183,27 @@ export function authRoutes(api: Group, deps: Deps) {
     }
     if (!user) throw new Error("create user returned no row");
 
+    await adoptRequestGuest(req, user);
     await issueSession(db, req, res, cfg, user);
     rlog.info(req, "user registered", { user_id: user.id });
     ok(res, 201, "Registration successful", publicUser(user));
+  });
+
+  // Guest starts a session for a shopper without an account (a hidden
+  // 'guest' user), so the bag and checkout work. A request that already
+  // has a session, guest or not, gets its user back unchanged.
+  auth.post("/guest", limits.guest, async (req, res) => {
+    const current = await sessionUser(req);
+    if (current) {
+      ok(res, 200, "Already signed in", publicUser(current));
+      return;
+    }
+    const user = await createGuestUser(db);
+    if (!user) throw new Error("create guest returned no row");
+
+    await issueSession(db, req, res, cfg, user);
+    rlog.info(req, "guest session started", { user_id: user.id });
+    ok(res, 201, "Guest session started", publicUser(user));
   });
 
   auth.post("/login", ...limits.login, async (req, res) => {
@@ -170,6 +226,7 @@ export function authRoutes(api: Group, deps: Deps) {
       return;
     }
 
+    await adoptRequestGuest(req, user);
     await issueSession(db, req, res, cfg, user);
     rlog.info(req, "user logged in", { user_id: user.id });
     ok(res, 200, "Logged in successfully", publicUser(user));
@@ -264,6 +321,7 @@ export function authRoutes(api: Group, deps: Deps) {
       return;
     }
 
+    await adoptRequestGuest(req, user);
     await issueSession(db, req, res, cfg, user);
     rlog.info(req, "user signed in with google", { user_id: user.id });
     res.redirect(
@@ -489,7 +547,7 @@ export function authRoutes(api: Group, deps: Deps) {
   // UpdateProfile changes the signed-in user's name. The access token
   // carries the name (pages render it from there), so a fresh one is set
   // with the new name instead of waiting for the next refresh.
-  auth.patch("/me", signedIn, async (req, res) => {
+  auth.patch("/me", signedIn, requireAccount, async (req, res) => {
     const body = parseBody(UpdateProfileBody, req, res);
     if (!body) return;
     const id = userId(req);
@@ -517,6 +575,7 @@ export function authRoutes(api: Group, deps: Deps) {
   auth.post(
     "/me/password",
     signedIn,
+    requireAccount,
     limits.changePassword,
     async (req, res) => {
       const body = parseBody(ChangePasswordBody, req, res);
@@ -675,7 +734,7 @@ async function sendResetLink(
   }
   try {
     await mailer.send({
-      to: user.email,
+      to: email,
       subject: msg.subject,
       html: msg.html,
       text: msg.text,

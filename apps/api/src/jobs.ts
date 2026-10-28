@@ -1,4 +1,10 @@
-import { deleteStalePasswordResets, deleteStaleSessions } from "./db/gen";
+import { GUEST_TTL_MS } from "./auth/guest";
+import {
+  deleteStaleGuests,
+  deleteStalePasswordResets,
+  deleteStaleSessions,
+} from "./db/gen";
+import type { Queryable } from "./db/queryable";
 import type { Deps } from "./deps";
 import type { EmailWorker } from "./emails/worker";
 import { log } from "./log";
@@ -29,8 +35,27 @@ function every(interval: number, task: () => Promise<void>) {
 }
 
 /**
- * The loops inside the API process: expired sessions and stale reset links
- * (hourly), checkouts whose reservation ran out without word from Stripe
+ * The hourly cleanup: expired sessions, reset links a day past their
+ * expiry, and guests nobody can use any more (older than GUEST_TTL_MS,
+ * never ordered, no live session; their carts go with them). Resolves to
+ * how many of each were deleted.
+ */
+export async function cleanUp(db: Queryable, now = new Date()) {
+  const sessions = await deleteStaleSessions(db);
+  if (sessions > 0) log.info("session cleanup", { deleted: sessions });
+  const resets = await deleteStalePasswordResets(db);
+  if (resets > 0) log.info("password reset cleanup", { deleted: resets });
+  const guests = await deleteStaleGuests(
+    db,
+    new Date(now.getTime() - GUEST_TTL_MS),
+  );
+  if (guests > 0) log.info("guest cleanup", { deleted: guests });
+  return { sessions, resets, guests };
+}
+
+/**
+ * The loops inside the API process: expired sessions, stale reset links
+ * and unused guests (hourly), checkouts whose reservation ran out without word from Stripe
  * (every 5 minutes), and the order email outbox (every 10 seconds).
  * Resolves the returned function once they've stopped.
  */
@@ -41,11 +66,7 @@ export function startBackgroundJobs(
   const stops = [
     every(SESSION_CLEANUP_INTERVAL, async () => {
       try {
-        const sessions = await deleteStaleSessions(deps.db);
-        if (sessions > 0) log.info("session cleanup", { deleted: sessions });
-        // Reset links a day past their expiry, on the same schedule.
-        const resets = await deleteStalePasswordResets(deps.db);
-        if (resets > 0) log.info("password reset cleanup", { deleted: resets });
+        await cleanUp(deps.db);
       } catch (err) {
         log.error("session cleanup failed", err);
       }

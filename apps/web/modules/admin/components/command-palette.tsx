@@ -22,13 +22,23 @@ import {
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatPrice } from "@/lib/money";
 import { orderLabel } from "@/modules/checkout/lib/orders";
+import { SETTINGS_PAGES } from "../lib/settings";
 import { useAdminSearch } from "../queries";
 import { groups } from "./admin-nav";
+import { SETTINGS_ICONS } from "./settings-nav";
 import { OrderStatusBadge } from "./status-badge";
 
 const noop = () => () => {};
 
-const pages = groups.flatMap((g) => g.links);
+// Every section, and each settings page by name ("Settings › Delivery").
+const pages = [
+  ...groups.flatMap((g) => g.links),
+  ...SETTINGS_PAGES.map((p) => ({
+    label: `Settings › ${p.label}`,
+    href: p.href,
+    icon: SETTINGS_ICONS[p.id],
+  })),
+];
 
 /**
  * The admin's command palette: ⌘K / Ctrl+K (or the top-bar button) finds

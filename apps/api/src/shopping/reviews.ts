@@ -14,7 +14,7 @@ import {
   type ReviewDistributionRow,
 } from "../db/gen";
 import type { Deps } from "../deps";
-import { requireAuth, requireRole } from "../http/middleware";
+import { requireAccount, requireAuth, requireRole } from "../http/middleware";
 import {
   checkPageInRange,
   offset,
@@ -139,7 +139,11 @@ export function reviewRoutes(api: Group, deps: Deps) {
     );
   });
 
-  const mine = api.group("/products/:productSlug/reviews", requireAuth(cfg));
+  const mine = api.group(
+    "/products/:productSlug/reviews",
+    requireAuth(cfg),
+    requireAccount,
+  );
 
   /** Whether the user may review the product, and their review. */
   mine.get("/mine", async (req, res) => {

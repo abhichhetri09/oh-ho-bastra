@@ -38,7 +38,7 @@ import {
   adminShipOrder,
 } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
-import { formatPrice } from "@/lib/money";
+import { formatDiscount, formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { optionSummary } from "@/modules/cart/lib/cart-math";
 import {
@@ -646,6 +646,17 @@ function Items({
           <dt className="text-muted-foreground">Subtotal</dt>
           <dd className="tabular-nums">{formatPrice(o.subtotal)}</dd>
         </div>
+        {o.discount > 0 && (
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">
+              Discount
+              {o.coupon_code && (
+                <span className="font-mono text-xs"> ({o.coupon_code})</span>
+              )}
+            </dt>
+            <dd className="tabular-nums">{formatDiscount(o.discount)}</dd>
+          </div>
+        )}
         <div className="flex justify-between">
           <dt className="text-muted-foreground">Shipping</dt>
           <dd className="tabular-nums">
@@ -671,7 +682,10 @@ const initials = (name: string) =>
     .map((w) => w[0]!.toUpperCase())
     .join("");
 
-/** Who ordered, with a way to reach them and their other orders. */
+/**
+ * Who ordered, with a way to reach them and their other orders. A guest
+ * (no account) has only the order's email, and no profile.
+ */
 function Customer({ order: o }: { order: AdminOrderDetail }) {
   return (
     <Panel title="Customer">
@@ -680,8 +694,17 @@ function Customer({ order: o }: { order: AdminOrderDetail }) {
           {initials(o.customer.name)}
         </span>
         <div className="min-w-0">
-          <p className="truncate text-[0.8125rem] font-medium">
-            {o.customer.name}
+          <p className="flex items-center gap-2 text-[0.8125rem] font-medium">
+            <span className="truncate">
+              {o.customer.guest
+                ? o.shipping_address.full_name
+                : o.customer.name}
+            </span>
+            {o.customer.guest && (
+              <span className="eyebrow shrink-0 rounded-control border border-border px-1.5 py-0.5 !text-[0.5625rem]">
+                Guest
+              </span>
+            )}
           </p>
           <a
             href={`mailto:${o.email}`}
@@ -692,13 +715,19 @@ function Customer({ order: o }: { order: AdminOrderDetail }) {
           </a>
         </div>
       </div>
-      <Link
-        href={`/admin/customers/${o.customer.id}`}
-        className="mt-4 flex items-center justify-between rounded-control bg-surface px-3 py-2 text-xs transition-colors hover:bg-muted"
-      >
-        Profile and other orders
-        <ArrowRightIcon className="size-3.5" />
-      </Link>
+      {o.customer.guest ? (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Checked out without an account.
+        </p>
+      ) : (
+        <Link
+          href={`/admin/customers/${o.customer.id}`}
+          className="mt-4 flex items-center justify-between rounded-control bg-surface px-3 py-2 text-xs transition-colors hover:bg-muted"
+        >
+          Profile and other orders
+          <ArrowRightIcon className="size-3.5" />
+        </Link>
+      )}
     </Panel>
   );
 }

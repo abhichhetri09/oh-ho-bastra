@@ -7,11 +7,12 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import { CheckIcon, PaletteIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
+  applyAppearance,
   isThemeId,
   THEME_COOKIE,
   THEMES,
   themeById,
-  type ThemeId,
+  type Appearance,
 } from "@/lib/themes";
 
 const YEAR = 60 * 60 * 24 * 365;
@@ -21,9 +22,13 @@ const LIFT =
     ? "bottom-20 sm:bottom-20"
     : "bottom-4 sm:bottom-6";
 
-/** Applies a theme at once and remembers it for the server's next render. */
-function applyTheme(id: ThemeId) {
-  document.documentElement.dataset.theme = id;
+/**
+ * Applies a theme at once (with the store's font and corners, which stay)
+ * and remembers it for the server's next render.
+ */
+function applyTheme(appearance: Appearance) {
+  const id = appearance.theme;
+  applyAppearance(document.documentElement, appearance);
   document.cookie = `${THEME_COOKIE}=${id}; path=/; max-age=${YEAR}; samesite=lax`;
   document
     .querySelector('meta[name="theme-color"]')
@@ -34,8 +39,8 @@ function applyTheme(id: ThemeId) {
  * Demo-only theme switcher (DEMO_THEME_PICKER=true): a floating button that
  * lets whoever is presenting the store try each theme live.
  */
-export function ThemePicker({ initial }: { initial: ThemeId }) {
-  const [theme, setTheme] = useState<ThemeId>(initial);
+export function ThemePicker({ initial }: { initial: Appearance }) {
+  const [theme, setTheme] = useState(initial.theme);
 
   return (
     <Popover.Root>
@@ -61,7 +66,7 @@ export function ThemePicker({ initial }: { initial: ThemeId }) {
               onValueChange={(value) => {
                 if (!isThemeId(value)) return;
                 setTheme(value);
-                applyTheme(value);
+                applyTheme({ ...initial, theme: value });
               }}
               aria-label="Theme"
               className="grid gap-2"

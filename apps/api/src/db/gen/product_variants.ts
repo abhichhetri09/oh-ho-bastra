@@ -125,3 +125,54 @@ export interface ClearOtherDefaultsParams {
 export async function clearOtherDefaults(db: Queryable, p: ClearOtherDefaultsParams): Promise<void> {
   await db.query(clearOtherDefaultsSql, [p["product_id"], p["keep_id"]]);
 }
+
+// A mass sale's products are chosen by one of: product_ids, a category
+// (category_id, and its subcategories when include_subcategories) or
+// all_products. The subtree is the one the admin listings walk, by id here;
+// UNION (not UNION ALL) stops even on a cycle.
+// Every variant of the chosen products gets percent_off off its selling
+// price as its offer, replacing the one it had, ending at ends_at (NULL: no
+// end). A price too low to discount (the offer would round to 0 or to the
+// full price, which offer_price's CHECK refuses) keeps its own offer. The
+// maths is numeric: selling_price * 99 can overflow an int.
+export const putVariantsOnSaleSql = "\nWITH RECURSIVE subtree AS (\n    SELECT root.id FROM categories root WHERE root.id = $1::uuid\n    UNION\n    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id\n    WHERE $2::bool\n),\ndiscounted AS (\n    SELECT\n        pv.id,\n        ROUND(pv.selling_price::numeric * (100 - $3::int) / 100)::int AS offer_price\n    FROM product_variants pv\n    JOIN products p ON p.id = pv.product_id\n    WHERE $4::bool\n       OR p.id = ANY($5::uuid[])\n       OR p.category_id IN (SELECT id FROM subtree)\n),\nupdated AS (\n    UPDATE product_variants pv SET\n        offer_price = d.offer_price,\n        offer_expires_at = $6::timestamptz\n    FROM discounted d\n    WHERE pv.id = d.id AND d.offer_price > 0 AND d.offer_price < pv.selling_price\n    RETURNING pv.product_id\n)\nSELECT COUNT(DISTINCT product_id)::int AS products, COUNT(*)::int AS variants\nFROM updated";
+
+export interface PutVariantsOnSaleParams {
+  category_id: string | null;
+  include_subcategories: boolean;
+  percent_off: number;
+  all_products: boolean;
+  product_ids: string[];
+  ends_at: Date | string | null;
+}
+
+export interface PutVariantsOnSaleRow {
+  products: number;
+  variants: number;
+}
+
+export async function putVariantsOnSale(db: Queryable, p: PutVariantsOnSaleParams): Promise<PutVariantsOnSaleRow | null> {
+  const { rows } = await db.query(putVariantsOnSaleSql, [p["category_id"], p["include_subcategories"], p["percent_off"], p["all_products"], p["product_ids"], p["ends_at"]]);
+  return (rows[0] as PutVariantsOnSaleRow | undefined) ?? null;
+}
+
+// Clears the offer of every variant of the chosen products; only those that
+// had one (an expired one too) change and are counted.
+export const endVariantsSaleSql = "WITH RECURSIVE subtree AS (\n    SELECT root.id FROM categories root WHERE root.id = $1::uuid\n    UNION\n    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id\n    WHERE $2::bool\n),\nupdated AS (\n    UPDATE product_variants pv SET offer_price = NULL, offer_expires_at = NULL\n    FROM products p\n    WHERE p.id = pv.product_id\n      AND (pv.offer_price IS NOT NULL OR pv.offer_expires_at IS NOT NULL)\n      AND ($3::bool\n           OR p.id = ANY($4::uuid[])\n           OR p.category_id IN (SELECT id FROM subtree))\n    RETURNING pv.product_id\n)\nSELECT COUNT(DISTINCT product_id)::int AS products, COUNT(*)::int AS variants\nFROM updated";
+
+export interface EndVariantsSaleParams {
+  category_id: string | null;
+  include_subcategories: boolean;
+  all_products: boolean;
+  product_ids: string[];
+}
+
+export interface EndVariantsSaleRow {
+  products: number;
+  variants: number;
+}
+
+export async function endVariantsSale(db: Queryable, p: EndVariantsSaleParams): Promise<EndVariantsSaleRow | null> {
+  const { rows } = await db.query(endVariantsSaleSql, [p["category_id"], p["include_subcategories"], p["all_products"], p["product_ids"]]);
+  return (rows[0] as EndVariantsSaleRow | undefined) ?? null;
+}

@@ -6,6 +6,7 @@ export * from "./admin";
 export * from "./cart_items";
 export * from "./carts";
 export * from "./categories";
+export * from "./coupons";
 export * from "./customers";
 export * from "./emails";
 export * from "./inventory";

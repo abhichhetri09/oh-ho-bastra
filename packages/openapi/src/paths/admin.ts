@@ -432,7 +432,8 @@ export function registerAdminPaths() {
     operationId: "adminSetStoreTheme",
     tag: "Admin",
     summary: "Change the store's theme",
-    description: "The storefront switches to the theme on its next render.",
+    description:
+      "Sets the theme, and the headline font and corner style used in place of the theme's (left out or null: the theme's own). The storefront switches on its next render.",
     auth: "admin",
     request: body(schemas.StoreThemeBodySchema),
     success: {
@@ -440,7 +441,7 @@ export function registerAdminPaths() {
       description: "Store theme updated",
       schema: schemas.StoreSettingsResponseSchema,
     },
-    errors: { 400: "Unknown theme (VALIDATION_FAILED)" },
+    errors: { 400: "Unknown theme, font or corner style (VALIDATION_FAILED)" },
   });
 
   operation({
@@ -480,6 +481,26 @@ export function registerAdminPaths() {
     },
     errors: {
       400: "A field too long, or an invalid email (VALIDATION_FAILED)",
+    },
+  });
+
+  operation({
+    method: "put",
+    path: "/api/v1/admin/settings/shipping",
+    operationId: "adminSetShipping",
+    tag: "Admin",
+    summary: "Change the delivery price",
+    description:
+      "Replaces what delivery costs: a flat price, free from a subtotal counted after any discount code (left out or null: never free). Bags and checkouts are priced with it at once; placed orders keep what they were charged.",
+    auth: "admin",
+    request: body(schemas.ShippingBodySchema),
+    success: {
+      status: 200,
+      description: "Delivery price updated",
+      schema: schemas.StoreSettingsResponseSchema,
+    },
+    errors: {
+      400: "A price or threshold out of range, or not whole cents (VALIDATION_FAILED)",
     },
   });
 }

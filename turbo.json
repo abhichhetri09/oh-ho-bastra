@@ -15,7 +15,8 @@
         "DEMO_THEME_PICKER",
         "FRONTEND_URL",
         "VERCEL_ENV",
-        "VERCEL_PROJECT_PRODUCTION_URL"
+        "VERCEL_PROJECT_PRODUCTION_URL",
+        "NEXT_OUTPUT"
       ]
     },
     "generate": {

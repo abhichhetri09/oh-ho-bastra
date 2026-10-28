@@ -2,6 +2,7 @@ import {
   SHIPPING_COUNTRIES,
   type CategoryNode,
   type ProductDetail,
+  type ShippingRule,
   type StorefrontVariant,
 } from "@repo/types";
 import { CURRENCY } from "@/lib/money";
@@ -63,15 +64,15 @@ export function storeLd(origin: string) {
   };
 }
 
-// The store's real rules (lib/shipping.ts, the checkout's country list and
-// site.shippingCopy): free over €60 else €4.90, two to four working days,
-// free returns within 30 days.
-function shippingDetails(price: number) {
+// The store's real rules (its shipping rule from the settings, the
+// checkout's country list and site.shippingCopy): the admin's delivery
+// price, two to four working days, free returns within 30 days.
+function shippingDetails(price: number, shipping: ShippingRule) {
   return {
     "@type": "OfferShippingDetails",
     shippingRate: {
       "@type": "MonetaryAmount",
-      value: shippingFor(price) / 100,
+      value: shippingFor(price, shipping) / 100,
       currency: CURRENCY,
     },
     shippingDestination: SHIPPING_COUNTRIES.map((country) => ({
@@ -110,11 +111,13 @@ function offerLd({
   price,
   inStock,
   offerEndsAt,
+  shipping,
 }: {
   url: string;
   price: number;
   inStock: boolean;
   offerEndsAt: string | null;
+  shipping: ShippingRule;
 }) {
   return {
     "@type": "Offer",
@@ -125,7 +128,7 @@ function offerLd({
     itemCondition: `${SCHEMA}/NewCondition`,
     // A sale price with an end date: say when it stops being valid.
     ...(offerEndsAt && { priceValidUntil: offerEndsAt.slice(0, 10) }),
-    shippingDetails: shippingDetails(price),
+    shippingDetails: shippingDetails(price, shipping),
     hasMerchantReturnPolicy: RETURN_POLICY,
   };
 }
@@ -148,6 +151,7 @@ function variantLd(
   product: ProductDetail,
   variant: StorefrontVariant,
   productUrl: string,
+  shipping: ShippingRule,
 ) {
   const label = variant.options.map((o) => o.value).join(" / ");
   const url = `${productUrl}?variant=${variant.id}`;
@@ -168,6 +172,7 @@ function variantLd(
       inStock: variant.stock > 0,
       offerEndsAt:
         variant.offer_price !== null ? variant.offer_expires_at : null,
+      shipping,
     }),
   };
 }
@@ -175,18 +180,21 @@ function variantLd(
 /**
  * A product page's structured data. One variant: a Product with one
  * offer. Several: a ProductGroup with a Product per variant, each with its
- * own price, stock and SKU (Google's pattern for variants).
+ * own price, stock and SKU (Google's pattern for variants). Each offer's
+ * shipping follows the store's rule.
  */
 export function productLd({
   origin,
   product,
   variants,
   path,
+  shipping,
 }: {
   origin: string;
   product: ProductDetail;
   variants: StorefrontVariant[];
   path: CategoryNode[];
+  shipping: ShippingRule;
 }) {
   const url = `${origin}/products/${product.slug}`;
   const common = {
@@ -220,7 +228,7 @@ export function productLd({
       ...(varies.length > 0 && {
         variesBy: varies.map((p) => `${SCHEMA}/${p}`),
       }),
-      hasVariant: variants.map((v) => variantLd(product, v, url)),
+      hasVariant: variants.map((v) => variantLd(product, v, url, shipping)),
     };
   }
 
@@ -235,6 +243,7 @@ export function productLd({
       inStock: (only?.stock ?? product.stock) > 0,
       offerEndsAt:
         only && only.offer_price !== null ? only.offer_expires_at : null,
+      shipping,
     }),
   };
 }

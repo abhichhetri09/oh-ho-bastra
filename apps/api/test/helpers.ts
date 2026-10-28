@@ -6,7 +6,7 @@ import { buildApp } from "../src/app";
 import { newAccessToken } from "../src/auth/tokens";
 import type { Config } from "../src/config";
 import { loadConfig } from "../src/config";
-import { createUser, type User } from "../src/db/gen";
+import { createGuestUser, createUser, type User } from "../src/db/gen";
 import { createPool, type Pool } from "../src/db/pool";
 import { CheckoutService } from "../src/checkout/service";
 import type { Deps } from "../src/deps";
@@ -83,7 +83,11 @@ export function fakeCloudinary(): Cloudinary & { deleted: string[] } {
   };
 }
 
-/** Empties every table except the migration bookkeeping. */
+/**
+ * Empties every table except the migration bookkeeping, then seeds the
+ * store's settings row as its migration does (the cart and checkout read
+ * the shipping rule from it).
+ */
 export async function resetDatabase(db: Pool) {
   const { rows } = await db.query<{ tablename: string }>(
     "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'schema_migrations'",
@@ -93,24 +97,36 @@ export async function resetDatabase(db: Pool) {
       `TRUNCATE ${rows.map((r) => `"${r.tablename}"`).join(", ")} RESTART IDENTITY CASCADE`,
     );
   }
+  await db.query("INSERT INTO store_settings DEFAULT VALUES");
 }
 
 export const TEST_PASSWORD = "secret123";
 
+/** A customer or admin: unlike a guest, it always has an email. */
+export type Account = User & { email: string };
+
 /** A user (customer by default) with TEST_PASSWORD, hashed cheaply. */
 export async function makeUser(
   db: Pool,
-  fields: Partial<Pick<User, "name" | "email" | "role" | "image_url">> = {},
-): Promise<User> {
+  fields: Partial<Pick<Account, "name" | "email" | "role" | "image_url">> = {},
+): Promise<Account> {
+  const email = fields.email ?? `user-${randomUUID().slice(0, 8)}@example.com`;
   const user = await createUser(db, {
     name: fields.name ?? "Ada Lovelace",
-    email: fields.email ?? `user-${randomUUID().slice(0, 8)}@example.com`,
+    email,
     password_hash: await bcrypt.hash(TEST_PASSWORD, 4),
     role: fields.role ?? "customer",
     image_url: fields.image_url ?? null,
   });
   if (!user) throw new Error("createUser returned no row");
-  return user;
+  return { ...user, email };
+}
+
+/** A guest (a hidden user for shopping without an account). */
+export async function makeGuest(db: Pool): Promise<User> {
+  const guest = await createGuestUser(db);
+  if (!guest) throw new Error("createGuestUser returned no row");
+  return guest;
 }
 
 /** A Cookie header that signs in as user (an access token only). */

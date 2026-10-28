@@ -2,6 +2,8 @@ import { z } from "zod";
 import {
   CreateVariantBodySchema,
   ProductBodySchema,
+  PutOnSaleBodySchema,
+  Timestamp,
   UpdateVariantBodySchema,
 } from "@repo/types";
 
@@ -127,3 +129,65 @@ export const UpdateVariantBody = z
   .refine(sameLen.check, sameLen.params)
   .refine(offerBelowPrice.check, offerBelowPrice.params);
 export type UpdateVariantInput = z.output<typeof UpdateVariantBody>;
+
+// A mass sale's target is a union in the spec (SaleTarget), but zod reports
+// a failed union as one opaque issue. Checked as one object instead, a bad
+// id is reported at its own field (target.product_ids.2) and a mix of
+// targets at the target itself.
+
+const TARGET_KEYS = ["product_ids", "category_id", "all"] as const;
+
+/** Which products a sale applies to. */
+export type SaleScope =
+  | { kind: "products"; ids: string[] }
+  | { kind: "category"; id: string; subcategories: boolean }
+  | { kind: "all" };
+
+const SaleTarget = z
+  .object({
+    product_ids: z.array(z.guid()).min(1).max(200).optional(),
+    category_id: z.guid().optional(),
+    include_subcategories: z.boolean().optional(),
+    all: z.literal(true).optional(),
+  })
+  .superRefine((t, ctx) => {
+    if (TARGET_KEYS.filter((k) => t[k] !== undefined).length !== 1) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Choose one target: product_ids, category_id or all",
+        params: { code: "INVALID_VALUE" },
+      });
+    } else if (t.category_id && t.include_subcategories === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["include_subcategories"],
+        message: "Include subcategories is required",
+        params: { code: "REQUIRED_FIELD" },
+      });
+    }
+  })
+  .transform((t): SaleScope => {
+    if (t.product_ids) return { kind: "products", ids: t.product_ids };
+    if (t.category_id) {
+      return {
+        kind: "category",
+        id: t.category_id.toLowerCase(),
+        subcategories: t.include_subcategories ?? false,
+      };
+    }
+    return { kind: "all" };
+  });
+
+export const PutOnSaleBody = z.object({
+  target: SaleTarget,
+  percent_off: PutOnSaleBodySchema.shape.percent_off,
+  // null was dropped as "not given" (parseBody); the end is checked against
+  // our clock, not the browser's
+  ends_at: Timestamp.refine((v) => Date.parse(v) > Date.now(), {
+    message: "The sale must end in the future",
+    params: { code: "OUT_OF_RANGE" },
+  }).optional(),
+});
+export type PutOnSaleInput = z.output<typeof PutOnSaleBody>;
+
+export const EndSaleBody = z.object({ target: SaleTarget });

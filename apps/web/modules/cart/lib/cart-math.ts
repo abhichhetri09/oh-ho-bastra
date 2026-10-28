@@ -1,22 +1,35 @@
 import {
   type Cart,
+  type CartCoupon,
   type CartLine,
   MAX_LINE_QUANTITY,
   type ProductDetail,
+  type ShippingRule,
   type StorefrontVariant,
   type WishlistProduct,
 } from "@repo/types";
+import { DEFAULT_SHIPPING, shippingFor } from "@/lib/shipping";
+import { repriceCoupon } from "./coupon";
 
 // Client copies of the API's cart arithmetic (handlers/cart buildCart), for
-// optimistic updates. The server's answer replaces them once it arrives.
+// optimistic updates, priced with the store's shipping rule as the layout
+// read it (useShippingRule). The server's answer replaces them once it
+// arrives.
 
 /** Whether a line can be checked out as it stands. */
 export function lineIsReady(line: CartLine): boolean {
   return line.available && line.quantity <= line.stock;
 }
 
-/** Recomputes the totals from the lines. */
-export function withTotals(items: CartLine[]): Cart {
+/**
+ * Recomputes the totals from the lines, with the bag's discount code (if
+ * any) taken off before shipping under rule, as the API does.
+ */
+export function withTotals(
+  items: CartLine[],
+  coupon: CartCoupon | null,
+  rule: ShippingRule,
+): Cart {
   let itemCount = 0;
   let subtotal = 0;
   let hasIssues = false;
@@ -28,13 +41,27 @@ export function withTotals(items: CartLine[]): Cart {
     itemCount += line.quantity;
     subtotal += line.price * line.quantity;
   }
-  return { items, item_count: itemCount, subtotal, has_issues: hasIssues };
+  const repriced = repriceCoupon(coupon, subtotal);
+  const discount = repriced?.discount ?? 0;
+  // Nothing to check out ships for nothing.
+  const shipping = itemCount === 0 ? 0 : shippingFor(subtotal - discount, rule);
+  return {
+    items,
+    item_count: itemCount,
+    subtotal,
+    discount,
+    shipping,
+    total: subtotal - discount + shipping,
+    coupon: repriced,
+    has_issues: hasIssues,
+  };
 }
 
 export function setLineQuantity(
   cart: Cart,
   variantId: string,
   quantity: number,
+  rule: ShippingRule,
 ): Cart {
   return withTotals(
     cart.items.map((line) =>
@@ -42,11 +69,26 @@ export function setLineQuantity(
         ? { ...line, quantity, line_total: line.price * quantity }
         : line,
     ),
+    cart.coupon,
+    rule,
   );
 }
 
-export function removeLine(cart: Cart, variantId: string): Cart {
-  return withTotals(cart.items.filter((l) => l.variant_id !== variantId));
+export function removeLine(
+  cart: Cart,
+  variantId: string,
+  rule: ShippingRule,
+): Cart {
+  return withTotals(
+    cart.items.filter((l) => l.variant_id !== variantId),
+    cart.coupon,
+    rule,
+  );
+}
+
+/** The bag without its discount code. */
+export function removeCoupon(cart: Cart, rule: ShippingRule): Cart {
+  return withTotals(cart.items, null, rule);
 }
 
 /** What a page knows about a variant, enough to show it in the bag. */
@@ -109,6 +151,7 @@ export function addLine(
   cart: Cart,
   variantId: string,
   quantity: number,
+  rule: ShippingRule,
   preview?: LinePreview,
 ): Cart {
   const line = cart.items.find((l) => l.variant_id === variantId);
@@ -119,23 +162,29 @@ export function addLine(
       cart,
       variantId,
       Math.min(line.quantity + quantity, cap),
+      rule,
     );
   }
   if (!preview) return cart;
-  return withTotals([
-    ...cart.items,
-    {
-      ...preview,
-      quantity,
-      added_at: new Date().toISOString(),
-      available: true,
-      line_total: preview.price * quantity,
-      max_quantity: Math.min(preview.stock, MAX_LINE_QUANTITY),
-    },
-  ]);
+  return withTotals(
+    [
+      ...cart.items,
+      {
+        ...preview,
+        quantity,
+        added_at: new Date().toISOString(),
+        available: true,
+        line_total: preview.price * quantity,
+        max_quantity: Math.min(preview.stock, MAX_LINE_QUANTITY),
+      },
+    ],
+    cart.coupon,
+    rule,
+  );
 }
 
-export const EMPTY_CART: Cart = withTotals([]);
+/** Nothing in it ships for nothing, whatever the rule. */
+export const EMPTY_CART: Cart = withTotals([], null, DEFAULT_SHIPPING);
 
 /**
  * Units in the bag, ready or not: what the badge and headings count, so a

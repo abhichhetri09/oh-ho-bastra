@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminCancelOrderData, AdminCancelOrderErrors, AdminCancelOrderResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminDeliverOrderData, AdminDeliverOrderErrors, AdminDeliverOrderResponses, AdminExportOrdersData, AdminExportOrdersErrors, AdminExportOrdersResponses, AdminGetCountsData, AdminGetCountsErrors, AdminGetCountsResponses, AdminGetCustomerData, AdminGetCustomerErrors, AdminGetCustomerResponses, AdminGetOrderData, AdminGetOrderErrors, AdminGetOrderResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListCustomersData, AdminListCustomersErrors, AdminListCustomersResponses, AdminListEmailsData, AdminListEmailsErrors, AdminListEmailsResponses, AdminListInventoryData, AdminListInventoryErrors, AdminListInventoryResponses, AdminListOrdersData, AdminListOrdersErrors, AdminListOrdersResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListReviewsData, AdminListReviewsErrors, AdminListReviewsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminRefundOrderData, AdminRefundOrderErrors, AdminRefundOrderResponses, AdminRetryEmailData, AdminRetryEmailErrors, AdminRetryEmailResponses, AdminSearchData, AdminSearchErrors, AdminSearchResponses, AdminSetAnnouncementsData, AdminSetAnnouncementsErrors, AdminSetAnnouncementsResponses, AdminSetBusinessDetailsData, AdminSetBusinessDetailsErrors, AdminSetBusinessDetailsResponses, AdminSetOrderTrackingData, AdminSetOrderTrackingErrors, AdminSetOrderTrackingResponses, AdminSetReviewStatusData, AdminSetReviewStatusErrors, AdminSetReviewStatusResponses, AdminSetStoreThemeData, AdminSetStoreThemeErrors, AdminSetStoreThemeResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminShipOrderData, AdminShipOrderErrors, AdminShipOrderResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ChangePasswordData, ChangePasswordErrors, ChangePasswordResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, ForgotPasswordData, ForgotPasswordErrors, ForgotPasswordResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, GetStoreSettingsData, GetStoreSettingsErrors, GetStoreSettingsResponses, GoogleCallbackData, GoogleCallbackErrors, GoogleSignInData, GoogleSignInErrors, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, ResetPasswordData, ResetPasswordErrors, ResetPasswordResponses, SendContactMessageData, SendContactMessageErrors, SendContactMessageResponses, SetDefaultAddressData, SetDefaultAddressErrors, SetDefaultAddressResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, UpdateProfileData, UpdateProfileErrors, UpdateProfileResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
+import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminCancelOrderData, AdminCancelOrderErrors, AdminCancelOrderResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateCouponData, AdminCreateCouponErrors, AdminCreateCouponResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteCouponData, AdminDeleteCouponErrors, AdminDeleteCouponResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminDeliverOrderData, AdminDeliverOrderErrors, AdminDeliverOrderResponses, AdminEndSaleData, AdminEndSaleErrors, AdminEndSaleResponses, AdminExportOrdersData, AdminExportOrdersErrors, AdminExportOrdersResponses, AdminGetCountsData, AdminGetCountsErrors, AdminGetCountsResponses, AdminGetCustomerData, AdminGetCustomerErrors, AdminGetCustomerResponses, AdminGetOrderData, AdminGetOrderErrors, AdminGetOrderResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListCouponsData, AdminListCouponsErrors, AdminListCouponsResponses, AdminListCustomersData, AdminListCustomersErrors, AdminListCustomersResponses, AdminListEmailsData, AdminListEmailsErrors, AdminListEmailsResponses, AdminListInventoryData, AdminListInventoryErrors, AdminListInventoryResponses, AdminListOrdersData, AdminListOrdersErrors, AdminListOrdersResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListReviewsData, AdminListReviewsErrors, AdminListReviewsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminPutOnSaleData, AdminPutOnSaleErrors, AdminPutOnSaleResponses, AdminRefundOrderData, AdminRefundOrderErrors, AdminRefundOrderResponses, AdminRetryEmailData, AdminRetryEmailErrors, AdminRetryEmailResponses, AdminSearchData, AdminSearchErrors, AdminSearchResponses, AdminSetAnnouncementsData, AdminSetAnnouncementsErrors, AdminSetAnnouncementsResponses, AdminSetBusinessDetailsData, AdminSetBusinessDetailsErrors, AdminSetBusinessDetailsResponses, AdminSetCouponActiveData, AdminSetCouponActiveErrors, AdminSetCouponActiveResponses, AdminSetOrderTrackingData, AdminSetOrderTrackingErrors, AdminSetOrderTrackingResponses, AdminSetReviewStatusData, AdminSetReviewStatusErrors, AdminSetReviewStatusResponses, AdminSetShippingData, AdminSetShippingErrors, AdminSetShippingResponses, AdminSetStoreThemeData, AdminSetStoreThemeErrors, AdminSetStoreThemeResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminShipOrderData, AdminShipOrderErrors, AdminShipOrderResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateCouponData, AdminUpdateCouponErrors, AdminUpdateCouponResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ApplyCartCouponData, ApplyCartCouponErrors, ApplyCartCouponResponses, ChangePasswordData, ChangePasswordErrors, ChangePasswordResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, ForgotPasswordData, ForgotPasswordErrors, ForgotPasswordResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, GetStoreSettingsData, GetStoreSettingsErrors, GetStoreSettingsResponses, GoogleCallbackData, GoogleCallbackErrors, GoogleSignInData, GoogleSignInErrors, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, LookupOrderData, LookupOrderErrors, LookupOrderResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartCouponData, RemoveCartCouponErrors, RemoveCartCouponResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, ResetPasswordData, ResetPasswordErrors, ResetPasswordResponses, SendContactMessageData, SendContactMessageErrors, SendContactMessageResponses, SetDefaultAddressData, SetDefaultAddressErrors, SetDefaultAddressResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StartGuestSessionData, StartGuestSessionErrors, StartGuestSessionResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, UpdateProfileData, UpdateProfileErrors, UpdateProfileResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -30,7 +30,7 @@ export const getHealth = <ThrowOnError extends boolean = false>(options?: Option
 /**
  * Register
  *
- * Creates a customer account and starts a session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. The email is trimmed and lowercased.
+ * Creates a customer account and starts a session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. The email is trimmed and lowercased. From a guest session (by its refresh cookie), the guest's bag joins the account's (quantities add up, capped to stock; the account keeps its own discount code, else takes the guest's), the guest's orders placed with the account's email move to the account, and the guest is signed out and deleted once it has no orders left, all in one transaction.
  */
 export const register = <ThrowOnError extends boolean = false>(options: Options<RegisterData, ThrowOnError>): RequestResult<RegisterResponses, RegisterErrors, ThrowOnError> => (options.client ?? client).post<RegisterResponses, RegisterErrors, ThrowOnError>({
     responseType: 'json',
@@ -43,9 +43,20 @@ export const register = <ThrowOnError extends boolean = false>(options: Options<
 });
 
 /**
+ * Start a guest session
+ *
+ * For shopping without an account: creates a hidden guest user (role `guest`, no email or password, name "Guest") and starts its session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. A guest can use the bag, its discount code, checkout (giving an email) and its own orders; the wishlist, reviews, the address book and account settings answer 403 GUEST_NOT_ALLOWED. A request that already has a session (guest or not) gets its user back unchanged, with 200.
+ */
+export const startGuestSession = <ThrowOnError extends boolean = false>(options?: Options<StartGuestSessionData, ThrowOnError>): RequestResult<StartGuestSessionResponses, StartGuestSessionErrors, ThrowOnError> => (options?.client ?? client).post<StartGuestSessionResponses, StartGuestSessionErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/auth/guest',
+    ...options
+});
+
+/**
  * Log in
  *
- * Starts a new session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie.
+ * Starts a new session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. From a guest session (by its refresh cookie), the guest's bag joins the account's (quantities add up, capped to stock; the account keeps its own discount code, else takes the guest's), the guest's orders placed with the account's email move to the account, and the guest is signed out and deleted once it has no orders left, all in one transaction. A guest has no email or password, so it can never log in itself.
  */
 export const login = <ThrowOnError extends boolean = false>(options: Options<LoginData, ThrowOnError>): RequestResult<LoginResponses, LoginErrors, ThrowOnError> => (options.client ?? client).post<LoginResponses, LoginErrors, ThrowOnError>({
     responseType: 'json',
@@ -67,7 +78,7 @@ export const googleSignIn = <ThrowOnError extends boolean = false>(options?: Opt
 /**
  * Google sign-in callback
  *
- * Where Google sends the browser back. Checks the state against the `google_oauth` cookie, trades the code for the Google profile and signs in the customer linked to that Google account, creating one for a new email. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. Then redirects to `?next=` from the start (else the home page, or /admin for an admin). Any failure redirects to the login page with `?google_error=` set to `cancelled`, `failed`, `unverified` (the Google email isn't verified) or `exists` (a password account already uses the email).
+ * Where Google sends the browser back. Checks the state against the `google_oauth` cookie, trades the code for the Google profile and signs in the customer linked to that Google account, creating one for a new email. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. From a guest session (by its refresh cookie), the guest's bag joins the account's (quantities add up, capped to stock; the account keeps its own discount code, else takes the guest's), the guest's orders placed with the account's email move to the account, and the guest is signed out and deleted once it has no orders left, all in one transaction. Then redirects to `?next=` from the start (else the home page, or /admin for an admin). Any failure redirects to the login page with `?google_error=` set to `cancelled`, `failed`, `unverified` (the Google email isn't verified) or `exists` (a password account already uses the email).
  */
 export const googleCallback = <ThrowOnError extends boolean = false>(options?: Options<GoogleCallbackData, ThrowOnError>): RequestResult<unknown, GoogleCallbackErrors, ThrowOnError> => (options?.client ?? client).get<unknown, GoogleCallbackErrors, ThrowOnError>({ url: '/api/v1/auth/google/callback', ...options });
 
@@ -378,6 +389,46 @@ export const adminCreateVariant = <ThrowOnError extends boolean = false>(options
 });
 
 /**
+ * Put products on sale
+ *
+ * Sets an offer of percent_off on every variant of the targeted products (active or not), in one transaction. Variants whose discounted price would round to 0 or to their full price are skipped.
+ */
+export const adminPutOnSale = <ThrowOnError extends boolean = false>(options: Options<AdminPutOnSaleData, ThrowOnError>): RequestResult<AdminPutOnSaleResponses, AdminPutOnSaleErrors, ThrowOnError> => (options.client ?? client).post<AdminPutOnSaleResponses, AdminPutOnSaleErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/products/sale',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * End a sale
+ *
+ * Clears the offer (and its end) of every variant of the targeted products. Counts only the variants that had one.
+ */
+export const adminEndSale = <ThrowOnError extends boolean = false>(options: Options<AdminEndSaleData, ThrowOnError>): RequestResult<AdminEndSaleResponses, AdminEndSaleErrors, ThrowOnError> => (options.client ?? client).post<AdminEndSaleResponses, AdminEndSaleErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/products/sale/end',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Delete a product
  *
  * Also deletes its variants, options and cart items.
@@ -514,7 +565,7 @@ export const clearCart = <ThrowOnError extends boolean = false>(options?: Option
 /**
  * Get my cart
  *
- * One cart per user, priced live; empty until something is added. Capped at 50 lines, so it is not paginated.
+ * One cart per user, priced live; empty until something is added. Capped at 50 lines, so it is not paginated. With a discount code, its discount and any issue are worked out on each read.
  */
 export const getCart = <ThrowOnError extends boolean = false>(options?: Options<GetCartData, ThrowOnError>): RequestResult<GetCartResponses, GetCartErrors, ThrowOnError> => (options?.client ?? client).get<GetCartResponses, GetCartErrors, ThrowOnError>({
     responseType: 'json',
@@ -582,9 +633,45 @@ export const updateCartItem = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
+ * Remove the discount code
+ *
+ * Removing when there is none succeeds.
+ */
+export const removeCartCoupon = <ThrowOnError extends boolean = false>(options?: Options<RemoveCartCouponData, ThrowOnError>): RequestResult<RemoveCartCouponResponses, RemoveCartCouponErrors, ThrowOnError> => (options?.client ?? client).delete<RemoveCartCouponResponses, RemoveCartCouponErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/cart/coupon',
+    ...options
+});
+
+/**
+ * Apply a discount code
+ *
+ * Checks the code against the bag as it is now and puts it on the bag, replacing any other (one code per bag). Codes are case-insensitive. Failed attempts are limited to 10 per 15 minutes per user, against guessing.
+ */
+export const applyCartCoupon = <ThrowOnError extends boolean = false>(options: Options<ApplyCartCouponData, ThrowOnError>): RequestResult<ApplyCartCouponResponses, ApplyCartCouponErrors, ThrowOnError> => (options.client ?? client).put<ApplyCartCouponResponses, ApplyCartCouponErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/cart/coupon',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Start checkout
  *
- * Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines once payment lands.
+ * Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. The cart's discount code is checked again and its use held by the order until it is paid or cancelled. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines (and its code) once payment lands. The order's email (where its emails go, Stripe's receipt email, and who a once-per-customer code counts) is the account's; a guest gives it as `email` and ships to a new `address` (nothing is saved).
  */
 export const startCheckout = <ThrowOnError extends boolean = false>(options: Options<StartCheckoutData, ThrowOnError>): RequestResult<StartCheckoutResponses, StartCheckoutErrors, ThrowOnError> => (options.client ?? client).post<StartCheckoutResponses, StartCheckoutErrors, ThrowOnError>({
     responseType: 'json',
@@ -656,6 +743,21 @@ export const getOrder = <ThrowOnError extends boolean = false>(options: Options<
         }],
     url: '/api/v1/orders/{number}',
     ...options
+});
+
+/**
+ * Find an order by number and email
+ *
+ * For shoppers without an account (the order tracking page): the placed order with that number and email (any case), as GET /orders/{number} answers it, with `reviewed_product_ids` empty. A wrong email answers the same 404 as an unknown number. Abandoned checkouts aren't found.
+ */
+export const lookupOrder = <ThrowOnError extends boolean = false>(options: Options<LookupOrderData, ThrowOnError>): RequestResult<LookupOrderResponses, LookupOrderErrors, ThrowOnError> => (options.client ?? client).post<LookupOrderResponses, LookupOrderErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/orders/lookup',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -849,7 +951,7 @@ export const getMyReview = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * Store settings
  *
- * Store-wide settings the storefront needs: its theme, the top banner's messages and the seller's business details.
+ * Store-wide settings the storefront needs: its theme (with the headline font and corners the store uses in place of the theme's), the top banner's messages, the seller's business details and what delivery costs.
  */
 export const getStoreSettings = <ThrowOnError extends boolean = false>(options?: Options<GetStoreSettingsData, ThrowOnError>): RequestResult<GetStoreSettingsResponses, GetStoreSettingsErrors, ThrowOnError> => (options?.client ?? client).get<GetStoreSettingsResponses, GetStoreSettingsErrors, ThrowOnError>({
     responseType: 'json',
@@ -1180,7 +1282,7 @@ export const adminSetReviewStatus = <ThrowOnError extends boolean = false>(optio
 /**
  * Change the store's theme
  *
- * The storefront switches to the theme on its next render.
+ * Sets the theme, and the headline font and corner style used in place of the theme's (left out or null: the theme's own). The storefront switches on its next render.
  */
 export const adminSetStoreTheme = <ThrowOnError extends boolean = false>(options: Options<AdminSetStoreThemeData, ThrowOnError>): RequestResult<AdminSetStoreThemeResponses, AdminSetStoreThemeErrors, ThrowOnError> => (options.client ?? client).put<AdminSetStoreThemeResponses, AdminSetStoreThemeErrors, ThrowOnError>({
     responseType: 'json',
@@ -1230,6 +1332,116 @@ export const adminSetBusinessDetails = <ThrowOnError extends boolean = false>(op
             type: 'apiKey'
         }],
     url: '/api/v1/admin/settings/business',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Change the delivery price
+ *
+ * Replaces what delivery costs: a flat price, free from a subtotal counted after any discount code (left out or null: never free). Bags and checkouts are priced with it at once; placed orders keep what they were charged.
+ */
+export const adminSetShipping = <ThrowOnError extends boolean = false>(options: Options<AdminSetShippingData, ThrowOnError>): RequestResult<AdminSetShippingResponses, AdminSetShippingErrors, ThrowOnError> => (options.client ?? client).put<AdminSetShippingResponses, AdminSetShippingErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/settings/shipping',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Discount codes
+ *
+ * Newest first, 20 per page, each with its uses (unpaid checkouts hold theirs until they are cancelled).
+ */
+export const adminListCoupons = <ThrowOnError extends boolean = false>(options?: Options<AdminListCouponsData, ThrowOnError>): RequestResult<AdminListCouponsResponses, AdminListCouponsErrors, ThrowOnError> => (options?.client ?? client).get<AdminListCouponsResponses, AdminListCouponsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/coupons',
+    ...options
+});
+
+/**
+ * Create a discount code
+ */
+export const adminCreateCoupon = <ThrowOnError extends boolean = false>(options: Options<AdminCreateCouponData, ThrowOnError>): RequestResult<AdminCreateCouponResponses, AdminCreateCouponErrors, ThrowOnError> => (options.client ?? client).post<AdminCreateCouponResponses, AdminCreateCouponErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/coupons',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a discount code
+ *
+ * Only a code that was never used; one that was is switched off instead, so its orders keep their record.
+ */
+export const adminDeleteCoupon = <ThrowOnError extends boolean = false>(options: Options<AdminDeleteCouponData, ThrowOnError>): RequestResult<AdminDeleteCouponResponses, AdminDeleteCouponErrors, ThrowOnError> => (options.client ?? client).delete<AdminDeleteCouponResponses, AdminDeleteCouponErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/coupons/{couponID}',
+    ...options
+});
+
+/**
+ * Change a discount code
+ *
+ * Replaces every field. Orders keep the code and discount they were placed with; bags holding the old code see it checked against the new rules.
+ */
+export const adminUpdateCoupon = <ThrowOnError extends boolean = false>(options: Options<AdminUpdateCouponData, ThrowOnError>): RequestResult<AdminUpdateCouponResponses, AdminUpdateCouponErrors, ThrowOnError> => (options.client ?? client).put<AdminUpdateCouponResponses, AdminUpdateCouponErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/coupons/{couponID}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Switch a discount code on or off
+ *
+ * A code that is off can't be applied or checked out with; to shoppers it doesn't exist.
+ */
+export const adminSetCouponActive = <ThrowOnError extends boolean = false>(options: Options<AdminSetCouponActiveData, ThrowOnError>): RequestResult<AdminSetCouponActiveResponses, AdminSetCouponActiveErrors, ThrowOnError> => (options.client ?? client).put<AdminSetCouponActiveResponses, AdminSetCouponActiveErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/coupons/{couponID}/active',
     ...options,
     headers: {
         'Content-Type': 'application/json',

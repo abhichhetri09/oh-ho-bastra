@@ -54,11 +54,12 @@ export function AuthForm(props: AuthFormProps) {
   const searchParams = useSearchParams();
   const next = safeNextPath(searchParams.get("next"));
 
-  const [values, setValues] = useState<FormValues>({
+  const [values, setValues] = useState<FormValues>(() => ({
     name: "",
-    email: "",
+    // ?email= fills it in (a guest's order email, from the success page).
+    email: (searchParams.get("email") ?? "").trim().slice(0, 254),
     password: "",
-  });
+  }));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { ref: formRef, focusFirstError } = useFocusFirstError();
 

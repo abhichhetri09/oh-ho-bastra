@@ -12,6 +12,20 @@ test("maps user_id to id", () => {
   });
 });
 
+test("reads a guest, which has no email", () => {
+  expect(
+    userFromAccessToken(
+      token(accessClaims({ role: "guest", email: "", name: "Guest" })),
+    ),
+  ).toEqual({
+    id: "0b7c1e1e-8a52-4a8e-9a43-0d1f5b2f3c4d",
+    name: "Guest",
+    email: null,
+    role: "guest",
+    image_url: null,
+  });
+});
+
 test.each([
   ["expired", { exp: nowSec() - 1 }],
   ["refresh token", { typ: "refresh" }],

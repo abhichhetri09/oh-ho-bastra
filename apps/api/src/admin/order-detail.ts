@@ -22,7 +22,8 @@ function sendAdminJson(res: Response, status: number, body: unknown) {
 
 /**
  * The order as the admin sees it: what was bought (with each line's
- * shortfall), by whom, and the payment (null until it is paid).
+ * shortfall), by whom (a customer, or a guest), and the payment (null
+ * until it is paid).
  */
 export async function respondOrder(
   req: Request,
@@ -43,13 +44,20 @@ export async function respondOrder(
     return;
   }
   const payment = await getOrderPayment(db, order.id);
+  // A guest has no email of its own: the order's is the one to write to.
+  const guest = user.role === "guest";
   sendAdminJson(res, 200, {
     success: true,
     message,
     data: {
       ...order,
       items,
-      customer: { id: user.id, name: user.name, email: user.email },
+      customer: {
+        id: user.id,
+        name: user.name,
+        email: guest ? order.email : (user.email ?? order.email),
+        guest,
+      },
       payment,
     },
   });

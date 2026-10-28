@@ -15,9 +15,12 @@ export interface OrderView {
   label: string; // "OHB-1001"
   placedOn: string;
   url: string; // the order on the storefront
+  cta: string; // the link's label: "View your order", or "Track your order"
   shopUrl: string;
   items: ItemView[];
   subtotal: string;
+  /** The code's line ("Discount (SUMMER10)", "−€5.00"); null without one. */
+  discount: { label: string; amount: string } | null;
   shipping: string;
   total: string;
   tracking: string;
@@ -135,7 +138,7 @@ export function orderHtml(v: OrderView): string {
 
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
 <tr><td style="background:#24201c;">
-<a href="${u(v.url)}" style="display:inline-block;padding:12px 22px;font-size:14px;color:#faf8f4;text-decoration:none;">View your order</a>
+<a href="${u(v.url)}" style="display:inline-block;padding:12px 22px;font-size:14px;color:#faf8f4;text-decoration:none;">${h(v.cta)}</a>
 </td></tr>
 </table>
 
@@ -143,7 +146,12 @@ export function orderHtml(v: OrderView): string {
 </table>
 
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:16px 0 0;font-size:14px;">
-<tr><td style="padding:3px 0;color:#4a423a;">Subtotal</td><td align="right" style="padding:3px 0;">${h(v.subtotal)}</td></tr>
+<tr><td style="padding:3px 0;color:#4a423a;">Subtotal</td><td align="right" style="padding:3px 0;">${h(v.subtotal)}</td></tr>${
+      v.discount
+        ? `
+<tr><td style="padding:3px 0;color:#4a423a;">${h(v.discount.label)}</td><td align="right" style="padding:3px 0;">${h(v.discount.amount)}</td></tr>`
+        : ""
+    }
 <tr><td style="padding:3px 0;color:#4a423a;">Shipping</td><td align="right" style="padding:3px 0;">${h(v.shipping)}</td></tr>
 <tr><td style="padding:10px 0 0;font-size:15px;color:#24201c;"><strong>Total</strong></td><td align="right" style="padding:10px 0 0;font-size:15px;"><strong>${h(v.total)}</strong></td></tr>
 </table>${address}
@@ -166,11 +174,11 @@ ${v.greeting}
 
 ${v.intro}
 ${v.tracking ? `\nTracking number: ${v.tracking}\n` : ""}
-View your order: ${v.url}
+${v.cta}: ${v.url}
 
 ${v.items.map((it) => `${it.quantity} × ${it.name}${it.options ? ` (${it.options})` : ""}  ${it.lineTotal}\n`).join("")}
 Subtotal  ${v.subtotal}
-Shipping  ${v.shipping}
+${v.discount ? `${v.discount.label}  ${v.discount.amount}\n` : ""}Shipping  ${v.shipping}
 Total     ${v.total}
 ${v.address?.length ? `\nShipping to:\n${v.address.map((line) => line + "\n").join("")}` : ""}
 --

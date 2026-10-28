@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { accountOf } from "@/lib/auth/redirect";
 import { getSessionUser } from "@/lib/auth/session";
 import { site } from "@/lib/site";
 import { storeBusiness } from "@/lib/theme-server";
@@ -11,6 +12,7 @@ const signedOutLinks = [
 
 const helpLinks = [
   { label: "Contact", href: "/contact" },
+  { label: "Track an order", href: "/orders/track" },
   { label: "Shipping", href: "/terms#shipping" },
   { label: "Returns", href: "/terms#returns" },
   { label: "Terms of sale", href: "/terms" },
@@ -40,7 +42,10 @@ export async function SiteFooter() {
       ],
     },
     { title: "Help", links: helpLinks },
-    { title: "Account", links: user ? signedInLinks : signedOutLinks },
+    {
+      title: "Account",
+      links: accountOf(user) ? signedInLinks : signedOutLinks,
+    },
   ];
 
   return (

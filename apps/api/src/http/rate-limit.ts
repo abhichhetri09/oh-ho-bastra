@@ -9,7 +9,9 @@ import { rlog } from "../log";
 import { fail } from "./response";
 
 // Limits on the auth endpoints, against password guessing (one account or
-// many), account spam and email flooding. Counts live in memory: one API
+// many), account and guest spam and email flooding, on discount codes,
+// against guessing them, and on order lookups, against guessing an
+// order's email. Counts live in memory: one API
 // instance. With several instances behind a load balancer, give them a
 // shared store (express-rate-limit supports Redis) or each counts alone.
 //
@@ -65,6 +67,8 @@ export interface AuthLimits {
   /** Failed logins: per ip and account, and per ip across accounts. */
   login: RequestHandler[];
   register: RequestHandler;
+  /** New guest sessions, per ip. */
+  guest: RequestHandler;
   forgotPassword: RequestHandler;
   resetPassword: RequestHandler;
   /** Wrong current passwords, per signed-in user (runs after requireAuth). */
@@ -78,6 +82,7 @@ export function authLimits(enabled = true): AuthLimits {
     return {
       login: [pass],
       register: pass,
+      guest: pass,
       forgotPassword: pass,
       resetPassword: pass,
       changePassword: pass,
@@ -101,6 +106,11 @@ export function authLimits(enabled = true): AuthLimits {
     register: limiter("register", {
       windowMs: 60 * MINUTE,
       limit: 10,
+      keyGenerator: ip,
+    }),
+    guest: limiter("guest", {
+      windowMs: 60 * MINUTE,
+      limit: 20,
       keyGenerator: ip,
     }),
     forgotPassword: limiter("forgot-password", {
@@ -129,6 +139,34 @@ export function contactLimit(enabled = true): RequestHandler {
   return limiter("contact", {
     windowMs: 60 * MINUTE,
     limit: 5,
+    keyGenerator: ip,
+  });
+}
+
+/**
+ * Failed discount codes per signed-in user (else per ip), against guessing
+ * codes; a code that applies never counts. Runs after requireAuth.
+ */
+export function couponLimit(enabled = true): RequestHandler {
+  if (!enabled) return (_req, _res, next) => next();
+  return limiter("coupon", {
+    windowMs: 15 * MINUTE,
+    limit: 10,
+    failuresOnly: true,
+    keyGenerator: (req) => req.auth?.userId ?? ip(req),
+  });
+}
+
+/**
+ * Order lookups without an account that find nothing, per ip, so an
+ * order's email can't be guessed; one that finds its order never counts.
+ */
+export function orderLookupLimit(enabled = true): RequestHandler {
+  if (!enabled) return (_req, _res, next) => next();
+  return limiter("order-lookup", {
+    windowMs: 15 * MINUTE,
+    limit: 10,
+    failuresOnly: true,
     keyGenerator: ip,
   });
 }

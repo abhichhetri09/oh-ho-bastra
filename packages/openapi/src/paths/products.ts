@@ -127,6 +127,48 @@ export function registerProductPaths() {
   });
 
   operation({
+    method: "post",
+    path: "/api/v1/admin/products/sale",
+    operationId: "adminPutOnSale",
+    tag,
+    summary: "Put products on sale",
+    description:
+      "Sets an offer of percent_off on every variant of the targeted products (active or not), in one transaction. Variants whose discounted price would round to 0 or to their full price are skipped.",
+    auth: "admin",
+    request: body(schemas.PutOnSaleBodySchema),
+    success: {
+      status: 200,
+      description: "Products put on sale",
+      schema: schemas.SaleResponseSchema,
+    },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      404: "Category not found (CATEGORY_NOT_FOUND)",
+    },
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/admin/products/sale/end",
+    operationId: "adminEndSale",
+    tag,
+    summary: "End a sale",
+    description:
+      "Clears the offer (and its end) of every variant of the targeted products. Counts only the variants that had one.",
+    auth: "admin",
+    request: body(schemas.EndSaleBodySchema),
+    success: {
+      status: 200,
+      description: "Sale ended",
+      schema: schemas.SaleResponseSchema,
+    },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      404: "Category not found (CATEGORY_NOT_FOUND)",
+    },
+  });
+
+  operation({
     method: "get",
     path: "/api/v1/admin/products/{productID}",
     operationId: "adminGetProduct",

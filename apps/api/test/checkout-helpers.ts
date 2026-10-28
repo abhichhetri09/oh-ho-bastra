@@ -63,8 +63,10 @@ export class FakePayments implements PaymentProvider {
       id,
       url: `https://checkout.stripe.test/${id}`,
       orderId: req.orderId,
+      // As Stripe charges it: the items, less the one-off coupon, plus shipping.
       amountTotal:
-        req.items.reduce((s, i) => s + i.unitAmount * i.quantity, 0) +
+        req.items.reduce((s, i) => s + i.unitAmount * i.quantity, 0) -
+        (req.discount?.amount ?? 0) +
         req.shipping,
       currency: req.currency,
     };

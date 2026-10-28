@@ -76,9 +76,17 @@ export const AddressResponseSchema = successResponse(AddressSchema).meta({
   id: "AddressResponse",
 });
 
+/** The email a guest gives at checkout and to look an order up (as registration takes it). */
+export const CheckoutEmailSchema = z
+  .email("Enter a valid email address")
+  .max(254, "Email cannot exceed 254 characters");
+
 export const CheckoutBodySchema = z
   .object({
-    address_id: Uuid.optional().describe("A saved address"),
+    email: CheckoutEmailSchema.optional().describe(
+      "Where a guest's order emails go (required for a guest, ignored for an account); trimmed and lowercased",
+    ),
+    address_id: Uuid.optional().describe("A saved address (not for a guest)"),
     address: AddressInputSchema.optional().describe("Or a new one"),
     save_address: z
       .boolean()
@@ -92,7 +100,7 @@ export const CheckoutBodySchema = z
   .meta({
     id: "CheckoutBody",
     description:
-      "Ship to a saved address or a new one: exactly one of the two.",
+      "Ship to a saved address or a new one: exactly one of the two. A guest gives an email and a new address.",
   });
 export type CheckoutBody = z.infer<typeof CheckoutBodySchema>;
 
@@ -137,7 +145,7 @@ export const OrderSchema = z
     status: OrderStatusSchema,
     subtotal: Cents,
     shipping: Cents,
-    total: Cents,
+    total: Cents.describe("subtotal − discount + shipping"),
     currency: z.string(),
     email: z.string(),
     shipping_address: AddressSnapshotSchema,
@@ -156,6 +164,11 @@ export const OrderSchema = z
       .string()
       .nullable()
       .describe("The carrier's, when the order shipped with one"),
+    discount: Cents.describe("Taken off the subtotal by coupon_code"),
+    coupon_code: z
+      .string()
+      .nullable()
+      .describe("The discount code used, as it was then"),
   })
   .meta({ id: "Order" });
 export type Order = z.infer<typeof OrderSchema>;
@@ -210,3 +223,14 @@ export const OrderListResponseSchema = paginatedResponse(
   OrderSummarySchema,
 ).meta({ id: "OrderListResponse" });
 export type OrderListResponse = z.infer<typeof OrderListResponseSchema>;
+
+export const OrderLookupBodySchema = z
+  .object({
+    number: z.int().positive().describe("The order number (1042 for OHB-1042)"),
+    email: CheckoutEmailSchema.describe("The email the order was placed with"),
+  })
+  .meta({
+    id: "OrderLookupBody",
+    description: "Finds an order without an account.",
+  });
+export type OrderLookupBody = z.infer<typeof OrderLookupBodySchema>;

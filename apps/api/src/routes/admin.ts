@@ -6,6 +6,9 @@ import {
   OrderTrackingBodySchema,
   RefundOrderBodySchema,
   ShipOrderBodySchema,
+  ShippingBodySchema,
+  StoreCornersSchema,
+  StoreHeadingFontSchema,
   StoreThemeSchema,
 } from "@repo/types";
 import { exportCsv } from "../admin/csv";
@@ -19,6 +22,7 @@ import {
   MAX_SEARCH,
 } from "../admin/filters";
 import { respondOrder } from "../admin/order-detail";
+import { storeSettings } from "../catalog/settings";
 import {
   DEFAULT_STATS_RANGE,
   LOW_STOCK_THRESHOLD,
@@ -53,7 +57,8 @@ import {
   setOrderTracking,
   updateAnnouncements,
   updateBusinessDetails,
-  updateStoreTheme,
+  updateShippingRule,
+  updateStoreAppearance,
 } from "../db/gen";
 import type { Order } from "../db/gen";
 import type { Queryable } from "../db/queryable";
@@ -95,10 +100,14 @@ const STOCK_LEVELS = ["out", "low", "in"];
 
 /**
  * Go trimmed the theme and checked required before oneof, so a blank theme
- * is "Theme is required" and a number "Theme must be a string".
+ * is "Theme is required" and a number "Theme must be a string". The font
+ * and corners are optional: left out (or null, see parseBody) is the
+ * theme's own.
  */
 const ThemeBody = z.object({
   theme: z.string().trim().min(1).pipe(StoreThemeSchema),
+  heading_font: StoreHeadingFontSchema.optional(),
+  corners: StoreCornersSchema.optional(),
 });
 
 /** A :one row that can't be missing (an aggregate); Go's ErrNoRows was a 500. */
@@ -545,7 +554,11 @@ export function adminRoutes(api: Group, deps: Deps) {
     });
   });
 
-  /** SetStoreTheme switches the storefront's theme. */
+  /**
+   * SetStoreTheme switches the storefront's theme, with the headline font
+   * and corners it uses in place of the theme's. One save for the whole
+   * look: what's left out goes back to the theme's own.
+   */
   admin.put("/settings", async (req, res) => {
     const body = parseBody(ThemeBody, req, res);
     if (body === null) return;
@@ -553,7 +566,15 @@ export function adminRoutes(api: Group, deps: Deps) {
       res,
       200,
       "Store theme updated",
-      must(await updateStoreTheme(db, body.theme)),
+      storeSettings(
+        must(
+          await updateStoreAppearance(db, {
+            theme: body.theme,
+            heading_font: body.heading_font ?? null,
+            corners: body.corners ?? null,
+          }),
+        ),
+      ),
     );
   });
 
@@ -568,11 +589,13 @@ export function adminRoutes(api: Group, deps: Deps) {
       res,
       200,
       "Announcements updated",
-      must(
-        await updateAnnouncements(db, {
-          announcements: body.announcements,
-          announcements_enabled: body.announcements_enabled,
-        }),
+      storeSettings(
+        must(
+          await updateAnnouncements(db, {
+            announcements: body.announcements,
+            announcements_enabled: body.announcements_enabled,
+          }),
+        ),
       ),
     );
   });
@@ -588,7 +611,30 @@ export function adminRoutes(api: Group, deps: Deps) {
       res,
       200,
       "Business details updated",
-      must(await updateBusinessDetails(db, body)),
+      storeSettings(must(await updateBusinessDetails(db, body))),
+    );
+  });
+
+  /**
+   * SetShipping replaces what delivery costs: a flat price, free from a
+   * subtotal (after any discount code), or never free without one. Bags
+   * and checkouts price with it from now on; placed orders keep theirs.
+   */
+  admin.put("/settings/shipping", async (req, res) => {
+    const body = parseBody(ShippingBodySchema, req, res);
+    if (body === null) return;
+    ok(
+      res,
+      200,
+      "Delivery price updated",
+      storeSettings(
+        must(
+          await updateShippingRule(db, {
+            shipping_flat: body.flat,
+            free_shipping_from: body.free_from ?? null,
+          }),
+        ),
+      ),
     );
   });
 }

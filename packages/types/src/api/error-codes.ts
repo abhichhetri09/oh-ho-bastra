@@ -30,6 +30,7 @@ export const ErrorCodeSchema = z
     "INVALID_RESET_TOKEN",
     "MAIL_UNAVAILABLE",
     "GOOGLE_UNAVAILABLE",
+    "GUEST_NOT_ALLOWED",
     // product
     "PRODUCT_NOT_FOUND",
     "INVALID_PRODUCT_ID",
@@ -50,6 +51,15 @@ export const ErrorCodeSchema = z
     "CART_QUANTITY_LIMIT",
     "CART_FULL",
     "CART_ITEM_NOT_FOUND",
+    // coupons
+    "COUPON_NOT_FOUND",
+    "COUPON_EXPIRED",
+    "COUPON_MIN_SUBTOTAL",
+    "COUPON_USED_UP",
+    "COUPON_ALREADY_USED",
+    "COUPON_ALREADY_EXISTS",
+    "COUPON_IN_USE",
+    "INVALID_COUPON_ID",
     // checkout and orders
     "CART_EMPTY",
     "CART_HAS_ISSUES",

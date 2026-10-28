@@ -62,8 +62,8 @@ export function corsMiddleware(cfg: Config): RequestHandler {
   });
 }
 
-const ROLES = ["customer", "admin"] as const;
-type Role = (typeof ROLES)[number];
+const ROLES = ["customer", "admin", "guest"] as const;
+export type Role = (typeof ROLES)[number];
 export const isValidRole = (role: string): role is Role =>
   (ROLES as readonly string[]).includes(role);
 
@@ -111,6 +111,25 @@ export function requireRole(...roles: Role[]): RequestHandler {
     fail(res, 403, "FORBIDDEN", "Insufficient permissions");
   };
 }
+
+/**
+ * Keeps guests (hidden accounts for shopping without one) out of what
+ * needs a real account: the wishlist, reviews, the address book and the
+ * account's own settings. Runs after requireAuth.
+ */
+export const requireAccount: RequestHandler = (req, res, next) => {
+  if (req.auth?.role !== "guest") {
+    next();
+    return;
+  }
+  rlog.warn(req, "guest asked for an account-only endpoint");
+  fail(
+    res,
+    403,
+    "GUEST_NOT_ALLOWED",
+    "Sign in or create an account to do this",
+  );
+};
 
 /**
  * The last handler: malformed JSON is the same 400 a bad body gets; anything

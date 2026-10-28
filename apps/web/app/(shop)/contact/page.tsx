@@ -7,6 +7,7 @@ import {
   MapPinIcon,
   PhoneIcon,
 } from "@phosphor-icons/react/ssr";
+import { accountOf } from "@/lib/auth/redirect";
 import { getSessionUser } from "@/lib/auth/session";
 import { site } from "@/lib/site";
 import { storeBusiness } from "@/lib/theme-server";
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 const QUICK_LINKS = [
-  { label: "Track an order", href: "/account/orders" },
+  { label: "Track an order", href: "/orders/track" },
   { label: "Returns and exchanges", href: "/terms#returns" },
   { label: "Shipping costs and times", href: "/terms#shipping" },
   { label: "Terms of sale", href: "/terms" },
@@ -28,7 +29,9 @@ const QUICK_LINKS = [
 export default async function ContactPage() {
   const [business, user] = await Promise.all([
     storeBusiness(),
-    getSessionUser().catch(() => null),
+    getSessionUser()
+      .then(accountOf)
+      .catch(() => null),
   ]);
   const address = business.business_address
     .split("\n")
@@ -117,7 +120,9 @@ export default async function ContactPage() {
 
         <div className="order-1 lg:order-2">
           <ContactForm
-            defaults={user ? { name: user.name, email: user.email } : undefined}
+            defaults={
+              user ? { name: user.name, email: user.email ?? "" } : undefined
+            }
           />
         </div>
       </div>

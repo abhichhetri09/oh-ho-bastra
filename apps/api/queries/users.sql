@@ -30,4 +30,29 @@ RETURNING *;
 
 
 -- name: ListAdminEmails :many
-SELECT email FROM users WHERE role = 'admin' ORDER BY created_at;
+SELECT email::text FROM users WHERE role = 'admin' AND email IS NOT NULL ORDER BY created_at;
+
+-- name: CreateGuestUser :one
+-- A hidden user for a shopper without an account: no email (each checkout
+-- gives one) and no password.
+INSERT INTO users (name, email, password_hash, role)
+VALUES ('Guest', NULL, '', 'guest')
+RETURNING *;
+
+-- name: DeleteGuestUser :execrows
+-- A guest that has no orders left (its cart and sessions go with it).
+DELETE FROM users u
+WHERE u.id = $1 AND u.role = 'guest'
+  AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id);
+
+-- name: DeleteStaleGuests :execrows
+-- Guests created before @before that never ordered and can't sign in any
+-- more: every session expired or revoked, or none.
+DELETE FROM users u
+WHERE u.role = 'guest'
+  AND u.created_at < @before
+  AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id)
+  AND NOT EXISTS (
+      SELECT 1 FROM sessions s
+      WHERE s.user_id = u.id AND s.revoked_at IS NULL AND s.expires_at > now()
+  );

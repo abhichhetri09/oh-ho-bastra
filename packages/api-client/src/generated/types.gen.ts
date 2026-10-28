@@ -13,7 +13,7 @@ export type MessageResponse = {
 };
 
 /**
- * Every non-2xx response. `errors` is only present for VALIDATION_FAILED.
+ * Every non-2xx response. `errors` lists the fields at fault: for VALIDATION_FAILED, and for a conflict on one field (COUPON_ALREADY_EXISTS).
  */
 export type ApiError = {
     success: false;
@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -56,12 +56,18 @@ export type UserResponse = {
 export type PublicUser = {
     id: string;
     name: string;
-    email: string;
+    /**
+     * null for a guest
+     */
+    email: string | null;
     role: UserRole;
     image_url: string | null;
 };
 
-export type UserRole = 'admin' | 'customer';
+/**
+ * guest: a hidden account for shopping without one (bag, checkout and its own orders only)
+ */
+export type UserRole = 'admin' | 'customer' | 'guest';
 
 export type RegisterBody = {
     name: string;
@@ -484,6 +490,57 @@ export type ProductBody = {
     is_featured: boolean;
 };
 
+export type SaleResponse = {
+    success: true;
+    message: string;
+    data: SaleResult;
+};
+
+export type SaleResult = {
+    /**
+     * Products with a variant changed
+     */
+    products: number;
+    /**
+     * Variants changed
+     */
+    variants: number;
+};
+
+/**
+ * Each variant's offer becomes its selling price less percent_off (rounded to the cent), replacing any offer it had. A variant whose price is too low to discount keeps its own.
+ */
+export type PutOnSaleBody = {
+    target: SaleTarget;
+    percent_off: number;
+    /**
+     * When the sale ends, in the future; null or omitted for no end.
+     */
+    ends_at?: string | null;
+};
+
+/**
+ * The products a sale applies to: a list of them, a category or all of them. Exactly one.
+ */
+export type SaleTarget = {
+    product_ids: Array<string>;
+} | {
+    category_id: string;
+    /**
+     * Also the products of every category under it
+     */
+    include_subcategories: boolean;
+} | {
+    all: true;
+};
+
+/**
+ * Clears the offer of every variant of the targeted products.
+ */
+export type EndSaleBody = {
+    target: SaleTarget;
+};
+
 export type VariantResponse = {
     success: true;
     message: string;
@@ -594,9 +651,46 @@ export type Cart = {
      */
     item_count: number;
     /**
-     * Cents, over the lines that can be checked out
+     * Cents, over the lines that can be checked out (sale prices, before any code)
      */
     subtotal: number;
+    /**
+     * What the code takes off the subtotal
+     */
+    discount: number;
+    /**
+     * On the subtotal after the discount; 0 when nothing can be checked out
+     */
+    shipping: number;
+    /**
+     * subtotal − discount + shipping, as checkout charges
+     */
+    total: number;
+    /**
+     * null without a code
+     */
+    coupon: {
+        code: string;
+        /**
+         * null when the code is COUPON_NOT_FOUND
+         */
+        kind: 'percent' | 'fixed' | null;
+        /**
+         * null when the code is COUPON_NOT_FOUND
+         */
+        value: number | null;
+        /**
+         * What it takes off now; 0 with an issue
+         */
+        discount: number;
+        /**
+         * Why the code doesn't apply right now (it stays on the bag; checkout refuses with this code until it is fixed or removed)
+         */
+        issue: {
+            code: CouponIssueCode;
+            message: string;
+        } | null;
+    } | null;
     /**
      * A line is off sale or above its stock; checkout refuses until it is fixed
      */
@@ -644,6 +738,11 @@ export type CartLine = {
 };
 
 /**
+ * COUPON_NOT_FOUND also covers a code that is switched off or not started yet
+ */
+export type CouponIssueCode = 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED';
+
+/**
  * Adds to the quantity already in the cart.
  */
 export type AddCartItemBody = {
@@ -653,6 +752,13 @@ export type AddCartItemBody = {
 
 export type UpdateCartItemBody = {
     quantity: number;
+};
+
+/**
+ * Any case; spaces around it are ignored.
+ */
+export type ApplyCouponBody = {
+    code: string;
 };
 
 export type CheckoutResponse = {
@@ -670,11 +776,15 @@ export type Checkout = {
 };
 
 /**
- * Ship to a saved address or a new one: exactly one of the two.
+ * Ship to a saved address or a new one: exactly one of the two. A guest gives an email and a new address.
  */
 export type CheckoutBody = {
     /**
-     * A saved address
+     * Where a guest's order emails go (required for a guest, ignored for an account); trimmed and lowercased
+     */
+    email?: string;
+    /**
+     * A saved address (not for a guest)
      */
     address_id?: string;
     /**
@@ -718,6 +828,9 @@ export type OrderDetail = {
     status: OrderStatus;
     subtotal: number;
     shipping: number;
+    /**
+     * subtotal − discount + shipping
+     */
     total: number;
     currency: string;
     email: string;
@@ -738,6 +851,14 @@ export type OrderDetail = {
      * The carrier's, when the order shipped with one
      */
     tracking_number: string | null;
+    /**
+     * Taken off the subtotal by coupon_code
+     */
+    discount: number;
+    /**
+     * The discount code used, as it was then
+     */
+    coupon_code: string | null;
     items: Array<OrderItem>;
     /**
      * Products of this order you've reviewed
@@ -802,6 +923,20 @@ export type OrderSummary = {
      * Up to 3, priciest first
      */
     preview_images: Array<string>;
+};
+
+/**
+ * Finds an order without an account.
+ */
+export type OrderLookupBody = {
+    /**
+     * The order number (1042 for OHB-1042)
+     */
+    number: number;
+    /**
+     * The email the order was placed with
+     */
+    email: string;
 };
 
 export type AddressListResponse = {
@@ -1013,6 +1148,14 @@ export type StoreSettingsResponse = {
 export type StoreSettings = {
     theme: StoreTheme;
     /**
+     * The headline font in place of the theme's; null is the theme's own.
+     */
+    heading_font: 'instrument-serif' | 'fraunces' | 'geist' | 'space-grotesk' | 'playfair' | 'archivo' | null;
+    /**
+     * The corner style in place of the theme's; null is the theme's own.
+     */
+    corners: 'sharp' | 'soft' | 'round' | null;
+    /**
      * The messages in the storefront's scrolling top banner, in order; empty hides it.
      */
     announcements: Array<string>;
@@ -1040,10 +1183,25 @@ export type StoreSettings = {
      * The seller's phone number; optional.
      */
     business_phone: string;
+    shipping: ShippingRule;
     updated_at: string;
 };
 
-export type StoreTheme = 'editorial' | 'studio' | 'botanical';
+export type StoreTheme = 'editorial' | 'studio' | 'botanical' | 'blaze';
+
+/**
+ * What delivery costs. Checkout charges it as it is then, and each order keeps what it was charged.
+ */
+export type ShippingRule = {
+    /**
+     * What an order below free_from pays for delivery, in cents.
+     */
+    flat: number;
+    /**
+     * Orders from this subtotal, in cents and counted after any discount code, ship free; null: never free.
+     */
+    free_from: number | null;
+};
 
 export type AdminStatsResponse = {
     success: true;
@@ -1215,6 +1373,10 @@ export type AdminOrderRow = {
     currency: string;
     email: string;
     customer_name: string;
+    /**
+     * Placed without an account
+     */
+    guest: boolean;
     item_count: number;
     created_at: string;
     paid_at: string | null;
@@ -1452,6 +1614,9 @@ export type AdminOrderDetail = {
     status: OrderStatus;
     subtotal: number;
     shipping: number;
+    /**
+     * subtotal − discount + shipping
+     */
     total: number;
     currency: string;
     email: string;
@@ -1472,11 +1637,26 @@ export type AdminOrderDetail = {
      * The carrier's, when the order shipped with one
      */
     tracking_number: string | null;
+    /**
+     * Taken off the subtotal by coupon_code
+     */
+    discount: number;
+    /**
+     * The discount code used, as it was then
+     */
+    coupon_code: string | null;
     items: Array<AdminOrderItem>;
     customer: {
         id: string;
         name: string;
+        /**
+         * The account's email; a guest's is the order's own
+         */
         email: string;
+        /**
+         * Placed without an account
+         */
+        guest: boolean;
     };
     /**
      * null until the order is paid
@@ -1572,8 +1752,19 @@ export type ReviewStatusBody = {
     status: ReviewStatus;
 };
 
+/**
+ * Replaces the store's look: its theme, and the headline font and corners it uses in place of the theme's.
+ */
 export type StoreThemeBody = {
     theme: StoreTheme;
+    /**
+     * Left out or null for the theme's own.
+     */
+    heading_font?: 'instrument-serif' | 'fraunces' | 'geist' | 'space-grotesk' | 'playfair' | 'archivo' | null;
+    /**
+     * Left out or null for the theme's own.
+     */
+    corners?: 'sharp' | 'soft' | 'round' | null;
 };
 
 /**
@@ -1596,6 +1787,100 @@ export type BusinessDetailsBody = {
     business_address: string;
     business_email: string;
     business_phone: string;
+};
+
+/**
+ * Replaces what delivery costs: the flat price, and the subtotal (after any discount code) from which orders ship free.
+ */
+export type ShippingBody = {
+    /**
+     * Cents, 0 to 100000; 0 ships every order free.
+     */
+    flat: number;
+    /**
+     * Cents, 1 to 10000000; left out or null: never free.
+     */
+    free_from?: number | null;
+};
+
+export type AdminCouponListResponse = {
+    success: true;
+    message: string;
+    data: Array<AdminCoupon>;
+    meta: PaginationMeta;
+};
+
+export type AdminCoupon = {
+    id: string;
+    code: string;
+    kind: CouponKind;
+    value: number;
+    min_subtotal: number;
+    starts_at: string | null;
+    ends_at: string | null;
+    max_redemptions: number | null;
+    once_per_customer: boolean;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    /**
+     * Orders that used it, unpaid checkouts included (a cancelled one gives its use back)
+     */
+    redemptions: number;
+};
+
+/**
+ * percent: value is 1–100 (%); fixed: value is cents off
+ */
+export type CouponKind = 'percent' | 'fixed';
+
+export type AdminCouponResponse = {
+    success: true;
+    message: string;
+    data: AdminCoupon;
+};
+
+/**
+ * Create or replace a coupon: an omitted optional field is cleared (or its default).
+ */
+export type CouponBody = {
+    /**
+     * Any case; stored uppercased, and unique
+     */
+    code: string;
+    kind: CouponKind;
+    /**
+     * percent: 1–100; fixed: cents
+     */
+    value: number;
+    /**
+     * The subtotal the bag needs, in cents; 0 or omitted for any
+     */
+    min_subtotal?: number;
+    /**
+     * Omit to start at once
+     */
+    starts_at?: string;
+    /**
+     * Omit to never end
+     */
+    ends_at?: string;
+    /**
+     * Uses across every customer; omit for no limit
+     */
+    max_redemptions?: number;
+    /**
+     * One use per email address (default false)
+     */
+    once_per_customer?: boolean;
+    /**
+     * Default true
+     */
+    is_active?: boolean;
+};
+
+export type CouponActiveBody = {
+    is_active: boolean;
 };
 
 export type GetHealthData = {
@@ -1659,6 +1944,35 @@ export type RegisterResponses = {
 };
 
 export type RegisterResponse = RegisterResponses[keyof RegisterResponses];
+
+export type StartGuestSessionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/guest';
+};
+
+export type StartGuestSessionErrors = {
+    /**
+     * Too many guest sessions from this address (TOO_MANY_REQUESTS); see Retry-After
+     */
+    429: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type StartGuestSessionError = StartGuestSessionErrors[keyof StartGuestSessionErrors];
+
+export type StartGuestSessionResponses = {
+    /**
+     * Guest session started (200: already signed in)
+     */
+    201: UserResponse;
+};
+
+export type StartGuestSessionResponse = StartGuestSessionResponses[keyof StartGuestSessionResponses];
 
 export type LoginData = {
     body: LoginBody;
@@ -1920,6 +2234,10 @@ export type UpdateProfileErrors = {
      */
     401: ApiError;
     /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
+    /**
      * The user no longer exists (USER_NOT_FOUND)
      */
     404: ApiError;
@@ -1956,6 +2274,10 @@ export type ChangePasswordErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * The user no longer exists (USER_NOT_FOUND)
      */
@@ -2526,6 +2848,88 @@ export type AdminCreateVariantResponses = {
 
 export type AdminCreateVariantResponse = AdminCreateVariantResponses[keyof AdminCreateVariantResponses];
 
+export type AdminPutOnSaleData = {
+    body: PutOnSaleBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/products/sale';
+};
+
+export type AdminPutOnSaleErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Category not found (CATEGORY_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminPutOnSaleError = AdminPutOnSaleErrors[keyof AdminPutOnSaleErrors];
+
+export type AdminPutOnSaleResponses = {
+    /**
+     * Products put on sale
+     */
+    200: SaleResponse;
+};
+
+export type AdminPutOnSaleResponse = AdminPutOnSaleResponses[keyof AdminPutOnSaleResponses];
+
+export type AdminEndSaleData = {
+    body: EndSaleBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/products/sale/end';
+};
+
+export type AdminEndSaleErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Category not found (CATEGORY_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminEndSaleError = AdminEndSaleErrors[keyof AdminEndSaleErrors];
+
+export type AdminEndSaleResponses = {
+    /**
+     * Sale ended
+     */
+    200: SaleResponse;
+};
+
+export type AdminEndSaleResponse = AdminEndSaleResponses[keyof AdminEndSaleResponses];
+
 export type AdminDeleteProductData = {
     body?: never;
     path: {
@@ -3016,6 +3420,80 @@ export type UpdateCartItemResponses = {
 
 export type UpdateCartItemResponse = UpdateCartItemResponses[keyof UpdateCartItemResponses];
 
+export type RemoveCartCouponData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cart/coupon';
+};
+
+export type RemoveCartCouponErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type RemoveCartCouponError = RemoveCartCouponErrors[keyof RemoveCartCouponErrors];
+
+export type RemoveCartCouponResponses = {
+    /**
+     * Code removed
+     */
+    200: CartResponse;
+};
+
+export type RemoveCartCouponResponse = RemoveCartCouponResponses[keyof RemoveCartCouponResponses];
+
+export type ApplyCartCouponData = {
+    body: ApplyCouponBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cart/coupon';
+};
+
+export type ApplyCartCouponErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No such code, or it isn't active (COUPON_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * The code can't be used (COUPON_EXPIRED, COUPON_MIN_SUBTOTAL (the message names the amount), COUPON_USED_UP, COUPON_ALREADY_USED)
+     */
+    409: ApiError;
+    /**
+     * Too many failed codes (TOO_MANY_REQUESTS)
+     */
+    429: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ApplyCartCouponError = ApplyCartCouponErrors[keyof ApplyCartCouponErrors];
+
+export type ApplyCartCouponResponses = {
+    /**
+     * Code applied
+     */
+    200: CartResponse;
+};
+
+export type ApplyCartCouponResponse = ApplyCartCouponResponses[keyof ApplyCartCouponResponses];
+
 export type StartCheckoutData = {
     body: CheckoutBody;
     path?: never;
@@ -3025,7 +3503,7 @@ export type StartCheckoutData = {
 
 export type StartCheckoutErrors = {
     /**
-     * Invalid body, or not exactly one of address_id and address (VALIDATION_FAILED)
+     * Invalid body, not exactly one of address_id and address, or a guest without an email or with an address_id (VALIDATION_FAILED)
      */
     400: ApiError;
     /**
@@ -3037,7 +3515,7 @@ export type StartCheckoutErrors = {
      */
     404: ApiError;
     /**
-     * The cart is empty, or a line is off sale or short (CART_EMPTY, CART_HAS_ISSUES)
+     * The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED)
      */
     409: ApiError;
     /**
@@ -3221,6 +3699,43 @@ export type GetOrderResponses = {
 
 export type GetOrderResponse = GetOrderResponses[keyof GetOrderResponses];
 
+export type LookupOrderData = {
+    body: OrderLookupBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/orders/lookup';
+};
+
+export type LookupOrderErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * No order with that number and email (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Too many lookups that found nothing from this address (TOO_MANY_REQUESTS); see Retry-After
+     */
+    429: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type LookupOrderError = LookupOrderErrors[keyof LookupOrderErrors];
+
+export type LookupOrderResponses = {
+    /**
+     * Order fetched
+     */
+    200: OrderDetailResponse;
+};
+
+export type LookupOrderResponse = LookupOrderResponses[keyof LookupOrderResponses];
+
 export type ListAddressesData = {
     body?: never;
     path?: never;
@@ -3233,6 +3748,10 @@ export type ListAddressesErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
@@ -3268,6 +3787,10 @@ export type DeleteAddressErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such address of yours (ADDRESS_NOT_FOUND)
      */
@@ -3307,6 +3830,10 @@ export type SetDefaultAddressErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such address of yours (ADDRESS_NOT_FOUND)
      */
@@ -3384,6 +3911,10 @@ export type ListWishlistErrors = {
      */
     401: ApiError;
     /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
+    /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
     500: ApiError;
@@ -3412,6 +3943,10 @@ export type ListWishlistIdsErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
@@ -3448,6 +3983,10 @@ export type RemoveFromWishlistErrors = {
      */
     401: ApiError;
     /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
+    /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
     500: ApiError;
@@ -3482,6 +4021,10 @@ export type AddToWishlistErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such product on sale (PRODUCT_NOT_FOUND)
      */
@@ -3521,6 +4064,10 @@ export type DeleteReviewErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such product, or no review of yours (PRODUCT_NOT_FOUND, REVIEW_NOT_FOUND)
      */
@@ -3636,6 +4183,10 @@ export type GetMyReviewErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such product on sale (PRODUCT_NOT_FOUND)
      */
@@ -4533,7 +5084,7 @@ export type AdminSetStoreThemeData = {
 
 export type AdminSetStoreThemeErrors = {
     /**
-     * Unknown theme (VALIDATION_FAILED)
+     * Unknown theme, font or corner style (VALIDATION_FAILED)
      */
     400: ApiError;
     /**
@@ -4634,3 +5185,257 @@ export type AdminSetBusinessDetailsResponses = {
 };
 
 export type AdminSetBusinessDetailsResponse = AdminSetBusinessDetailsResponses[keyof AdminSetBusinessDetailsResponses];
+
+export type AdminSetShippingData = {
+    body: ShippingBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/settings/shipping';
+};
+
+export type AdminSetShippingErrors = {
+    /**
+     * A price or threshold out of range, or not whole cents (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetShippingError = AdminSetShippingErrors[keyof AdminSetShippingErrors];
+
+export type AdminSetShippingResponses = {
+    /**
+     * Delivery price updated
+     */
+    200: StoreSettingsResponse;
+};
+
+export type AdminSetShippingResponse = AdminSetShippingResponses[keyof AdminSetShippingResponses];
+
+export type AdminListCouponsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+    };
+    url: '/api/v1/admin/coupons';
+};
+
+export type AdminListCouponsErrors = {
+    /**
+     * Invalid page (INVALID_PAGE_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListCouponsError = AdminListCouponsErrors[keyof AdminListCouponsErrors];
+
+export type AdminListCouponsResponses = {
+    /**
+     * Coupons fetched
+     */
+    200: AdminCouponListResponse;
+};
+
+export type AdminListCouponsResponse = AdminListCouponsResponses[keyof AdminListCouponsResponses];
+
+export type AdminCreateCouponData = {
+    body: CouponBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/coupons';
+};
+
+export type AdminCreateCouponErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Another coupon has the code (COUPON_ALREADY_EXISTS, with the field in errors)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminCreateCouponError = AdminCreateCouponErrors[keyof AdminCreateCouponErrors];
+
+export type AdminCreateCouponResponses = {
+    /**
+     * Coupon created
+     */
+    201: AdminCouponResponse;
+};
+
+export type AdminCreateCouponResponse = AdminCreateCouponResponses[keyof AdminCreateCouponResponses];
+
+export type AdminDeleteCouponData = {
+    body?: never;
+    path: {
+        couponID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/coupons/{couponID}';
+};
+
+export type AdminDeleteCouponErrors = {
+    /**
+     * Invalid id (INVALID_COUPON_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such coupon (COUPON_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * The code has been used (COUPON_IN_USE)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminDeleteCouponError = AdminDeleteCouponErrors[keyof AdminDeleteCouponErrors];
+
+export type AdminDeleteCouponResponses = {
+    /**
+     * Coupon deleted
+     */
+    200: MessageResponse;
+};
+
+export type AdminDeleteCouponResponse = AdminDeleteCouponResponses[keyof AdminDeleteCouponResponses];
+
+export type AdminUpdateCouponData = {
+    body: CouponBody;
+    path: {
+        couponID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/coupons/{couponID}';
+};
+
+export type AdminUpdateCouponErrors = {
+    /**
+     * Invalid id or body (INVALID_COUPON_ID, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such coupon (COUPON_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Another coupon has the code (COUPON_ALREADY_EXISTS, with the field in errors)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminUpdateCouponError = AdminUpdateCouponErrors[keyof AdminUpdateCouponErrors];
+
+export type AdminUpdateCouponResponses = {
+    /**
+     * Coupon updated
+     */
+    200: AdminCouponResponse;
+};
+
+export type AdminUpdateCouponResponse = AdminUpdateCouponResponses[keyof AdminUpdateCouponResponses];
+
+export type AdminSetCouponActiveData = {
+    body: CouponActiveBody;
+    path: {
+        couponID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/coupons/{couponID}/active';
+};
+
+export type AdminSetCouponActiveErrors = {
+    /**
+     * Invalid id or body (INVALID_COUPON_ID, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such coupon (COUPON_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetCouponActiveError = AdminSetCouponActiveErrors[keyof AdminSetCouponActiveErrors];
+
+export type AdminSetCouponActiveResponses = {
+    /**
+     * Coupon updated
+     */
+    200: AdminCouponResponse;
+};
+
+export type AdminSetCouponActiveResponse = AdminSetCouponActiveResponses[keyof AdminSetCouponActiveResponses];

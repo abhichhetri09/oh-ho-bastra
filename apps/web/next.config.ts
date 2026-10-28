@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
     output: "standalone",
     outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
   }),
+  async redirects() {
+    return [
+      // Store details and delivery moved from their own page into Settings.
+      {
+        source: "/admin/business",
+        destination: "/admin/settings/store",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     // Product images are Cloudinary uploads, resized and converted by
     // Cloudinary itself (lib/image-loader.ts), so Next's optimizer is unused.

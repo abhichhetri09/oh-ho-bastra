@@ -15,7 +15,7 @@ export function registerWishlistPaths() {
     summary: "My saved products",
     description:
       "Saved products that are still on sale, newest saved first, 24 per page.",
-    auth: "user",
+    auth: "account",
     request: {
       query: z.object({ page: z.int().min(1).max(100_000).optional() }),
     },
@@ -35,7 +35,7 @@ export function registerWishlistPaths() {
     summary: "Ids of my saved products",
     description:
       "Every saved product id (at most 200), to show saved state on any product card.",
-    auth: "user",
+    auth: "account",
     success: {
       status: 200,
       description: "Wishlist fetched",
@@ -50,7 +50,7 @@ export function registerWishlistPaths() {
     tag,
     summary: "Save a product",
     description: "Saving a saved product changes nothing.",
-    auth: "user",
+    auth: "account",
     request: { params: productParams },
     success: {
       status: 200,
@@ -71,7 +71,7 @@ export function registerWishlistPaths() {
     tag,
     summary: "Unsave a product",
     description: "Removing a product that isn't saved succeeds.",
-    auth: "user",
+    auth: "account",
     request: { params: productParams },
     success: {
       status: 200,

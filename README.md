@@ -21,8 +21,8 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 
 ## the shop
 
-- **catalog**: ten tees in two categories, **tees** (short sleeve, long sleeve) and **custom** (custom text, custom print), sized s to xxl, €25–45. `bun run db:seed:catalog` creates them; their photos are in `scripts/catalog-images`.
-- **money**: euros (`apps/web/lib/money.ts`, `apps/api/src/checkout/shipping.ts`). shipping is €4.90 flat and free from €60; the web shows the same rule from `apps/web/lib/shipping.ts`, so change both together.
+- **catalog**: fifteen tees in two categories, **tees** (short sleeve, long sleeve) and **custom** (custom text, custom print), sized s to xxl, €25–45. `bun run db:seed:catalog` creates them; their photos are in `scripts/catalog-images`.
+- **money**: euros (`apps/web/lib/money.ts`, `apps/api/src/checkout/shipping.ts`). shipping is a flat price, free from a threshold counted on the subtotal after any discount code (€4.90, free from €60 to start). the admin sets both, or "never free", in **admin → settings → delivery**; see [shipping](#checkout-and-orders).
 - **orders** are numbered `OHB-1001`, `OHB-1002`…
 - **brand**: the ओho mark is `apps/web/components/brand/logo-mark.tsx` (also in `docs/brand`), with the favicon and app icons in `apps/web/app` and `apps/web/public/brand`. store copy and editorial photos live in `apps/web/lib/site.ts` and `apps/web/public/editorial`.
 
@@ -34,11 +34,13 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 - full-text product search (⌘K dialog with live results, and `/shop?q=`)
 - product pages with a gallery, colour swatches and size pills (sold-out variants struck through, `?variant=` links), offers with expiry
 - a bag drawer and `/cart` with live prices and quantities capped to stock
-- stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold (€4.90, free from €60)
+- discount codes in the bag: a percentage or an amount off the whole bag (sale prices included), with an optional minimum order, start and end dates, a total number of uses and once per customer
+- stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold (set in the admin; €4.90, free from €60 to start)
+- guest checkout: shop and pay without an account (just an email), find an order later by its number and email at `/orders/track`, and keep the bag and orders when you sign in or sign up
 - order history with a status timeline, tracking number and refund date
-- order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part
+- order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part; a guest's link to the tracking page
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
-- three light themes (editorial, studio, botanical), chosen in the admin with live previews, plus a demo-only theme picker for showing the store to clients
+- four light themes (editorial, studio, botanical, blaze), chosen in the admin with live previews, each with a choice of six headline fonts and three corner styles, plus a demo-only theme picker for showing the store to clients
 - seo: canonical urls, a sitemap and robots.txt, generated share images for products and collections, and json-ld (products with per-variant offers, shipping and returns; breadcrumbs; the store)
 
 **admin** (`/admin`, admin role only)
@@ -46,9 +48,10 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 - dashboard: revenue chart, order counts, average order value, low stock, recent orders
 - products: table with search and filters, an editor with direct-to-cloudinary image uploads (drop files in, reorder, remove), variants, stock and offers
 - categories: a tree editor (add, rename, move under another parent, delete)
-- orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock
+- orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock; guest orders are marked as such, with the order's email
 - reviews: publish or hide, which updates the product's rating
-- settings: the store's theme, with a live preview of each
+- coupons: create and edit discount codes, switch them on or off, see each one's uses, and delete one nobody has used
+- settings (`/admin/settings`): an overview of where each area stands, then a page each for the store details (the seller's details for the footer, contact and legal pages), appearance (the theme, with a live preview of each, and its headline font and corners), the announcement bar and delivery (the price and the free threshold)
 
 ## stack
 
@@ -106,10 +109,10 @@ flowchart LR
   browser -- signed upload --> cloudinary
 ```
 
-- **sessions**: login sets two http-only cookies, a 15-minute access jwt and a refresh token tied to a row in `sessions`. refresh rotates the token with a compare-and-swap; a request that lost a concurrent refresh gets a 30-second grace window instead of a logout. sessions slide for 30 days and end after 90 at most. logout revokes the row, and a background job deletes expired sessions hourly.
+- **sessions**: login sets two http-only cookies, a 15-minute access jwt and a refresh token tied to a row in `sessions`. refresh rotates the token with a compare-and-swap; a request that lost a concurrent refresh gets a 30-second grace window instead of a logout. sessions slide for 30 days and end after 90 at most. logout revokes the row, and a background job deletes expired sessions (and unused guests, see [guest checkout](#checkout-and-orders)) hourly.
 - **google**: "continue with google" sends the browser to `GET /auth/google`, which redirects to google (openid connect with pkce, the state in a 10-minute cookie). google comes back to `/auth/google/callback`, the api trades the code for the profile, and signs in the user linked to that google account, or creates a customer for a new email. a password account with the same email isn't linked, since registration doesn't verify emails; that person signs in with their password. a google-only account has no password until it sets one through "forgot password".
-- **limits**: failed logins are limited to 10 per account and address and 50 per address every 15 minutes (successful ones never count), sign-ups to 10 an hour, password reset requests to 5 and reset attempts to 10 per 15 minutes, and wrong current passwords to 10. a blocked request gets 429 `TOO_MANY_REQUESTS` with `Retry-After`. counts are kept in memory, so several api instances would each count alone (a redis store fixes that).
-- **roles**: `customer` and `admin`, checked by `RequireAuth` / `RequireRole` middleware. the web's `proxy.ts` guards `/account`, `/cart`, `/checkout` and `/admin` and refreshes an expired access token before the page renders; in the browser, an axios interceptor queues requests while one refresh runs.
+- **limits**: failed logins are limited to 10 per account and address and 50 per address every 15 minutes (successful ones never count), sign-ups and new guest sessions to 10 and 20 an hour, password reset requests to 5 and reset attempts to 10 per 15 minutes, wrong current passwords to 10, discount codes that don't apply to 10 per user every 15 minutes, and order lookups that find nothing to 10 per address every 15 minutes. a blocked request gets 429 `TOO_MANY_REQUESTS` with `Retry-After`. counts are kept in memory, so several api instances would each count alone (a redis store fixes that).
+- **roles**: `customer`, `admin` and `guest`, checked by `requireAuth` / `requireRole` / `requireAccount` middleware (`requireAccount` answers a guest 403 `GUEST_NOT_ALLOWED`). the web's `proxy.ts` guards `/account`, `/cart`, `/checkout` (guests welcome) and `/admin` and refreshes an expired access token before the page renders; in the browser, an axios interceptor queues requests while one refresh runs.
 - **responses**: every response is `{ success, message?, code?, data?, meta?, errors? }`: `meta` carries pagination, `errors` carries per-field validation errors, and `code` is a stable error code (`INSUFFICIENT_STOCK`, `INVALID_ORDER_TRANSITION`…) from one zod enum in `packages/types`, shared by the api and the web.
 
 ### the api contract
@@ -151,7 +154,10 @@ sequenceDiagram
 - webhooks are signature-checked, recorded in `stripe_events` so a retry is a no-op, and applied in a transaction. an order paid after its reservation was released takes back what stock it can and records the shortfall.
 - orders move through one tested transition table (`apps/api/src/checkout/fulfilment.ts`): `pending → paid → shipped → delivered`, `pending → cancelled`, and `paid | shipped | delivered → refunded`. every transition locks the order row. a refund is a full stripe refund with an idempotency key per order, so retrying can't refund twice. restocks return only what the order actually took.
 - each paid, shipped or refunded order queues its email in the same transaction (see [emails](#emails)).
-- prices are in cents everywhere. an offer applies while `offer_price` is set and `offer_expires_at` is empty or in the future, and one sql expression decides it for listings, sorting, the cart and checkout. shipping is a flat rate, free from a threshold (`internal/constants/shipping.go`).
+- **discount codes** (`apps/api/src/coupons`): one per bag, kept on the cart and checked again on every read, so the bag shows the discount or why it doesn't apply (expired, below its minimum, used up…). checkout checks it once more with the coupon row locked, records its use with the pending order and refuses the whole checkout (409 with the reason) if it no longer applies. a cancelled order gives its use back; a refunded one keeps it. stripe line items can't be negative, so the discount goes on stripe's page as a one-off coupon for that order, and stripe charges exactly the order's total. the code leaves the bag once the order is paid.
+- **guest checkout** (`apps/api/src/auth/guest.ts`): a signed-out shopper's first add to the bag calls `POST /auth/guest`, which creates a hidden `guest` user (no email, no password, named "Guest") with a normal session, so the bag, its code and checkout work unchanged. a guest gives an email at checkout (`email` in the body) and a new address (nothing is saved); the order's email is where its emails go, stripe's receipt email, and what a once-per-customer code counts, so a guest and an account with one email share a code's use. guests can't use the wishlist, reviews, the address book or account settings. signing in, signing up or continuing with google from a guest session hands the guest over in one transaction: the bags merge (quantities add up, capped to stock; the account keeps its own code, else takes the guest's), the guest's orders placed with the account's email move to the account, and the guest is signed out and deleted once no orders are left on it. anyone can find a placed order by its number and email (`POST /orders/lookup`, read by `/orders/track`, linked from a guest's emails and the footer); a wrong email reads as an unknown number. the hourly cleanup deletes guests over 30 days old that never ordered and have no live session (their carts go with them). migration `000030` rolls back only once no guest has orders.
+- prices are in cents everywhere. an offer applies while `offer_price` is set and `offer_expires_at` is empty or in the future, and one sql expression decides it for listings, sorting, the cart and checkout.
+- **shipping** is a flat price, free from a threshold on the subtotal after any discount code, or never free. the admin sets it in **admin → settings → delivery** (`PUT /admin/settings/shipping`); it lives in `store_settings` (`shipping_flat`, `free_shipping_from`, migration `000032`) and `GET /settings` sends it as `shipping: { flat, free_from }`. the api prices every cart read with the rule as it is then, and checkout reads it inside its transaction, so an order (and its stripe page) is charged the rule it was placed under; `orders.shipping` keeps that, so changing the price never changes a placed order. the web takes the rule from the cached settings for the bag's optimistic totals, the free-shipping bar (hidden when it's never free), and the store's copy (product pages, the home page, the terms, json-ld); `apps/web/lib/shipping.ts` words it. the banner's messages are the admin's own text, so a "free shipping over €60" there is edited by hand.
 
 ### caching
 
@@ -240,7 +246,7 @@ the admin uploads images straight from the browser with a signature from `POST /
 
 ### emails
 
-the api emails the shopper when an order is **confirmed** (paid), **shipped** (with the tracking number) and **refunded**. there's no email for delivered, or for cancelling an unpaid checkout.
+the api emails the shopper when an order is **confirmed** (paid), **shipped** (with the tracking number) and **refunded**. there's no email for delivered, or for cancelling an unpaid checkout. emails go to the order's email; a guest's greet the name it ships to and link to `/orders/track?number=…` instead of the account's order page, which needs signing in.
 
 - each status change writes its email to an `email_outbox` table in the same transaction, so a change that commits always gets its email and one that rolls back never does. there's one email of each kind per order, so a replayed stripe webhook doesn't send twice.
 - a sender inside the api delivers the outbox every 10 seconds, rendering each email from the order as it is then. a failed send is retried after 1, 2, 4… minutes (at most an hour apart, 8 tries); a server that refuses the address for good fails it at once. an email still unsent after 48 hours is dropped rather than sent late. outcomes are in the table (`status`, `attempts`, `last_error`) and the logs.
@@ -252,17 +258,24 @@ the templates are in `apps/api/src/emails/templates.ts` (one layout for all thre
 
 ### themes
 
-the store ships three light themes: **editorial** (warm paper, a light serif, softly rounded corners; the default), **studio** (crisp white, bold sans-serif, soft corners) and **botanical** (cream and forest green, a soft serif, rounded shapes).
+the store ships four light themes: **editorial** (warm paper, a light serif, softly rounded corners; the default), **studio** (crisp white, bold sans-serif, soft corners) **botanical** (cream and forest green, a soft serif, rounded shapes) and **blaze** (pure white and black with signal orange `#F46B10`, a bold sans-serif, square corners).
 
 - the store owner picks the theme in **admin → settings**. each option shows a live preview in its own theme, and choosing one previews it across the admin before saving. saving applies it to every page at once: the setting is cached in next's data cache, and the cache is expired on save.
+- under the selected theme, **customise** swaps its headline font (instrument serif, fraunces, playfair display, geist, space grotesk or archivo) and its corners (sharp, soft or round). each choice is drawn in its own font or corners, and previews across the admin like a theme does. "theme default" (the starting point, and what another theme starts from) keeps the theme's own. one save covers the theme, font and corners (`PUT /api/v1/admin/settings`; a font or corners left out or null is the theme's own).
 - `STORE_THEME` is the fallback while the api can't be reached (default: editorial).
 - `DEMO_THEME_PICKER=true` adds a floating picker in the bottom-right corner for demos. A visitor's pick is kept in a cookie and applied on the server, so pages never flash the wrong theme. Leave it off for a real store.
 
 a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`: colours, the headline font and its style, and four corner radii (`rounded-control`, `rounded-field`, `rounded-panel`, `rounded-media`). to add a theme:
 
 1. add that block to `globals.css`
-2. add an entry to `THEMES` in `apps/web/lib/themes.ts`, and its id to `StoreThemeSchema` in `packages/types/src/settings` (then `bun run generate`); the api validates against that schema
-3. load a new font in `app/layout.tsx` with `preload: false`, if the theme needs one
+2. add an entry to `THEMES` in `apps/web/lib/themes.ts` (with its headline font's id), and its id to `StoreThemeSchema` in `packages/types/src/settings` (then `bun run generate`); the api validates against that schema
+3. load a new font in `apps/web/lib/fonts.ts` with `preload: false`, if the theme needs one
+
+the store's font and corners are `[data-font="…"]` and `[data-corners="…"]` blocks after the themes, set on `<html>` only when the store picked one. they set the same tokens as a theme (the headline ones, or the radii) and win over it: each selector is `:is(own, own [data-theme]:not(own))`, so it outranks a `[data-theme]` block on the same element wherever it sits, and reaches into the admin's nested theme previews too. faces that are wider than instrument serif set `data-headline="wide"` on `<html>`, which shrinks the logo wordmark (`in-data-[headline=wide]:…`). to add a headline font:
+
+1. load it in `apps/web/lib/fonts.ts` with `preload: false` and add its variable to `fontVariables`. every page declares its `@font-face`, but a browser downloads a face only when text uses it, so stores without it never fetch it
+2. add a `[data-font="…"]` block to `globals.css` setting every headline token (`--heading-font`, weight, tracking, leading, variation, size adjust, `--em-style`)
+3. add an entry to `HEADING_FONTS` in `apps/web/lib/themes.ts` (name, a one-word character, and whether it's wide), and its id to `StoreHeadingFontSchema` in `packages/types/src/settings` (then `bun run generate`). no migration: the column is plain text
 
 ## scripts
 
@@ -276,6 +289,7 @@ a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`:
 | `bun run db:sqlc`                          | regenerate the typed queries in `apps/api/src/db/gen`                             |
 | `bun run db:seed`                          | create the seed admin and customer (`SEED_*` in `.env.local`)                     |
 | `bun run db:seed:catalog`                  | add the tees and their categories through the running api as the seed admin      |
+| `bun run db:seed:demo`                    | add demo discount codes (WELCOME10, SUMMER20, FIVEOFF) and a 20% sale on two colours |
 | `bun run generate`                         | regenerate `openapi.json` and the api clients                                     |
 | `bun run generate:check` / `db:sqlc:check` | fail if generated code is out of date                                             |
 | `bun run check-types`                      | typecheck every package                                                           |
@@ -334,7 +348,6 @@ if order emails time out on render, its free instances may be blocking the stand
 
 ## not built yet
 
-- guest carts (the bag needs an account)
 - partial refunds and returns
 - emails beyond orders and password reset (for example verifying the address)
 - finnish payment methods (paytrail, mobilepay): checkout is stripe only

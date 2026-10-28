@@ -7,7 +7,7 @@ export const createUserSql = "INSERT INTO users (name, email, password_hash, rol
 
 export interface CreateUserParams {
   name: string;
-  email: string;
+  email: string | null;
   password_hash: string;
   role: string;
   image_url: string | null;
@@ -20,7 +20,7 @@ export async function createUser(db: Queryable, p: CreateUserParams): Promise<Us
 
 export const getUserByEmailSql = "SELECT id, name, email, password_hash, role, image_url, created_at, updated_at, google_id FROM users WHERE email = $1";
 
-export async function getUserByEmail(db: Queryable, email: string): Promise<User | null> {
+export async function getUserByEmail(db: Queryable, email: string | null): Promise<User | null> {
   const { rows } = await db.query(getUserByEmailSql, [email]);
   return (rows[0] as User | undefined) ?? null;
 }
@@ -78,7 +78,7 @@ export const createGoogleUserSql = "INSERT INTO users (name, email, password_has
 
 export interface CreateGoogleUserParams {
   name: string;
-  email: string;
+  email: string | null;
   google_id: string | null;
 }
 
@@ -87,7 +87,7 @@ export async function createGoogleUser(db: Queryable, p: CreateGoogleUserParams)
   return (rows[0] as User | undefined) ?? null;
 }
 
-export const listAdminEmailsSql = "SELECT email FROM users WHERE role = 'admin' ORDER BY created_at";
+export const listAdminEmailsSql = "SELECT email::text FROM users WHERE role = 'admin' AND email IS NOT NULL ORDER BY created_at";
 
 export interface ListAdminEmailsRow {
   email: string;
@@ -96,4 +96,32 @@ export interface ListAdminEmailsRow {
 export async function listAdminEmails(db: Queryable): Promise<ListAdminEmailsRow[]> {
   const { rows } = await db.query(listAdminEmailsSql, []);
   return rows as ListAdminEmailsRow[];
+}
+
+// A hidden user for a shopper without an account: no email (each checkout
+// gives one) and no password.
+export const createGuestUserSql = "INSERT INTO users (name, email, password_hash, role)\nVALUES ('Guest', NULL, '', 'guest')\nRETURNING id, name, email, password_hash, role, image_url, created_at, updated_at, google_id";
+
+export async function createGuestUser(db: Queryable): Promise<User | null> {
+  const { rows } = await db.query(createGuestUserSql, []);
+  return (rows[0] as User | undefined) ?? null;
+}
+
+// A guest that has no orders left (its cart and sessions go with it).
+export const deleteGuestUserSql = "DELETE FROM users u\nWHERE u.id = $1 AND u.role = 'guest'\n  AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id)";
+
+/** Resolves to the number of affected rows. */
+export async function deleteGuestUser(db: Queryable, id: string): Promise<number> {
+  const { rowCount } = await db.query(deleteGuestUserSql, [id]);
+  return rowCount ?? 0;
+}
+
+// Guests created before @before that never ordered and can't sign in any
+// more: every session expired or revoked, or none.
+export const deleteStaleGuestsSql = "DELETE FROM users u\nWHERE u.role = 'guest'\n  AND u.created_at < $1\n  AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id)\n  AND NOT EXISTS (\n      SELECT 1 FROM sessions s\n      WHERE s.user_id = u.id AND s.revoked_at IS NULL AND s.expires_at > now()\n  )";
+
+/** Resolves to the number of affected rows. */
+export async function deleteStaleGuests(db: Queryable, before: Date | string): Promise<number> {
+  const { rowCount } = await db.query(deleteStaleGuestsSql, [before]);
+  return rowCount ?? 0;
 }

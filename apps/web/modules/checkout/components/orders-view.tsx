@@ -9,7 +9,7 @@ import {
   HouseLineIcon,
   TruckIcon,
 } from "@phosphor-icons/react";
-import type { OrderStatus } from "@repo/types";
+import type { OrderDetail, OrderStatus } from "@repo/types";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -189,7 +189,7 @@ export function OrdersView() {
   );
 }
 
-/** One order: where it is, what's in it and where it's going. */
+/** One of the account's orders, by its number. */
 export function OrderView({ number }: { number: number }) {
   const query = useOrder(number);
   const order = query.data;
@@ -226,21 +226,47 @@ export function OrderView({ number }: { number: number }) {
     );
   }
 
-  const step = timelineStep(order.status);
-  // Paid (or later) orders make their buyer a verified reviewer.
-  const reviewable = step >= 0;
-  const reviewed = new Set(order.reviewed_product_ids);
-  const a = order.shipping_address;
-
   return (
-    <div className="space-y-10">
-      <header className="space-y-3">
+    <OrderDetails
+      order={order}
+      reviews
+      back={
         <Link
           href="/account/orders"
           className="link-underline text-xs text-muted-foreground hover:text-foreground"
         >
           All orders
         </Link>
+      }
+    />
+  );
+}
+
+/**
+ * An order's page: where it is, what's in it and where it's going. With
+ * reviews, its items link to writing a review (an account's own orders;
+ * order tracking without an account is read-only).
+ */
+export function OrderDetails({
+  order,
+  back,
+  reviews = false,
+}: {
+  order: OrderDetail;
+  /** Above the order number: the way back. */
+  back: React.ReactNode;
+  reviews?: boolean;
+}) {
+  const step = timelineStep(order.status);
+  // Paid (or later) orders make their buyer a verified reviewer.
+  const reviewable = reviews && step >= 0;
+  const reviewed = new Set(order.reviewed_product_ids);
+  const a = order.shipping_address;
+
+  return (
+    <div className="space-y-10">
+      <header className="space-y-3">
+        {back}
         <div className="flex flex-wrap items-center gap-4">
           <h1 className="display text-5xl">{orderLabel(order.number)}</h1>
           <StatusBadge status={order.status} />

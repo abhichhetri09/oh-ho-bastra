@@ -1,7 +1,11 @@
 // Store-wide copy and editorial imagery in one place, so rebranding or
 // swapping the photography is a one-file change. Editorial photos live in
 // public/editorial (credits in CREDITS.md there); product images are
-// Cloudinary uploads.
+// Cloudinary uploads. What shipping costs is the admin's (Admin → Settings
+// → Delivery): the copy that names it takes the store's rule.
+
+import type { ShippingRule } from "@repo/types";
+import { shippingPerk, shippingSentence } from "./shipping";
 
 const IMG = "/editorial";
 
@@ -38,9 +42,9 @@ export const site = {
     href: "/shop",
     cta: "Shop tees",
   },
-  values: [
+  values: (shipping: ShippingRule) => [
     {
-      title: "Free shipping over €60",
+      title: shippingPerk(shipping),
       body: "Dispatched in two to four working days.",
     },
     {
@@ -56,8 +60,8 @@ export const site = {
       body: "Regular and boxy cuts that keep their shape wash after wash.",
     },
   ],
-  shippingCopy:
-    "Free standard shipping on orders over €60; otherwise a flat €4.90. Orders ship in two to four working days. Plain tees can be returned within 30 days of delivery (return postage is yours); custom prints are made for you and can't be returned unless faulty.",
+  shippingCopy: (shipping: ShippingRule) =>
+    `${shippingSentence(shipping)} Orders ship in two to four working days. Plain tees can be returned within 30 days of delivery (return postage is yours); custom prints are made for you and can't be returned unless faulty.`,
   authImage: `${IMG}/white-hanger.jpg`,
   authImageAlt: "A plain white tee on a wooden hanger",
 } as const;

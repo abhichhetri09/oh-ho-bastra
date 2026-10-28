@@ -11,6 +11,7 @@ import {
 import { metaDescription } from "@/lib/seo/text";
 import { site } from "@/lib/site";
 import { siteUrl } from "@/lib/site-url";
+import { storeShipping } from "@/lib/theme-server";
 import { getCategories, getProductPage } from "@/modules/catalog/api";
 import { Breadcrumbs } from "@/modules/catalog/components/breadcrumbs";
 import { ProductRail } from "@/modules/catalog/components/product-rail";
@@ -44,9 +45,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
     params,
     searchParams,
   ]);
-  const [page, categories] = await Promise.all([
+  const [page, categories, shipping] = await Promise.all([
     getProductPage(slug),
     getCategories(),
+    storeShipping(),
   ]);
   if (!page) notFound();
 
@@ -65,7 +67,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
 
   const origin = siteUrl();
   const structured = [
-    productLd({ origin, product, variants, path }),
+    productLd({ origin, product, variants, path, shipping }),
     breadcrumbLd(origin, [
       ...categoryCrumbs(path),
       { name: product.name, path: `/products/${product.slug}` },

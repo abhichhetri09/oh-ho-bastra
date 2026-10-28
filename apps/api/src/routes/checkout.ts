@@ -5,6 +5,7 @@ import {
   SHIPPING_COUNTRIES,
   type ValidationCode,
 } from "@repo/types";
+import { EmailField } from "../auth/schemas";
 import { Refusal, type CheckoutService } from "../checkout/service";
 import {
   clearDefaultAddress,
@@ -17,12 +18,13 @@ import {
   listOrders,
   listReviewedProductIDs,
   lockAddresses,
+  lookupOrder,
   setDefaultAddress,
   type Order,
 } from "../db/gen";
 import { withTx } from "../db/pool";
 import type { Deps } from "../deps";
-import { requireAuth } from "../http/middleware";
+import { requireAccount, requireAuth } from "../http/middleware";
 import {
   checkPageInRange,
   isUuid,
@@ -31,10 +33,18 @@ import {
   pathUuid,
   userId,
 } from "../http/params";
-import { fail, internal, ok, paginationMeta } from "../http/response";
+import { orderLookupLimit } from "../http/rate-limit";
+import {
+  fail,
+  internal,
+  ok,
+  paginationMeta,
+  validationFailed,
+} from "../http/response";
 import type { Group } from "../http/router";
 import { parseBody } from "../http/validate";
-import { log } from "../log";
+import { log, rlog } from "../log";
+import { goInt } from "../shopping/validation";
 import {
   InvalidSignatureError,
   type PaymentProvider,
@@ -106,6 +116,7 @@ const GoAddressInput = z.object({
 });
 
 const CheckoutBody = CheckoutBodySchema.extend({
+  email: EmailField.optional(),
   address_id: z
     .string()
     .superRefine((s, ctx) => {
@@ -114,6 +125,12 @@ const CheckoutBody = CheckoutBodySchema.extend({
     })
     .optional(),
   address: GoAddressInput.optional(),
+});
+
+// An order by its number and email, for shoppers without an account.
+const LookupBody = z.object({
+  number: goInt("Order number", 1, Number.MAX_SAFE_INTEGER),
+  email: EmailField,
 });
 
 function unavailable(res: Response) {
@@ -176,6 +193,29 @@ export function checkoutRoutes(api: Group, deps: Deps) {
     const uid = userId(req);
     const body = parseBody(CheckoutBody, req, res);
     if (body === null) return;
+    // A guest says where its order emails go, and has no address book.
+    if (req.auth?.role === "guest") {
+      if (!body.email) {
+        validationFailed(res, [
+          {
+            code: "REQUIRED_FIELD",
+            field: "email",
+            message: "Email is required",
+          },
+        ]);
+        return;
+      }
+      if (body.address_id) {
+        validationFailed(res, [
+          {
+            code: "INVALID_VALUE",
+            field: "address_id",
+            message: "Enter the address to ship to",
+          },
+        ]);
+        return;
+      }
+    }
     if (!body.address_id === !body.address) {
       fail(res, 400, "VALIDATION_FAILED", "Give either address_id or address");
       return;
@@ -266,6 +306,31 @@ export function checkoutRoutes(api: Group, deps: Deps) {
     ok(res, 200, "Event received");
   });
 
+  /**
+   * An order found by its number and the email it was placed with, for a
+   * shopper without an account (the same answer as GET /orders/:number,
+   * without reviews). A wrong email reads as an unknown number; lookups
+   * that find nothing are rate limited.
+   */
+  api.post(
+    "/orders/lookup",
+    orderLookupLimit(cfg.authRateLimits),
+    async (req, res) => {
+      const body = parseBody(LookupBody, req, res);
+      if (body === null) return;
+      const order = await lookupOrder(db, {
+        number: body.number,
+        email: body.email,
+      });
+      if (!order) {
+        rlog.warn(req, "order lookup found nothing");
+        fail(res, 404, "ORDER_NOT_FOUND", "Order not found");
+        return;
+      }
+      await respondOrder(res, order, { reviews: false });
+    },
+  );
+
   const orders = api.group("/orders", auth);
 
   /** The user's order history, newest first (placed orders only, not abandoned checkouts). */
@@ -311,13 +376,22 @@ export function checkoutRoutes(api: Group, deps: Deps) {
     await respondOrder(res, order);
   });
 
-  /** An order with what was bought, and which of its products the customer has reviewed (never null). */
-  async function respondOrder(res: Response, order: Order) {
+  /**
+   * An order with what was bought, and which of its products the customer
+   * has reviewed (never null; empty for a lookup, which can't review).
+   */
+  async function respondOrder(
+    res: Response,
+    order: Order,
+    { reviews = true }: { reviews?: boolean } = {},
+  ) {
     const items = await getOrderItems(db, order.id);
-    const reviewed = await listReviewedProductIDs(db, {
-      order_id: order.id,
-      user_id: order.user_id,
-    });
+    const reviewed = reviews
+      ? await listReviewedProductIDs(db, {
+          order_id: order.id,
+          user_id: order.user_id,
+        })
+      : [];
     ok(res, 200, "Order fetched", {
       ...order,
       items,
@@ -325,7 +399,8 @@ export function checkoutRoutes(api: Group, deps: Deps) {
     });
   }
 
-  const addresses = api.group("/addresses", auth);
+  // A guest has no address book.
+  const addresses = api.group("/addresses", auth, requireAccount);
 
   /** The user's address book, the default first, then the newest (at most 10). */
   addresses.get("", async (req, res) => {

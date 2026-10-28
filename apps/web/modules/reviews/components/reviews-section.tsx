@@ -31,6 +31,7 @@ import { loginPath } from "@/lib/auth/redirect";
 import { friendlyFieldErrors } from "@/lib/forms";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+import { accountOf } from "@/lib/auth/redirect";
 import { formatOrderDate } from "@/modules/checkout/lib/orders";
 import { useMyReview, useReviewMutations, useReviews } from "../hooks";
 import { Stars } from "./stars";
@@ -188,7 +189,7 @@ function WriteReview({
   slug: string;
   productName: string;
 }) {
-  const user = useAuth((s) => s.user);
+  const user = useAuth((s) => accountOf(s.user));
   const pathname = usePathname();
   const mine = useMyReview(slug);
   const [open, setOpen] = useState(false);

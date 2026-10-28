@@ -19,7 +19,7 @@ export function registerCartPaths() {
     tag,
     summary: "Get my cart",
     description:
-      "One cart per user, priced live; empty until something is added. Capped at 50 lines, so it is not paginated.",
+      "One cart per user, priced live; empty until something is added. Capped at 50 lines, so it is not paginated. With a discount code, its discount and any issue are worked out on each read.",
     auth: "user",
     success: { ...cart, description: "Cart fetched" },
   });
@@ -84,5 +84,38 @@ export function registerCartPaths() {
       400: "Invalid id (INVALID_VARIANT_ID)",
       404: "Not in the cart (CART_ITEM_NOT_FOUND)",
     },
+  });
+
+  const couponIssues =
+    "COUPON_EXPIRED, COUPON_MIN_SUBTOTAL (the message names the amount), COUPON_USED_UP, COUPON_ALREADY_USED";
+
+  operation({
+    method: "put",
+    path: "/api/v1/cart/coupon",
+    operationId: "applyCartCoupon",
+    tag,
+    summary: "Apply a discount code",
+    description:
+      "Checks the code against the bag as it is now and puts it on the bag, replacing any other (one code per bag). Codes are case-insensitive. Failed attempts are limited to 10 per 15 minutes per user, against guessing.",
+    auth: "user",
+    request: body(schemas.ApplyCouponBodySchema),
+    success: { ...cart, description: "Code applied" },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      404: "No such code, or it isn't active (COUPON_NOT_FOUND)",
+      409: `The code can't be used (${couponIssues})`,
+      429: "Too many failed codes (TOO_MANY_REQUESTS)",
+    },
+  });
+
+  operation({
+    method: "delete",
+    path: "/api/v1/cart/coupon",
+    operationId: "removeCartCoupon",
+    tag,
+    summary: "Remove the discount code",
+    description: "Removing when there is none succeeds.",
+    auth: "user",
+    success: { ...cart, description: "Code removed" },
   });
 }

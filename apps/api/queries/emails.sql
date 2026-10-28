@@ -33,8 +33,9 @@ UPDATE email_outbox SET status = 'failed', last_error = @last_error
 WHERE id = @id;
 
 -- name: GetEmailOrder :one
--- The order an email is about, with the customer's name for the greeting.
-SELECT sqlc.embed(orders), users.name AS customer_name
+-- The order an email is about, with the customer's name for the greeting
+-- and whether it was placed without an account.
+SELECT sqlc.embed(orders), users.name AS customer_name, (users.role = 'guest')::bool AS guest
 FROM orders JOIN users ON users.id = orders.user_id
 WHERE orders.id = @id;
 

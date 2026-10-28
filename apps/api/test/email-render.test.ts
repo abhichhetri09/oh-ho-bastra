@@ -18,6 +18,8 @@ const placed = new Date(Date.UTC(2026, 9, 11, 9, 30));
 const testOrder = (): EmailOrder => ({
   number: 1042,
   subtotal: 123450,
+  discount: 0,
+  coupon_code: null,
   shipping: 800,
   total: 124250,
   currency: "usd",
@@ -99,6 +101,59 @@ describe("render", () => {
     expect(r.html).toContain("11 October 2026");
   });
 
+  it("shows a discount code's line only when there is one", () => {
+    const order = {
+      ...testOrder(),
+      currency: "eur",
+      subtotal: 6000,
+      discount: 600,
+      coupon_code: "SUMMER10",
+      shipping: 490,
+      total: 5890,
+    };
+    const r = render("order_confirmed", order, "Ada", testItems(), "");
+    expect(r.text).toContain(
+      "Subtotal  €60.00\nDiscount (SUMMER10)  −€6.00\nShipping  €4.90\nTotal     €58.90\n",
+    );
+    expect(r.html).toContain(
+      `<tr><td style="padding:3px 0;color:#4a423a;">Discount (SUMMER10)</td><td align="right" style="padding:3px 0;">−€6.00</td></tr>`,
+    );
+    const plain = render("order_confirmed", testOrder(), "Ada", null, "");
+    expect(plain.text).not.toContain("Discount");
+    expect(plain.html).not.toContain("Discount");
+  });
+
+  it("greets a guest by the address and links to order tracking", () => {
+    const r = render(
+      "order_shipped",
+      testOrder(),
+      "Guest",
+      null,
+      "https://shop.example",
+      { guest: true },
+    );
+    expect(r.text).toContain("Hi Ada,");
+    expect(r.text).toContain(
+      "Track your order: https://shop.example/orders/track?number=1042",
+    );
+    expect(r.html).toContain(
+      `<a href="https://shop.example/orders/track?number=1042" style="display:inline-block;padding:12px 22px;font-size:14px;color:#faf8f4;text-decoration:none;">Track your order</a>`,
+    );
+    expect(r.text).not.toContain("/account/orders");
+
+    const account = render(
+      "order_shipped",
+      testOrder(),
+      "Grace Hopper",
+      null,
+      "https://shop.example",
+    );
+    expect(account.text).toContain("Hi Grace,");
+    expect(account.text).toContain(
+      "View your order: https://shop.example/account/orders/OHB-1042",
+    );
+  });
+
   it("renders the other kinds", () => {
     const order = { ...testOrder(), shipping: 0 };
     for (const [kind, subject] of [
@@ -165,6 +220,8 @@ http://localhost:3000
       {
         number: 123456,
         subtotal: 250000,
+        discount: 0,
+        coupon_code: null,
         shipping: 1,
         total: -1050,
         currency: "gbp",

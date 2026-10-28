@@ -11,6 +11,7 @@ import { jsonReplacer } from "./http/response";
 import { createGroup, fallback, type RouteRecord } from "./http/router";
 import { adminRoutes } from "./routes/admin";
 import { adminCatalogRoutes } from "./routes/admin-catalog";
+import { adminCouponRoutes } from "./routes/admin-coupons";
 import { adminEmailRoutes } from "./routes/admin-emails";
 import { authRoutes } from "./routes/auth";
 import { catalogRoutes } from "./routes/catalog";
@@ -67,6 +68,7 @@ export function buildApp(deps: Deps): App {
   checkoutRoutes(api, deps);
   contactRoutes(api, deps);
   adminEmailRoutes(api, deps);
+  adminCouponRoutes(api, deps);
   adminRoutes(api, deps);
 
   // JSON for unknown paths and wrong methods too.

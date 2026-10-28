@@ -10,6 +10,7 @@ import {
   UserIcon,
 } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
+import { accountOf } from "@/lib/auth/redirect";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,7 +55,8 @@ const item = "h-9 gap-2.5 rounded-control px-2.5 text-[0.8125rem]";
 const icon = "size-4 text-muted-foreground";
 
 export function UserMenu() {
-  const user = useAuth((s) => s.user);
+  // A guest (bag only) is signed out here.
+  const user = useAuth((s) => accountOf(s.user));
   const logout = useLogout();
   const savedCount = useSavedCount();
   const openWishlist = useWishlistDrawer((s) => s.setOpen);

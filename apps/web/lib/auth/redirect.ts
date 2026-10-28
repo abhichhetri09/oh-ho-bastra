@@ -33,9 +33,25 @@ export function loginPath(path?: string): string {
   return withNext(LOGIN_PATH, path);
 }
 
-/** The sign-up page, returning to path after creating the account. */
-export function registerPath(path?: string): string {
-  return withNext(REGISTER_PATH, path);
+/**
+ * The sign-up page, returning to path after creating the account, with
+ * the email filled in when given (a guest's order email).
+ */
+export function registerPath(path?: string, email?: string): string {
+  const page = withNext(REGISTER_PATH, path);
+  if (!email) return page;
+  return `${page}${page.includes("?") ? "&" : "?"}email=${encodeURIComponent(email)}`;
+}
+
+/**
+ * The user when they have an account, else null: a guest (the hidden
+ * account a shopper gets on their first add to the bag) is signed out
+ * everywhere but the bag and checkout.
+ */
+export function accountOf<T extends { role: UserRole }>(
+  user: T | null | undefined,
+): T | null {
+  return user && user.role !== "guest" ? user : null;
 }
 
 /** Where a user lands when there is no ?next=. */

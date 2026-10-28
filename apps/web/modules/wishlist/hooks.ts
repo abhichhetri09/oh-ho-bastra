@@ -20,6 +20,7 @@ import { loginPath } from "@/lib/auth/redirect";
 import { rememberIntent } from "@/modules/auth/lib/pending-intent";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useAuth } from "@/providers/auth-provider";
+import { accountOf } from "@/lib/auth/redirect";
 import { wishlistKeys } from "./keys";
 import { useWishlistDrawer } from "./store";
 
@@ -27,7 +28,7 @@ const mutationKey = [...wishlistKeys.all, "write"] as const;
 
 /** Every saved product id, as a set; empty when signed out. */
 export function useWishlistIds() {
-  const userId = useAuth((s) => s.user?.id ?? "");
+  const userId = useAuth((s) => accountOf(s.user)?.id ?? "");
   const query = useQuery({
     queryKey: wishlistKeys.ids(userId),
     queryFn: async ({ signal }) => {
@@ -54,7 +55,7 @@ export function useToggleWishlist() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
-  const userId = useAuth((s) => s.user?.id ?? "");
+  const userId = useAuth((s) => accountOf(s.user)?.id ?? "");
   const key = wishlistKeys.ids(userId);
 
   const mutation = useMutation({
@@ -135,7 +136,7 @@ export function useToggleWishlist() {
 
 /** Saved products still on sale, 24 at a time. */
 export function useWishlistProducts() {
-  const userId = useAuth((s) => s.user?.id ?? "");
+  const userId = useAuth((s) => accountOf(s.user)?.id ?? "");
   return useInfiniteQuery({
     queryKey: wishlistKeys.list(userId),
     queryFn: async ({ pageParam, signal }) => {

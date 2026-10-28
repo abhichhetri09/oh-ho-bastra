@@ -175,7 +175,7 @@ export interface AdminListReviewsRow {
   product_name: string;
   product_slug: string;
   author_name: string;
-  author_email: string;
+  author_email: string | null;
 }
 
 export async function adminListReviews(db: Queryable, p: AdminListReviewsParams): Promise<AdminListReviewsRow[]> {
@@ -203,7 +203,7 @@ export interface SetReviewStatusRow {
   product_name: string;
   product_slug: string;
   author_name: string;
-  author_email: string;
+  author_email: string | null;
 }
 
 export async function setReviewStatus(db: Queryable, p: SetReviewStatusParams): Promise<SetReviewStatusRow | null> {

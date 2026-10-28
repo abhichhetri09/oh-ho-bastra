@@ -463,6 +463,7 @@ describe("GET /admin/orders", () => {
       currency: "usd",
       email: "ada@example.org",
       customer_name: "Ada Lovelace",
+      guest: false,
       item_count: 0,
       created_at: "2026-10-01T10:00:00.000Z",
       paid_at: null,
@@ -550,9 +551,9 @@ describe("GET /admin/orders/export.csv", () => {
     expect(res.headers["cache-control"]).toBe("no-store");
     expect(res.headers.etag).toBeUndefined();
     expect(res.text).toBe(
-      "order,status,placed_at,paid_at,shipped_at,customer,email,items,subtotal,shipping,total,currency,tracking_number,ship_city,ship_country\n" +
-        `OHB-${b.number},pending,2026-10-03T00:00:00Z,,,"Bob, ""the"" Builder",bob@example.org,0,0.05,0.00,0.05,usd,,Kathmandu,NP\n` +
-        `OHB-${a.number},shipped,2026-10-01T10:00:00Z,2026-10-01T10:05:00Z,2026-10-02T08:00:00Z,"'=HYPERLINK(""x"")",ada@example.org,3,1234.05,0.50,1234.55,usd,'+1Z999," Lalitpur",NP\n`,
+      "order,status,placed_at,paid_at,shipped_at,customer,email,items,subtotal,discount,shipping,total,currency,coupon_code,tracking_number,ship_city,ship_country\n" +
+        `OHB-${b.number},pending,2026-10-03T00:00:00Z,,,"Bob, ""the"" Builder",bob@example.org,0,0.05,0.00,0.00,0.05,usd,,,Kathmandu,NP\n` +
+        `OHB-${a.number},shipped,2026-10-01T10:00:00Z,2026-10-01T10:05:00Z,2026-10-02T08:00:00Z,"'=HYPERLINK(""x"")",ada@example.org,3,1234.05,0.00,0.50,1234.55,usd,,'+1Z999," Lalitpur",NP\n`,
     );
 
     const filtered = await get(`/orders/export.csv?status=pending`);
@@ -563,7 +564,7 @@ describe("GET /admin/orders/export.csv", () => {
     const res = await get("/orders/export.csv?q=nobody");
     expect(res.status).toBe(200);
     expect(res.text).toBe(
-      "order,status,placed_at,paid_at,shipped_at,customer,email,items,subtotal,shipping,total,currency,tracking_number,ship_city,ship_country\n",
+      "order,status,placed_at,paid_at,shipped_at,customer,email,items,subtotal,discount,shipping,total,currency,coupon_code,tracking_number,ship_city,ship_country\n",
     );
   });
 
@@ -647,6 +648,8 @@ describe("GET /admin/orders/:number", () => {
       "delivered_at",
       "refunded_at",
       "tracking_number",
+      "discount",
+      "coupon_code",
       "items",
       "customer",
       "payment",
@@ -660,6 +663,7 @@ describe("GET /admin/orders/:number", () => {
       id: ada.id,
       name: "Ada Lovelace",
       email: "ada@example.org",
+      guest: false,
     });
     expect(d.payment).toBeNull();
     expect(d.items).toHaveLength(1);
@@ -772,7 +776,6 @@ describe("GET /admin/customers", () => {
 
 describe("PUT /admin/settings", () => {
   beforeEach(async () => {
-    // The singleton row the migration inserts; the test reset empties it.
     await db.query(
       "INSERT INTO store_settings DEFAULT VALUES ON CONFLICT DO NOTHING",
     );
@@ -787,10 +790,12 @@ describe("PUT /admin/settings", () => {
     expect(res.body).toMatchObject({
       success: true,
       message: "Store theme updated",
-      data: { theme: "studio" },
+      data: { theme: "studio", heading_font: null, corners: null },
     });
     expect(Object.keys(res.body.data)).toEqual([
       "theme",
+      "heading_font",
+      "corners",
       "announcements",
       "announcements_enabled",
       "business_name",
@@ -798,8 +803,147 @@ describe("PUT /admin/settings", () => {
       "business_address",
       "business_email",
       "business_phone",
+      "shipping",
       "updated_at",
     ]);
+  });
+
+  it("saves the font and corners with the theme, and the storefront sees them", async () => {
+    const res = await http()
+      .put("/api/v1/admin/settings")
+      .set("Cookie", admin)
+      .send({ theme: "blaze", heading_font: "playfair", corners: "round" });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      theme: "blaze",
+      heading_font: "playfair",
+      corners: "round",
+    });
+    const settings = await http().get("/api/v1/settings");
+    expect(settings.body.data).toMatchObject({
+      theme: "blaze",
+      heading_font: "playfair",
+      corners: "round",
+    });
+  });
+
+  it("takes every font and corner style", async () => {
+    const fonts = [
+      "instrument-serif",
+      "fraunces",
+      "geist",
+      "space-grotesk",
+      "playfair",
+      "archivo",
+    ];
+    const corners = ["sharp", "soft", "round"];
+    for (const [i, font] of fonts.entries()) {
+      const res = await http()
+        .put("/api/v1/admin/settings")
+        .set("Cookie", admin)
+        .send({
+          theme: "studio",
+          heading_font: font,
+          corners: corners[i % corners.length],
+        });
+      expect(res.status, font).toBe(200);
+      expect(res.body.data).toMatchObject({
+        heading_font: font,
+        corners: corners[i % corners.length],
+      });
+    }
+  });
+
+  it("goes back to the theme's own with null, or when they're left out", async () => {
+    const put = (body: object) =>
+      http().put("/api/v1/admin/settings").set("Cookie", admin).send(body);
+    const look = { theme: "studio", heading_font: "archivo", corners: "sharp" };
+
+    await put(look);
+    const nulls = await put({
+      theme: "studio",
+      heading_font: null,
+      corners: null,
+    });
+    expect(nulls.status).toBe(200);
+    expect(nulls.body.data).toMatchObject({
+      heading_font: null,
+      corners: null,
+    });
+
+    await put(look);
+    const left = await put({ theme: "botanical" });
+    expect(left.status).toBe(200);
+    expect(left.body.data).toMatchObject({
+      theme: "botanical",
+      heading_font: null,
+      corners: null,
+    });
+
+    // an empty string is "not given" too
+    await put(look);
+    const empty = await put({ theme: "studio", heading_font: "", corners: "" });
+    expect(empty.status).toBe(200);
+    expect(empty.body.data).toMatchObject({
+      heading_font: null,
+      corners: null,
+    });
+  });
+
+  it("validates the font and corners", async () => {
+    const put = (body: object) =>
+      http().put("/api/v1/admin/settings").set("Cookie", admin).send(body);
+    await put({ theme: "studio", heading_font: "geist", corners: "soft" });
+    const cases: [object, object][] = [
+      [
+        { theme: "studio", heading_font: "comic-sans" },
+        {
+          code: "INVALID_VALUE",
+          field: "heading_font",
+          message:
+            "Heading font must be one of: instrument-serif, fraunces, geist, space-grotesk, playfair, archivo",
+        },
+      ],
+      [
+        { theme: "studio", corners: "bevelled" },
+        {
+          code: "INVALID_VALUE",
+          field: "corners",
+          message: "Corners must be one of: sharp, soft, round",
+        },
+      ],
+    ];
+    for (const [body, error] of cases) {
+      const res = await put(body);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(res.body.errors, JSON.stringify(body)).toEqual([error]);
+    }
+    const number = await put({ theme: "studio", corners: 5 });
+    expect(number.status).toBe(400);
+    expect(number.body.errors[0].field).toBe("corners");
+    // a refused save changes nothing
+    const settings = await http().get("/api/v1/settings");
+    expect(settings.body.data).toMatchObject({
+      theme: "studio",
+      heading_font: "geist",
+      corners: "soft",
+    });
+  });
+
+  it("is for admins only", async () => {
+    const body = { theme: "studio", heading_font: "geist" };
+    const { cookie } = await signIn(db, cfg);
+    expect(
+      (
+        await http()
+          .put("/api/v1/admin/settings")
+          .set("Cookie", cookie)
+          .send(body)
+      ).status,
+    ).toBe(403);
+    expect((await http().put("/api/v1/admin/settings").send(body)).status).toBe(
+      401,
+    );
   });
 
   it("validates the theme as Go did", async () => {
@@ -830,7 +974,7 @@ describe("PUT /admin/settings", () => {
         {
           code: "INVALID_VALUE",
           field: "theme",
-          message: "Theme must be one of: editorial, studio, botanical",
+          message: "Theme must be one of: editorial, studio, botanical, blaze",
         },
       ],
       [
@@ -879,6 +1023,8 @@ describe("PUT /admin/settings/announcements", () => {
       message: "Announcements updated",
       data: {
         theme: "editorial",
+        heading_font: null,
+        corners: null,
         announcements: ["Autumn sale", "New tees in"],
         announcements_enabled: true,
         business_name: "",
@@ -886,6 +1032,7 @@ describe("PUT /admin/settings/announcements", () => {
         business_address: "",
         business_email: "",
         business_phone: "",
+        shipping: { flat: 490, free_from: 6000 },
         updated_at: expect.any(String),
       },
     });

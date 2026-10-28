@@ -4,6 +4,7 @@ import { registerCartPaths } from "./carts.ts";
 import { registerCategoryPaths } from "./categories.ts";
 import { registerCheckoutPaths } from "./checkout.ts";
 import { registerContactPaths } from "./contact.ts";
+import { registerCouponPaths } from "./coupons.ts";
 import { registerHealthPaths } from "./health.ts";
 import { registerProductPaths } from "./products.ts";
 import { registerReviewPaths } from "./reviews.ts";
@@ -24,4 +25,5 @@ export function registerPaths() {
   registerReviewPaths();
   registerSettingsPaths();
   registerAdminPaths();
+  registerCouponPaths();
 }

@@ -168,3 +168,29 @@ describe("other auth limits", () => {
     expect(res.status).toBe(429);
   });
 });
+
+describe("guest and order lookup limits", () => {
+  it("allows 20 new guest sessions an hour per address", async () => {
+    const a = app();
+    for (let i = 0; i < 20; i++) {
+      expect((await request(a).post("/api/v1/auth/guest")).status).toBe(201);
+    }
+    const res = await request(a).post("/api/v1/auth/guest");
+    expect(res.status).toBe(429);
+    expect(res.body.code).toBe("TOO_MANY_REQUESTS");
+  });
+
+  it("allows 10 lookups that find nothing per 15 minutes per address", async () => {
+    const a = app();
+    const lookup = () =>
+      request(a)
+        .post("/api/v1/orders/lookup")
+        .send({ number: 1001, email: "ada@example.com" });
+    for (let i = 0; i < 10; i++) {
+      expect((await lookup()).status).toBe(404);
+    }
+    const res = await lookup();
+    expect(res.status).toBe(429);
+    expect(Number(res.headers["retry-after"])).toBeGreaterThan(800);
+  });
+});

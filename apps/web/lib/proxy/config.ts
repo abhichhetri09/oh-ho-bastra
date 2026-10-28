@@ -2,18 +2,20 @@ import type { UserRole } from "@repo/types";
 
 // Path prefixes that need a session, and the roles allowed in. The API
 // enforces roles on every endpoint; these rules only keep users out of pages
-// they can't use. Keep proxy.ts's matcher in sync.
+// they can't use. A guest (the hidden account of a shopper without one)
+// gets the bag and checkout. Keep proxy.ts's matcher in sync.
 export const ROLE_RULES: ReadonlyArray<{
   prefix: string;
   roles: readonly UserRole[];
 }> = [
   { prefix: "/admin", roles: ["admin"] },
   { prefix: "/account", roles: ["admin", "customer"] },
-  { prefix: "/cart", roles: ["admin", "customer"] },
-  { prefix: "/checkout", roles: ["admin", "customer"] },
+  { prefix: "/cart", roles: ["admin", "customer", "guest"] },
+  { prefix: "/checkout", roles: ["admin", "customer", "guest"] },
 ];
 
-// Pages only for signed-out users; signed-in users are sent home.
+// Pages only for signed-out users (guests count as signed out, so they
+// can sign in or register); signed-in users are sent home.
 export const SIGNED_OUT_ONLY_PREFIXES = ["/auth"] as const;
 
 // Exceptions under /auth that anyone may open: a reset link from an email

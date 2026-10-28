@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 import { Stagger, StaggerItem } from "@/components/motion/reveal";
 import { site } from "@/lib/site";
+import { storeShipping } from "@/lib/theme-server";
 
 const icons = [
   PackageIcon,
@@ -14,11 +15,12 @@ const icons = [
   LeafIcon,
 ];
 
-export function ValueProps() {
+export async function ValueProps() {
+  const values = site.values(await storeShipping());
   return (
     <section className="border-y border-border">
       <Stagger className="container-page grid divide-border sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
-        {site.values.map((value, i) => {
+        {values.map((value, i) => {
           const Icon = icons[i] ?? PackageIcon;
           return (
             <StaggerItem

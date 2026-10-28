@@ -31,7 +31,7 @@ export function AdminMobileNav() {
         className="w-72 gap-0 bg-sidebar p-0 text-sidebar-foreground"
       >
         <div className="flex h-16 items-baseline gap-3 border-b border-sidebar-border px-5 pt-5">
-          <SheetTitle className="font-serif text-2xl font-normal whitespace-nowrap in-data-[theme=botanical]:text-xl in-data-[theme=studio]:text-xl">
+          <SheetTitle className="font-serif text-2xl font-normal whitespace-nowrap in-data-[headline=wide]:text-xl">
             <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
             {site.name}
           </SheetTitle>
@@ -39,7 +39,7 @@ export function AdminMobileNav() {
         </div>
         <div className="flex flex-1 flex-col justify-between py-6">
           <AdminNav onNavigate={() => setOpen(false)} />
-          <AdminAccount />
+          <AdminAccount onNavigate={() => setOpen(false)} />
         </div>
       </SheetContent>
     </Sheet>

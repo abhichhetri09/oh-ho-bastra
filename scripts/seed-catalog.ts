@@ -22,14 +22,12 @@ import {
   adminCreateProduct,
   adminCreateVariant,
   adminListCategories,
-  adminListProducts,
   adminSignUpload,
-  createServerClient,
-  login,
   type Client,
   type CreateVariantBody,
   type UploadSignature,
 } from "../packages/api-client/src/server.ts";
+import { existingProducts, fail, signIn, requireEnv } from "./seed-client.ts";
 
 const IMAGES = fileURLToPath(new URL("catalog-images", import.meta.url));
 
@@ -171,6 +169,59 @@ const products: SeedProduct[] = [
       { colour: "Navy", prices: { XXL: 3500 } },
     ),
   },
+  {
+    name: "Boxy Tee — White",
+    category: "Short sleeve",
+    images: ["white-concrete", "white-hanger"],
+    description:
+      "The boxy cut in bright white: shorter, wider and with a curved hem.",
+    features: features({ fit: "Boxy fit" }),
+    variants: sized(
+      3200,
+      { S: 5, M: 12, L: 12, XL: 7, XXL: 3 },
+      { colour: "White", prices: { XXL: 3500 } },
+    ),
+  },
+  {
+    name: "Boxy Tee — Black",
+    category: "Short sleeve",
+    images: ["black-hanger"],
+    description:
+      "The boxy cut in deep black. Sits off the body and keeps its shape.",
+    features: features({ fit: "Boxy fit" }),
+    variants: sized(
+      3200,
+      { S: 6, M: 14, L: 12, XL: 8, XXL: 4 },
+      { colour: "Black", prices: { XXL: 3500 } },
+    ),
+  },
+  {
+    name: "Everyday Tee — White",
+    category: "Short sleeve",
+    images: ["white-hanger", "white-flat"],
+    description:
+      "Our lighter 180 gsm tee in plain white. The one to wear under everything.",
+    features: features({ weight: "180 gsm" }),
+    variants: sized(2500, { S: 10, M: 18, L: 18, XL: 9 }, { colour: "White" }),
+  },
+  {
+    name: "Everyday Tee — Sage",
+    category: "Short sleeve",
+    images: ["sage-rack"],
+    description:
+      "The lighter everyday tee in muted sage. Cool in summer, easy to layer.",
+    features: features({ weight: "180 gsm" }),
+    variants: sized(2500, { S: 6, M: 12, L: 12, XL: 5 }, { colour: "Sage" }),
+  },
+  {
+    name: "Heavyweight Two-Pack — Black & Mint",
+    category: "Short sleeve",
+    images: ["black-mint-folded", "mint-black-folded"],
+    description:
+      "One black and one mint heavyweight tee in the same size, for a little less than two.",
+    features: [...features(), "Two tees: one black, one mint"],
+    variants: sized(5200, { S: 4, M: 8, L: 8, XL: 4 }),
+  },
   // Long sleeve
   {
     name: "Long Sleeve — White",
@@ -212,36 +263,6 @@ const products: SeedProduct[] = [
 ];
 
 type StoredImage = { url: string; public_id: string };
-
-function fail(step: string, error: unknown): never {
-  throw new Error(`${step} failed: ${JSON.stringify(error)}`);
-}
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} is not set`);
-  return value;
-}
-
-async function signIn(baseUrl: string): Promise<Client> {
-  const { data, error, response } = await login({
-    client: createServerClient({ baseUrl }),
-    body: {
-      email: requireEnv("SEED_ADMIN_EMAIL"),
-      password: requireEnv("SEED_ADMIN_PASSWORD"),
-    },
-  });
-  if (!data) fail("login", error);
-  if (data.data.role !== "admin")
-    throw new Error("SEED_ADMIN_EMAIL is not an admin");
-
-  const access = response.headers
-    .getSetCookie()
-    .map((c) => c.split(";", 1)[0] ?? "")
-    .find((c) => c.startsWith("access_token="));
-  if (!access) throw new Error("login set no access_token cookie");
-  return createServerClient({ baseUrl, headers: { cookie: access } });
-}
 
 /**
  * Uploads catalog photos to the store's Cloudinary, each file once per run
@@ -315,19 +336,6 @@ async function existingCategories(
   }
 }
 
-async function existingProducts(client: Client): Promise<Set<string>> {
-  const names = new Set<string>();
-  for (let page = 1; ; page++) {
-    const { data, error } = await adminListProducts({
-      client,
-      query: { page },
-    });
-    if (!data) fail("list products", error);
-    data.data.forEach((p) => names.add(p.name));
-    if (page >= data.meta.total_pages) return names;
-  }
-}
-
 async function main() {
   const baseUrl = process.env.SEED_API_URL || requireEnv("NEXT_PUBLIC_API_URL");
   const client = await signIn(baseUrl);
@@ -347,7 +355,7 @@ async function main() {
     createdCategories++;
   }
 
-  const productNames = await existingProducts(client);
+  const productNames = new Set((await existingProducts(client)).keys());
   let createdProducts = 0;
   for (const p of products) {
     if (productNames.has(p.name)) continue;

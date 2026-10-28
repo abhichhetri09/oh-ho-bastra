@@ -1,9 +1,12 @@
 import {
   cancelPendingOrder,
+  clearPaidCartCoupon,
   createPayment,
+  deleteOrderRedemption,
   getOrderForUpdate,
   markOrderPaid,
   removeOrderedCartLines,
+  restoreCouponRedemption,
   restoreStock,
   retakeStock,
   setItemShortfall,
@@ -22,8 +25,8 @@ export const sessionOrderId = (session: Session) =>
   isUuid(session.orderId) ? session.orderId.toLowerCase() : null;
 
 /**
- * Cancels the order if it is still pending and then returns its stock;
- * resolves to whether it did.
+ * Cancels the order if it is still pending and then returns its stock and
+ * its discount code's use; resolves to whether it did.
  */
 export async function release(
   tx: Queryable,
@@ -31,13 +34,15 @@ export async function release(
 ): Promise<boolean> {
   if ((await cancelPendingOrder(tx, orderId)) === 0) return false;
   await restoreStock(tx, orderId);
+  await deleteOrderRedemption(tx, orderId);
   return true;
 }
 
 /**
  * Marks the session's order paid, once. An order cancelled before the money
  * arrived (its page was replaced or ran out) takes its stock back, as far
- * as there is any; a shortfall is logged as oversold.
+ * as there is any (a shortfall is logged as oversold), and its code's use,
+ * even past the code's limits: the discount was given.
  */
 export async function fulfil(tx: Queryable, session: Session): Promise<void> {
   const orderId = sessionOrderId(session);
@@ -75,6 +80,8 @@ export async function fulfil(tx: Queryable, session: Session): Promise<void> {
           variants: short.length,
         });
       }
+      if (order.coupon_code !== null)
+        await restoreCouponRedemption(tx, order.id);
       break;
     }
     default:
@@ -100,6 +107,13 @@ export async function fulfil(tx: Queryable, session: Session): Promise<void> {
     user_id: order.user_id,
     order_id: order.id,
   });
+  // The code is spent; until now a cancelled payment page kept it in the bag.
+  if (order.coupon_code !== null) {
+    await clearPaidCartCoupon(tx, {
+      user_id: order.user_id,
+      coupon_code: order.coupon_code,
+    });
+  }
   await enqueue(tx, "order_confirmed", order.id);
   log.info("checkout: order paid", { order: order.number });
 }

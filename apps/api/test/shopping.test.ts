@@ -210,7 +210,16 @@ describe("GET /cart", () => {
     expect(res.body).toEqual({
       success: true,
       message: "Cart fetched",
-      data: { items: [], item_count: 0, subtotal: 0, has_issues: false },
+      data: {
+        items: [],
+        item_count: 0,
+        subtotal: 0,
+        discount: 0,
+        shipping: 0,
+        total: 0,
+        coupon: null,
+        has_issues: false,
+      },
     });
   });
 
@@ -249,6 +258,10 @@ describe("GET /cart", () => {
       ],
       item_count: 0,
       subtotal: 0,
+      discount: 0,
+      shipping: 0,
+      total: 0,
+      coupon: null,
       has_issues: true,
     });
   });
@@ -519,7 +532,16 @@ describe("DELETE /cart/items/:variantID and /cart", () => {
     expect(res.body).toEqual({
       success: true,
       message: "Removed from your bag",
-      data: { items: [], item_count: 0, subtotal: 0, has_issues: false },
+      data: {
+        items: [],
+        item_count: 0,
+        subtotal: 0,
+        discount: 0,
+        shipping: 0,
+        total: 0,
+        coupon: null,
+        has_issues: false,
+      },
     });
     const again = await http()
       .delete(`/api/v1/cart/items/${tee.variant}`)

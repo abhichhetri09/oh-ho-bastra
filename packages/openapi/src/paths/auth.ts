@@ -5,6 +5,8 @@ import { body, operation } from "./shared.ts";
 const tag = "Auth";
 const sessionCookies =
   "Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie.";
+const adoption =
+  "From a guest session (by its refresh cookie), the guest's bag joins the account's (quantities add up, capped to stock; the account keeps its own discount code, else takes the guest's), the guest's orders placed with the account's email move to the account, and the guest is signed out and deleted once it has no orders left, all in one transaction.";
 
 export function registerAuthPaths() {
   operation({
@@ -13,7 +15,7 @@ export function registerAuthPaths() {
     operationId: "register",
     tag,
     summary: "Register",
-    description: `Creates a customer account and starts a session. ${sessionCookies} The email is trimmed and lowercased.`,
+    description: `Creates a customer account and starts a session. ${sessionCookies} The email is trimmed and lowercased. ${adoption}`,
     request: body(schemas.RegisterBodySchema),
     success: {
       status: 201,
@@ -29,11 +31,28 @@ export function registerAuthPaths() {
 
   operation({
     method: "post",
+    path: "/api/v1/auth/guest",
+    operationId: "startGuestSession",
+    tag,
+    summary: "Start a guest session",
+    description: `For shopping without an account: creates a hidden guest user (role \`guest\`, no email or password, name "Guest") and starts its session. ${sessionCookies} A guest can use the bag, its discount code, checkout (giving an email) and its own orders; the wishlist, reviews, the address book and account settings answer 403 GUEST_NOT_ALLOWED. A request that already has a session (guest or not) gets its user back unchanged, with 200.`,
+    success: {
+      status: 201,
+      description: "Guest session started (200: already signed in)",
+      schema: schemas.UserResponseSchema,
+    },
+    errors: {
+      429: "Too many guest sessions from this address (TOO_MANY_REQUESTS); see Retry-After",
+    },
+  });
+
+  operation({
+    method: "post",
     path: "/api/v1/auth/login",
     operationId: "login",
     tag,
     summary: "Log in",
-    description: `Starts a new session. ${sessionCookies}`,
+    description: `Starts a new session. ${sessionCookies} ${adoption} A guest has no email or password, so it can never log in itself.`,
     request: body(schemas.LoginBodySchema),
     success: {
       status: 200,
@@ -76,7 +95,7 @@ export function registerAuthPaths() {
     operationId: "googleCallback",
     tag,
     summary: "Google sign-in callback",
-    description: `Where Google sends the browser back. Checks the state against the \`google_oauth\` cookie, trades the code for the Google profile and signs in the customer linked to that Google account, creating one for a new email. ${sessionCookies} Then redirects to \`?next=\` from the start (else the home page, or /admin for an admin). Any failure redirects to the login page with \`?google_error=\` set to \`cancelled\`, \`failed\`, \`unverified\` (the Google email isn't verified) or \`exists\` (a password account already uses the email).`,
+    description: `Where Google sends the browser back. Checks the state against the \`google_oauth\` cookie, trades the code for the Google profile and signs in the customer linked to that Google account, creating one for a new email. ${sessionCookies} ${adoption} Then redirects to \`?next=\` from the start (else the home page, or /admin for an admin). Any failure redirects to the login page with \`?google_error=\` set to \`cancelled\`, \`failed\`, \`unverified\` (the Google email isn't verified) or \`exists\` (a password account already uses the email).`,
     request: {
       query: z.object({
         code: z.string().optional(),
@@ -191,7 +210,7 @@ export function registerAuthPaths() {
     summary: "Change your name",
     description:
       "Saves the name and sets a fresh `access_token` cookie carrying it (pages read the name from the token).",
-    auth: "user",
+    auth: "account",
     request: body(schemas.UpdateProfileBodySchema),
     success: {
       status: 200,
@@ -212,7 +231,7 @@ export function registerAuthPaths() {
     summary: "Change your password",
     description:
       "Checks the current password, sets the new one and signs out every other session (the one asking stays signed in). A wrong current password is a VALIDATION_FAILED field error on `current_password`, not a 401.",
-    auth: "user",
+    auth: "account",
     request: body(schemas.ChangePasswordBodySchema),
     success: {
       status: 200,

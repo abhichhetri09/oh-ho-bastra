@@ -6,6 +6,7 @@ import {
   createOrderItem,
   ensureCart,
   getAddress,
+  getCartCoupon,
   getCartLines,
   getUserByID,
   listExpiredPendingOrders,
@@ -18,6 +19,11 @@ import {
   type GetCartLinesRow,
   type Order,
 } from "../db/gen";
+import {
+  checkoutCoupon,
+  normalizeEmail,
+  recordRedemption,
+} from "../coupons/coupons";
 import type { Queryable } from "../db/queryable";
 import { withTx, type Pool } from "../db/pool";
 import { log } from "../log";
@@ -40,9 +46,10 @@ import {
   errAddressNotFound,
   errCartEmpty,
   errCartHasIssues,
+  errGuestEmail,
   errProvider,
 } from "./refusal";
-import { CURRENCY, shippingFor } from "./shipping";
+import { CURRENCY, loadShippingRule, shippingFor } from "./shipping";
 import { fulfil, release, sessionOrderId } from "./settle";
 
 // Turns a cart into an order and a hosted Stripe Checkout page, and settles
@@ -66,8 +73,13 @@ export const RELEASE_GRACE_MS = 5 * 60_000;
 /** Caps an address book. */
 export const MAX_ADDRESSES = 10;
 
-/** A checkout request, as validated by the handler (exactly one of address_id and address). */
+/**
+ * A checkout request, as validated by the handler (exactly one of
+ * address_id and address; a guest gives an email and an address).
+ */
 export interface CheckoutRequest {
+  /** Where a guest's order emails go; an account's own email is used instead. */
+  email?: string;
   address_id?: string;
   address?: Partial<AddressInput>;
   /** Adds the new address to the address book. */
@@ -106,11 +118,19 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
     return this.provider;
   }
 
-  /** Reserves the cart's stock in a new pending order and opens a Stripe Checkout page for it. */
+  /**
+   * Reserves the cart's stock in a new pending order and opens a Stripe
+   * Checkout page for it. The order's email (where its emails go, and who
+   * a once-per-customer code counts) is the account's, or the one a guest
+   * gave; a guest ships to a new address and saves nothing.
+   */
   async start(userId: string, req: CheckoutRequest): Promise<CheckoutResult> {
     const provider = this.stripe;
     const user = await getUserByID(this.db, userId);
     if (!user) throw new Error("get user: no rows in result set");
+    const guest = user.role === "guest";
+    const email = guest ? normalizeEmail(req.email ?? "") : user.email;
+    if (!email) throw errGuestEmail;
 
     // Free reservations that ran out, so their stock counts here.
     try {
@@ -132,25 +152,50 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
         if (p.stripe_session_id !== null) staleSlots.push(p.stripe_session_id);
       }
 
-      await reserve(tx, lines);
-      const address = await this.address(tx, userId, req);
-
       const subtotal = lines.reduce(
         (sum, line) => sum + line.price * line.quantity,
         0,
       );
-      const shipping = shippingFor(subtotal);
+      // The bag's code, checked again now that the replaced checkouts gave
+      // their uses back, and locked until this order holds its own use.
+      const code = (await getCartCoupon(tx, userId))?.coupon_code ?? null;
+      const applied =
+        code === null
+          ? null
+          : await checkoutCoupon(tx, code, {
+              subtotal,
+              email,
+              now: this.now(),
+            });
+      const discount = applied?.discount ?? 0;
+
+      await reserve(tx, lines);
+      // A guest has no address book: only the new address counts.
+      const address = await this.address(
+        tx,
+        userId,
+        guest ? { address: req.address } : req,
+      );
+
+      // The store's rule as of now, which the order keeps (orders.shipping)
+      // whatever the admin sets later. Free shipping counts what is paid
+      // for the items, after the code.
+      const rule = await loadShippingRule(tx);
+      const shipping = shippingFor(subtotal - discount, rule);
       const order = await createOrder(tx, {
         user_id: userId,
         subtotal,
+        discount,
+        coupon_code: applied?.coupon.code ?? null,
         shipping,
-        total: subtotal + shipping,
+        total: subtotal - discount + shipping,
         currency: CURRENCY,
-        email: user.email,
+        email,
         shipping_address: address,
         expires_at: new Date(this.now().getTime() + RESERVATION_TTL_MS),
       });
       if (!order) throw new Error("create order: no rows in result set");
+      if (applied) await recordRedemption(tx, applied.coupon, order);
       for (const line of lines) {
         await createOrderItem(tx, {
           order_id: order.id,
@@ -185,7 +230,7 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
     let session;
     try {
       session = await provider.createSession(
-        this.sessionRequest(order, user.email, lines),
+        this.sessionRequest(order, email, lines),
       );
     } catch (err) {
       log.error("checkout: create session", err, { order: order.number });
@@ -265,6 +310,10 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
         unitAmount: line.price,
         quantity: line.quantity,
       })),
+      discount:
+        order.discount > 0
+          ? { amount: order.discount, name: order.coupon_code ?? "Discount" }
+          : null,
       shipping: order.shipping,
       successUrl:
         this.frontendUrl + "/checkout/success?session_id={CHECKOUT_SESSION_ID}",

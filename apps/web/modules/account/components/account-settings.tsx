@@ -141,7 +141,7 @@ function ProfileForm({ user }: { user: PublicUser }) {
             <FieldLabel htmlFor="email" className="eyebrow !text-foreground">
               Email
             </FieldLabel>
-            <Input id="email" value={user.email} readOnly disabled />
+            <Input id="email" value={user.email ?? ""} readOnly disabled />
             <FieldDescription className="text-xs">
               Your email signs you in, so it can&apos;t be changed here.
             </FieldDescription>

@@ -17,6 +17,7 @@ import { unitCount } from "../lib/cart-math";
 import { useCart } from "../queries";
 import { CartLine } from "./cart-line";
 import { CartTotals, FreeShippingProgress } from "./cart-summary";
+import { CouponForm } from "./coupon-form";
 
 /**
  * The /cart page: lines on the left, a sticky summary on the right. The
@@ -101,7 +102,8 @@ export function CartView({ seeded }: { seeded: boolean }) {
             className="space-y-6 rounded-panel border border-border bg-surface/60 p-6 lg:sticky lg:top-24"
           >
             <p className="eyebrow">Summary</p>
-            <FreeShippingProgress subtotal={cart.subtotal} />
+            <FreeShippingProgress subtotal={cart.subtotal - cart.discount} />
+            <CouponForm cart={cart} />
             <CartTotals cart={cart} />
             {cart.has_issues && (
               <p className="text-xs text-clay">

@@ -209,7 +209,7 @@ export function AnnouncementSettings({
         )}
       </div>
 
-      <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-4">
+      <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border bg-surface/40 px-5 py-4">
         {tooLong && (
           <p className="mr-auto text-xs text-destructive" role="status">
             Keep each message to {MAX_ANNOUNCEMENT_LENGTH} characters.
