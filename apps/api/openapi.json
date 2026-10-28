@@ -3459,7 +3459,8 @@
         "enum": [
           "editorial",
           "studio",
-          "botanical"
+          "botanical",
+          "blaze"
         ]
       },
       "AdminStatsResponse": {

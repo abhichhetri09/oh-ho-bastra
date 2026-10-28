@@ -29,6 +29,13 @@ export const THEMES = [
     preview: ["#f8f5ea", "#2a4636", "#b65c3b"],
     themeColor: "#f8f5ea",
   },
+  {
+    id: "blaze",
+    name: "Blaze",
+    description: "Pure white and black, signal orange, square corners.",
+    preview: ["#ffffff", "#0a0a0a", "#f46b10"],
+    themeColor: "#ffffff",
+  },
 ] as const satisfies readonly {
   id: StoreTheme;
   name: string;

@@ -40,7 +40,7 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 - order history with a status timeline, tracking number and refund date
 - order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part; a guest's link to the tracking page
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
-- three light themes (editorial, studio, botanical), chosen in the admin with live previews, plus a demo-only theme picker for showing the store to clients
+- four light themes (editorial, studio, botanical, blaze), chosen in the admin with live previews, plus a demo-only theme picker for showing the store to clients
 - seo: canonical urls, a sitemap and robots.txt, generated share images for products and collections, and json-ld (products with per-variant offers, shipping and returns; breadcrumbs; the store)
 
 **admin** (`/admin`, admin role only)
@@ -257,7 +257,7 @@ the templates are in `apps/api/src/emails/templates.ts` (one layout for all thre
 
 ### themes
 
-the store ships three light themes: **editorial** (warm paper, a light serif, softly rounded corners; the default), **studio** (crisp white, bold sans-serif, soft corners) and **botanical** (cream and forest green, a soft serif, rounded shapes).
+the store ships four light themes: **editorial** (warm paper, a light serif, softly rounded corners; the default), **studio** (crisp white, bold sans-serif, soft corners) **botanical** (cream and forest green, a soft serif, rounded shapes) and **blaze** (pure white and black with signal orange `#F46B10`, a bold sans-serif, square corners).
 
 - the store owner picks the theme in **admin → settings**. each option shows a live preview in its own theme, and choosing one previews it across the admin before saving. saving applies it to every page at once: the setting is cached in next's data cache, and the cache is expired on save.
 - `STORE_THEME` is the fallback while the api can't be reached (default: editorial).

@@ -15,6 +15,7 @@ describe("themes", () => {
       "editorial",
       "studio",
       "botanical",
+      "blaze",
     ]);
     expect(isThemeId("studio")).toBe(true);
     expect(isThemeId("dark")).toBe(false);

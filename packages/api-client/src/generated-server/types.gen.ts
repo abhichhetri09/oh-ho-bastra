@@ -1178,7 +1178,7 @@ export type StoreSettings = {
     updated_at: string;
 };
 
-export type StoreTheme = 'editorial' | 'studio' | 'botanical';
+export type StoreTheme = 'editorial' | 'studio' | 'botanical' | 'blaze';
 
 export type AdminStatsResponse = {
     success: true;

@@ -55,9 +55,9 @@ export function HeaderShell({ categories }: { categories: NavCategory[] }) {
 
         <Link
           href="/"
-          // One line on phones too, where Studio's and Botanical's wider
+          // One line on phones too, where Studio's, Botanical's and Blaze's wider
           // faces would wrap.
-          className="font-serif text-[1.65rem] leading-none tracking-[-0.02em] whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/40 max-sm:in-data-[theme=botanical]:text-[1.4rem] max-sm:in-data-[theme=studio]:text-[1.4rem]"
+          className="font-serif text-[1.65rem] leading-none tracking-[-0.02em] whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/40 max-sm:in-data-[theme=botanical]:text-[1.4rem] max-sm:in-data-[theme=studio]:text-[1.4rem] max-sm:in-data-[theme=blaze]:text-[1.4rem]"
         >
           <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
           {site.name}

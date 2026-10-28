@@ -225,6 +225,62 @@
   --sidebar-ring: oklch(0.56 0.13 42);
 }
 
+/* Blaze: pure white and black with one signal orange (#F46B10), a bold
+   sans-serif and square corners. Buttons stay black: the orange is only
+   3:1 on white, so text in it (--clay: sale prices, warnings, badges) is a
+   deeper orange that reads at 4.5:1, and the brand orange itself goes on
+   large type (headline emphasis), focus rings and charts. */
+[data-theme="blaze"] {
+  --heading-font: var(--font-geist-sans);
+  --heading-weight: 700;
+  --heading-tracking: -0.04em;
+  --heading-leading: 0.8;
+  --heading-size-adjust: 0.4;
+  --em-style: normal;
+  --em-color: var(--blaze);
+  --blaze: oklch(0.686 0.189 45.9);
+  --theme-radius-control: 0.125rem;
+  --theme-radius-field: 0.125rem;
+  --theme-radius-panel: 0.25rem;
+  --theme-radius-media: 0.25rem;
+  --radius: 0.125rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.145 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.965 0.022 55);
+  --secondary-foreground: oklch(0.145 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.46 0 0);
+  --accent: oklch(0.96 0.025 55);
+  --accent-foreground: oklch(0.145 0 0);
+  --destructive: oklch(0.55 0.21 27);
+  --clay: oklch(0.57 0.16 45);
+  --clay-foreground: oklch(1 0 0);
+  --success: oklch(0.52 0.12 155);
+  --surface: oklch(0.965 0 0);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.85 0 0);
+  --ring: oklch(0.686 0.189 45.9);
+  --chart-1: oklch(0.686 0.189 45.9);
+  --chart-2: oklch(0.145 0 0);
+  --chart-3: oklch(0.82 0.1 55);
+  --chart-4: oklch(0.52 0.12 155);
+  --chart-5: oklch(0.86 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.145 0 0);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.025 55);
+  --sidebar-accent-foreground: oklch(0.145 0 0);
+  --sidebar-border: oklch(0.9 0 0);
+  --sidebar-ring: oklch(0.686 0.189 45.9);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
