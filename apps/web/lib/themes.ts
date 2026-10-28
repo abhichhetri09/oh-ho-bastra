@@ -32,7 +32,7 @@ export const THEMES = [
   {
     id: "blaze",
     name: "Blaze",
-    description: "Pure white and black, signal orange, square corners.",
+    description: "Signal orange on white and black, bold sans, square corners.",
     preview: ["#ffffff", "#0a0a0a", "#f46b10"],
     themeColor: "#ffffff",
   },
