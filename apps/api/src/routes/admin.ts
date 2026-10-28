@@ -6,6 +6,7 @@ import {
   OrderTrackingBodySchema,
   RefundOrderBodySchema,
   ShipOrderBodySchema,
+  ShippingBodySchema,
   StoreCornersSchema,
   StoreHeadingFontSchema,
   StoreThemeSchema,
@@ -21,6 +22,7 @@ import {
   MAX_SEARCH,
 } from "../admin/filters";
 import { respondOrder } from "../admin/order-detail";
+import { storeSettings } from "../catalog/settings";
 import {
   DEFAULT_STATS_RANGE,
   LOW_STOCK_THRESHOLD,
@@ -55,6 +57,7 @@ import {
   setOrderTracking,
   updateAnnouncements,
   updateBusinessDetails,
+  updateShippingRule,
   updateStoreAppearance,
 } from "../db/gen";
 import type { Order } from "../db/gen";
@@ -563,12 +566,14 @@ export function adminRoutes(api: Group, deps: Deps) {
       res,
       200,
       "Store theme updated",
-      must(
-        await updateStoreAppearance(db, {
-          theme: body.theme,
-          heading_font: body.heading_font ?? null,
-          corners: body.corners ?? null,
-        }),
+      storeSettings(
+        must(
+          await updateStoreAppearance(db, {
+            theme: body.theme,
+            heading_font: body.heading_font ?? null,
+            corners: body.corners ?? null,
+          }),
+        ),
       ),
     );
   });
@@ -584,11 +589,13 @@ export function adminRoutes(api: Group, deps: Deps) {
       res,
       200,
       "Announcements updated",
-      must(
-        await updateAnnouncements(db, {
-          announcements: body.announcements,
-          announcements_enabled: body.announcements_enabled,
-        }),
+      storeSettings(
+        must(
+          await updateAnnouncements(db, {
+            announcements: body.announcements,
+            announcements_enabled: body.announcements_enabled,
+          }),
+        ),
       ),
     );
   });
@@ -604,7 +611,30 @@ export function adminRoutes(api: Group, deps: Deps) {
       res,
       200,
       "Business details updated",
-      must(await updateBusinessDetails(db, body)),
+      storeSettings(must(await updateBusinessDetails(db, body))),
+    );
+  });
+
+  /**
+   * SetShipping replaces what delivery costs: a flat price, free from a
+   * subtotal (after any discount code), or never free without one. Bags
+   * and checkouts price with it from now on; placed orders keep theirs.
+   */
+  admin.put("/settings/shipping", async (req, res) => {
+    const body = parseBody(ShippingBodySchema, req, res);
+    if (body === null) return;
+    ok(
+      res,
+      200,
+      "Delivery price updated",
+      storeSettings(
+        must(
+          await updateShippingRule(db, {
+            shipping_flat: body.flat,
+            free_shipping_from: body.free_from ?? null,
+          }),
+        ),
+      ),
     );
   });
 }

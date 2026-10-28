@@ -483,4 +483,24 @@ export function registerAdminPaths() {
       400: "A field too long, or an invalid email (VALIDATION_FAILED)",
     },
   });
+
+  operation({
+    method: "put",
+    path: "/api/v1/admin/settings/shipping",
+    operationId: "adminSetShipping",
+    tag: "Admin",
+    summary: "Change the delivery price",
+    description:
+      "Replaces what delivery costs: a flat price, free from a subtotal counted after any discount code (left out or null: never free). Bags and checkouts are priced with it at once; placed orders keep what they were charged.",
+    auth: "admin",
+    request: body(schemas.ShippingBodySchema),
+    success: {
+      status: 200,
+      description: "Delivery price updated",
+      schema: schemas.StoreSettingsResponseSchema,
+    },
+    errors: {
+      400: "A price or threshold out of range, or not whole cents (VALIDATION_FAILED)",
+    },
+  });
 }

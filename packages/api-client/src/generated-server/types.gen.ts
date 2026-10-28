@@ -1183,10 +1183,25 @@ export type StoreSettings = {
      * The seller's phone number; optional.
      */
     business_phone: string;
+    shipping: ShippingRule;
     updated_at: string;
 };
 
 export type StoreTheme = 'editorial' | 'studio' | 'botanical' | 'blaze';
+
+/**
+ * What delivery costs. Checkout charges it as it is then, and each order keeps what it was charged.
+ */
+export type ShippingRule = {
+    /**
+     * What an order below free_from pays for delivery, in cents.
+     */
+    flat: number;
+    /**
+     * Orders from this subtotal, in cents and counted after any discount code, ship free; null: never free.
+     */
+    free_from: number | null;
+};
 
 export type AdminStatsResponse = {
     success: true;
@@ -1772,6 +1787,20 @@ export type BusinessDetailsBody = {
     business_address: string;
     business_email: string;
     business_phone: string;
+};
+
+/**
+ * Replaces what delivery costs: the flat price, and the subtotal (after any discount code) from which orders ship free.
+ */
+export type ShippingBody = {
+    /**
+     * Cents, 0 to 100000; 0 ships every order free.
+     */
+    flat: number;
+    /**
+     * Cents, 1 to 10000000; left out or null: never free.
+     */
+    free_from?: number | null;
 };
 
 export type AdminCouponListResponse = {
@@ -5156,6 +5185,43 @@ export type AdminSetBusinessDetailsResponses = {
 };
 
 export type AdminSetBusinessDetailsResponse = AdminSetBusinessDetailsResponses[keyof AdminSetBusinessDetailsResponses];
+
+export type AdminSetShippingData = {
+    body: ShippingBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/settings/shipping';
+};
+
+export type AdminSetShippingErrors = {
+    /**
+     * A price or threshold out of range, or not whole cents (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetShippingError = AdminSetShippingErrors[keyof AdminSetShippingErrors];
+
+export type AdminSetShippingResponses = {
+    /**
+     * Delivery price updated
+     */
+    200: StoreSettingsResponse;
+};
+
+export type AdminSetShippingResponse = AdminSetShippingResponses[keyof AdminSetShippingResponses];
 
 export type AdminListCouponsData = {
     body?: never;

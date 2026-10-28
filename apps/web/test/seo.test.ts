@@ -12,6 +12,7 @@ import {
   storeLd,
 } from "@/lib/seo/structured-data";
 import { metaDescription } from "@/lib/seo/text";
+import { DEFAULT_SHIPPING } from "@/lib/shipping";
 
 const ORIGIN = "https://shop.example";
 const T = "2026-10-01T00:00:00Z";
@@ -102,6 +103,7 @@ describe("productLd", () => {
       product,
       variants: [variant("v1")],
       path,
+      shipping: DEFAULT_SHIPPING,
     }) as Ld;
     expect(ld["@type"]).toBe("Product");
     expect(ld.sku).toBe("SKU-v1");
@@ -135,6 +137,7 @@ describe("productLd", () => {
         }),
       ],
       path,
+      shipping: DEFAULT_SHIPPING,
     }) as Ld;
     expect(ld["@type"]).toBe("ProductGroup");
     expect(ld.productGroupID).toBe("p1");
@@ -160,18 +163,21 @@ describe("productLd", () => {
     );
   });
 
-  test("shipping is free from $150, else $8", () => {
-    const rate = (price: number) =>
+  test("shipping follows the store's rule", () => {
+    const rate = (price: number, shipping = DEFAULT_SHIPPING) =>
       (
         productLd({
           origin: ORIGIN,
           product,
           variants: [variant("v1", { price })],
           path: [],
+          shipping,
         }) as Ld
       ).offers!.shippingDetails.shippingRate.value;
     expect(rate(5_999)).toBe(4.9);
     expect(rate(6_000)).toBe(0);
+    expect(rate(6_000, { flat: 590, free_from: 8_000 })).toBe(5.9);
+    expect(rate(100_000, { flat: 490, free_from: null })).toBe(4.9);
   });
 
   test("an offer with an end date sets priceValidUntil", () => {
@@ -186,6 +192,7 @@ describe("productLd", () => {
         }),
       ],
       path: [],
+      shipping: DEFAULT_SHIPPING,
     }) as Ld;
     expect(ld.offers?.priceValidUntil).toBe("2026-12-24");
     expect(ld.category).toBeUndefined();
@@ -196,6 +203,7 @@ describe("productLd", () => {
       product,
       variants: [variant("v1", { offer_expires_at: "2026-01-01T00:00:00Z" })],
       path: [],
+      shipping: DEFAULT_SHIPPING,
     }) as Ld;
     expect(lapsed.offers?.priceValidUntil).toBeUndefined();
   });
@@ -206,6 +214,7 @@ describe("productLd", () => {
       product: { ...product, stock: 0 },
       variants: [],
       path: [],
+      shipping: DEFAULT_SHIPPING,
     }) as Ld;
     expect(ld.offers?.price).toBe("89.00");
     expect(ld.offers?.availability).toBe("https://schema.org/OutOfStock");

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Request, Response } from "express";
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   parseListingQuery,
   parseOptions,
@@ -808,12 +808,9 @@ describe("GET /products/:productSlug", () => {
 // ---- GET /settings ------------------------------------------------------------
 
 describe("GET /settings", () => {
-  beforeEach(async () => {
-    // the test reset empties every table, the seeded settings row too
-    await db.query("INSERT INTO store_settings DEFAULT VALUES");
-  });
+  // the test reset seeds the settings row, as the migration does
 
-  it("sends the theme and the banner messages", async () => {
+  it("sends the theme, the banner messages and the delivery price", async () => {
     const res = await http().get("/api/v1/settings");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -834,9 +831,21 @@ describe("GET /settings", () => {
         business_address: "",
         business_email: "",
         business_phone: "",
+        // the rule the code hard-coded before it was editable
+        shipping: { flat: 490, free_from: 6000 },
         updated_at: expect.any(String),
       },
     });
+  });
+
+  it("sends a delivery price that never ships free as null", async () => {
+    await db.query(
+      "UPDATE store_settings SET shipping_flat = 0, free_shipping_from = NULL",
+    );
+    const res = await http().get("/api/v1/settings");
+    expect(res.body.data.shipping).toEqual({ flat: 0, free_from: null });
+    expect(res.body.data).not.toHaveProperty("shipping_flat");
+    expect(res.body.data).not.toHaveProperty("free_shipping_from");
   });
 
   it("sends the font and corners the store uses in place of the theme's", async () => {

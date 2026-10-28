@@ -776,7 +776,6 @@ describe("GET /admin/customers", () => {
 
 describe("PUT /admin/settings", () => {
   beforeEach(async () => {
-    // The singleton row the migration inserts; the test reset empties it.
     await db.query(
       "INSERT INTO store_settings DEFAULT VALUES ON CONFLICT DO NOTHING",
     );
@@ -804,6 +803,7 @@ describe("PUT /admin/settings", () => {
       "business_address",
       "business_email",
       "business_phone",
+      "shipping",
       "updated_at",
     ]);
   });
@@ -1032,6 +1032,7 @@ describe("PUT /admin/settings/announcements", () => {
         business_address: "",
         business_email: "",
         business_phone: "",
+        shipping: { flat: 490, free_from: 6000 },
         updated_at: expect.any(String),
       },
     });

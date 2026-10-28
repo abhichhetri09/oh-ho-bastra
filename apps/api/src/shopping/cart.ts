@@ -10,7 +10,11 @@ import {
   type ErrorCode,
 } from "@repo/types";
 import { Refusal } from "../checkout/refusal";
-import { shippingFor } from "../checkout/shipping";
+import {
+  loadShippingRule,
+  shippingFor,
+  type ShippingRule,
+} from "../checkout/shipping";
 import { evaluateCoupon, type CouponResult } from "../coupons/coupons";
 import {
   clearCart,
@@ -238,17 +242,18 @@ export function cartCoupon({ code, result }: AppliedCoupon): CartCoupon {
 }
 
 /**
- * The cart with its code's discount, shipping (on the subtotal after the
- * discount, as checkout charges it) and total. Nothing to check out ships
- * for nothing.
+ * The cart with its code's discount, shipping under the store's rule (on
+ * the subtotal after the discount, as checkout charges it) and total.
+ * Nothing to check out ships for nothing.
  */
 export function priceCart(
   cart: ReturnType<typeof buildCart>,
   applied: AppliedCoupon | null,
+  rule: ShippingRule,
 ) {
   const discount = applied?.result.discount ?? 0;
   const shipping =
-    cart.item_count === 0 ? 0 : shippingFor(cart.subtotal - discount);
+    cart.item_count === 0 ? 0 : shippingFor(cart.subtotal - discount, rule);
   return {
     items: cart.items,
     item_count: cart.item_count,
@@ -261,18 +266,22 @@ export function priceCart(
   };
 }
 
-/** The user's whole cart, priced, with its code checked as of now. */
+/**
+ * The user's whole cart, priced, with its code and the shipping rule as of
+ * now.
+ */
 export async function loadCart(db: Queryable, uid: string) {
   const cart = buildCart(await getCartLines(db, uid));
+  const rule = await loadShippingRule(db);
   const code = (await getCartCoupon(db, uid))?.coupon_code ?? null;
-  if (code === null) return priceCart(cart, null);
+  if (code === null) return priceCart(cart, null, rule);
   const user = await getUserByID(db, uid);
   const result = await evaluateCoupon(db, code, {
     subtotal: cart.subtotal,
     email: user?.email ?? null,
     now: new Date(),
   });
-  return priceCart(cart, { code, result });
+  return priceCart(cart, { code, result }, rule);
 }
 
 // Mirrors types.AddCartItemRequest / UpdateCartItemRequest. Go's uuid

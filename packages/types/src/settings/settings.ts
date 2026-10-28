@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { successResponse, Timestamp } from "../api/response";
+import { Cents, successResponse, Timestamp } from "../api/response";
 
 /** The storefront themes (apps/web/lib/themes.ts holds their look). */
 export const StoreThemeSchema = z
@@ -42,6 +42,35 @@ export const BUSINESS_LIMITS = {
   business_phone: 40,
 } as const;
 
+/**
+ * The most the admin can set delivery to, and the highest free-delivery
+ * threshold, in cents (€1,000 and €100,000).
+ */
+export const SHIPPING_LIMITS = {
+  flat: 100_000,
+  free_from: 10_000_000,
+} as const;
+
+export const ShippingRuleSchema = z
+  .object({
+    flat: Cents.describe(
+      "What an order below free_from pays for delivery, in cents.",
+    ),
+    free_from: z
+      .int()
+      .positive()
+      .nullable()
+      .describe(
+        "Orders from this subtotal, in cents and counted after any discount code, ship free; null: never free.",
+      ),
+  })
+  .meta({
+    id: "ShippingRule",
+    description:
+      "What delivery costs. Checkout charges it as it is then, and each order keeps what it was charged.",
+  });
+export type ShippingRule = z.infer<typeof ShippingRuleSchema>;
+
 export const StoreSettingsSchema = z
   .object({
     theme: StoreThemeSchema,
@@ -72,6 +101,7 @@ export const StoreSettingsSchema = z
       .string()
       .describe("Where customers can reach the seller."),
     business_phone: z.string().describe("The seller's phone number; optional."),
+    shipping: ShippingRuleSchema,
     updated_at: Timestamp,
   })
   .meta({ id: "StoreSettings", description: "Store-wide settings." });
@@ -148,6 +178,30 @@ export const BusinessDetailsBodySchema = z
       "Replaces the seller's details shown in the footer, contact page and legal pages. Empty strings clear a field.",
   });
 export type BusinessDetailsBody = z.infer<typeof BusinessDetailsBodySchema>;
+
+export const ShippingBodySchema = z
+  .object({
+    flat: z
+      .int()
+      .min(0, "The delivery price can't be negative")
+      .max(SHIPPING_LIMITS.flat, "Keep the delivery price to €1,000 or less")
+      .describe("Cents, 0 to 100000; 0 ships every order free."),
+    free_from: z
+      .int()
+      .min(1, "Free delivery needs a threshold above €0")
+      .max(
+        SHIPPING_LIMITS.free_from,
+        "Keep the free delivery threshold to €100,000 or less",
+      )
+      .nullish()
+      .describe("Cents, 1 to 10000000; left out or null: never free."),
+  })
+  .meta({
+    id: "ShippingBody",
+    description:
+      "Replaces what delivery costs: the flat price, and the subtotal (after any discount code) from which orders ship free.",
+  });
+export type ShippingBody = z.infer<typeof ShippingBodySchema>;
 
 export const StoreSettingsResponseSchema = successResponse(
   StoreSettingsSchema,
