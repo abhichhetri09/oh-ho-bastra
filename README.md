@@ -36,8 +36,9 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 - a bag drawer and `/cart` with live prices and quantities capped to stock
 - discount codes in the bag: a percentage or an amount off the whole bag (sale prices included), with an optional minimum order, start and end dates, a total number of uses and once per customer
 - stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold (€4.90, free from €60)
+- guest checkout: shop and pay without an account (just an email), find an order later by its number and email at `/orders/track`, and keep the bag and orders when you sign in or sign up
 - order history with a status timeline, tracking number and refund date
-- order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part
+- order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part; a guest's link to the tracking page
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
 - three light themes (editorial, studio, botanical), chosen in the admin with live previews, plus a demo-only theme picker for showing the store to clients
 - seo: canonical urls, a sitemap and robots.txt, generated share images for products and collections, and json-ld (products with per-variant offers, shipping and returns; breadcrumbs; the store)
@@ -47,7 +48,7 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 - dashboard: revenue chart, order counts, average order value, low stock, recent orders
 - products: table with search and filters, an editor with direct-to-cloudinary image uploads (drop files in, reorder, remove), variants, stock and offers
 - categories: a tree editor (add, rename, move under another parent, delete)
-- orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock
+- orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock; guest orders are marked as such, with the order's email
 - reviews: publish or hide, which updates the product's rating
 - coupons: create and edit discount codes, switch them on or off, see each one's uses, and delete one nobody has used
 - settings: the store's theme, with a live preview of each
@@ -108,10 +109,10 @@ flowchart LR
   browser -- signed upload --> cloudinary
 ```
 
-- **sessions**: login sets two http-only cookies, a 15-minute access jwt and a refresh token tied to a row in `sessions`. refresh rotates the token with a compare-and-swap; a request that lost a concurrent refresh gets a 30-second grace window instead of a logout. sessions slide for 30 days and end after 90 at most. logout revokes the row, and a background job deletes expired sessions hourly.
+- **sessions**: login sets two http-only cookies, a 15-minute access jwt and a refresh token tied to a row in `sessions`. refresh rotates the token with a compare-and-swap; a request that lost a concurrent refresh gets a 30-second grace window instead of a logout. sessions slide for 30 days and end after 90 at most. logout revokes the row, and a background job deletes expired sessions (and unused guests, see [guest checkout](#checkout-and-orders)) hourly.
 - **google**: "continue with google" sends the browser to `GET /auth/google`, which redirects to google (openid connect with pkce, the state in a 10-minute cookie). google comes back to `/auth/google/callback`, the api trades the code for the profile, and signs in the user linked to that google account, or creates a customer for a new email. a password account with the same email isn't linked, since registration doesn't verify emails; that person signs in with their password. a google-only account has no password until it sets one through "forgot password".
-- **limits**: failed logins are limited to 10 per account and address and 50 per address every 15 minutes (successful ones never count), sign-ups to 10 an hour, password reset requests to 5 and reset attempts to 10 per 15 minutes, wrong current passwords to 10, and discount codes that don't apply to 10 per user every 15 minutes. a blocked request gets 429 `TOO_MANY_REQUESTS` with `Retry-After`. counts are kept in memory, so several api instances would each count alone (a redis store fixes that).
-- **roles**: `customer` and `admin`, checked by `RequireAuth` / `RequireRole` middleware. the web's `proxy.ts` guards `/account`, `/cart`, `/checkout` and `/admin` and refreshes an expired access token before the page renders; in the browser, an axios interceptor queues requests while one refresh runs.
+- **limits**: failed logins are limited to 10 per account and address and 50 per address every 15 minutes (successful ones never count), sign-ups and new guest sessions to 10 and 20 an hour, password reset requests to 5 and reset attempts to 10 per 15 minutes, wrong current passwords to 10, discount codes that don't apply to 10 per user every 15 minutes, and order lookups that find nothing to 10 per address every 15 minutes. a blocked request gets 429 `TOO_MANY_REQUESTS` with `Retry-After`. counts are kept in memory, so several api instances would each count alone (a redis store fixes that).
+- **roles**: `customer`, `admin` and `guest`, checked by `requireAuth` / `requireRole` / `requireAccount` middleware (`requireAccount` answers a guest 403 `GUEST_NOT_ALLOWED`). the web's `proxy.ts` guards `/account`, `/cart`, `/checkout` (guests welcome) and `/admin` and refreshes an expired access token before the page renders; in the browser, an axios interceptor queues requests while one refresh runs.
 - **responses**: every response is `{ success, message?, code?, data?, meta?, errors? }`: `meta` carries pagination, `errors` carries per-field validation errors, and `code` is a stable error code (`INSUFFICIENT_STOCK`, `INVALID_ORDER_TRANSITION`…) from one zod enum in `packages/types`, shared by the api and the web.
 
 ### the api contract
@@ -154,6 +155,7 @@ sequenceDiagram
 - orders move through one tested transition table (`apps/api/src/checkout/fulfilment.ts`): `pending → paid → shipped → delivered`, `pending → cancelled`, and `paid | shipped | delivered → refunded`. every transition locks the order row. a refund is a full stripe refund with an idempotency key per order, so retrying can't refund twice. restocks return only what the order actually took.
 - each paid, shipped or refunded order queues its email in the same transaction (see [emails](#emails)).
 - **discount codes** (`apps/api/src/coupons`): one per bag, kept on the cart and checked again on every read, so the bag shows the discount or why it doesn't apply (expired, below its minimum, used up…). checkout checks it once more with the coupon row locked, records its use with the pending order and refuses the whole checkout (409 with the reason) if it no longer applies. a cancelled order gives its use back; a refunded one keeps it. stripe line items can't be negative, so the discount goes on stripe's page as a one-off coupon for that order, and stripe charges exactly the order's total. the code leaves the bag once the order is paid.
+- **guest checkout** (`apps/api/src/auth/guest.ts`): a signed-out shopper's first add to the bag calls `POST /auth/guest`, which creates a hidden `guest` user (no email, no password, named "Guest") with a normal session, so the bag, its code and checkout work unchanged. a guest gives an email at checkout (`email` in the body) and a new address (nothing is saved); the order's email is where its emails go, stripe's receipt email, and what a once-per-customer code counts, so a guest and an account with one email share a code's use. guests can't use the wishlist, reviews, the address book or account settings. signing in, signing up or continuing with google from a guest session hands the guest over in one transaction: the bags merge (quantities add up, capped to stock; the account keeps its own code, else takes the guest's), the guest's orders placed with the account's email move to the account, and the guest is signed out and deleted once no orders are left on it. anyone can find a placed order by its number and email (`POST /orders/lookup`, read by `/orders/track`, linked from a guest's emails and the footer); a wrong email reads as an unknown number. the hourly cleanup deletes guests over 30 days old that never ordered and have no live session (their carts go with them). migration `000030` rolls back only once no guest has orders.
 - prices are in cents everywhere. an offer applies while `offer_price` is set and `offer_expires_at` is empty or in the future, and one sql expression decides it for listings, sorting, the cart and checkout. shipping is a flat rate, free from a threshold (`internal/constants/shipping.go`).
 
 ### caching
@@ -243,7 +245,7 @@ the admin uploads images straight from the browser with a signature from `POST /
 
 ### emails
 
-the api emails the shopper when an order is **confirmed** (paid), **shipped** (with the tracking number) and **refunded**. there's no email for delivered, or for cancelling an unpaid checkout.
+the api emails the shopper when an order is **confirmed** (paid), **shipped** (with the tracking number) and **refunded**. there's no email for delivered, or for cancelling an unpaid checkout. emails go to the order's email; a guest's greet the name it ships to and link to `/orders/track?number=…` instead of the account's order page, which needs signing in.
 
 - each status change writes its email to an `email_outbox` table in the same transaction, so a change that commits always gets its email and one that rolls back never does. there's one email of each kind per order, so a replayed stripe webhook doesn't send twice.
 - a sender inside the api delivers the outbox every 10 seconds, rendering each email from the order as it is then. a failed send is retried after 1, 2, 4… minutes (at most an hour apart, 8 tries); a server that refuses the address for good fails it at once. an email still unsent after 48 hours is dropped rather than sent late. outcomes are in the table (`status`, `attempts`, `last_error`) and the logs.
@@ -337,7 +339,6 @@ if order emails time out on render, its free instances may be blocking the stand
 
 ## not built yet
 
-- guest carts (the bag needs an account)
 - partial refunds and returns
 - emails beyond orders and password reset (for example verifying the address)
 - finnish payment methods (paytrail, mobilepay): checkout is stripe only
