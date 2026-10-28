@@ -22,6 +22,7 @@ import { BAG_BUMP_EVENT, BAG_TARGET } from "../lib/fly-to-bag";
 import { useBagDrawer } from "../store";
 import { CartLine } from "./cart-line";
 import { CartTotals, FreeShippingProgress } from "./cart-summary";
+import { CouponForm } from "./coupon-form";
 
 /** The header bag: a count that rolls when it changes, opening the drawer. */
 export function BagButton() {
@@ -175,7 +176,8 @@ function BagContents({ close }: { close: () => void }) {
         ))}
       </ul>
       <SheetFooter className="gap-5 border-t border-border bg-background p-5">
-        <FreeShippingProgress subtotal={cart!.subtotal} />
+        <FreeShippingProgress subtotal={cart!.subtotal - cart!.discount} />
+        <CouponForm cart={cart!} />
         <CartTotals cart={cart!} />
         {cart!.has_issues && (
           <p className="text-xs text-clay">

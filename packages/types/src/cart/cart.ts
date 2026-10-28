@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Cents, successResponse, Timestamp, Uuid } from "../api/response";
+import { CartCouponSchema } from "../coupon/coupon";
 import { VariantOptionSchema } from "../product/product";
 
 /** The most of one variant a cart line can hold. */
@@ -46,7 +47,17 @@ export const CartSchema = z
     subtotal: z
       .int()
       .nonnegative()
-      .describe("Cents, over the lines that can be checked out"),
+      .describe(
+        "Cents, over the lines that can be checked out (sale prices, before any code)",
+      ),
+    discount: Cents.describe("What the code takes off the subtotal"),
+    shipping: Cents.describe(
+      "On the subtotal after the discount; 0 when nothing can be checked out",
+    ),
+    total: Cents.describe(
+      "subtotal − discount + shipping, as checkout charges",
+    ),
+    coupon: CartCouponSchema.nullable().describe("null without a code"),
     has_issues: z
       .boolean()
       .describe(

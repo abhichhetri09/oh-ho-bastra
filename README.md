@@ -22,7 +22,7 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 ## the shop
 
 - **catalog**: ten tees in two categories, **tees** (short sleeve, long sleeve) and **custom** (custom text, custom print), sized s to xxl, €25–45. `bun run db:seed:catalog` creates them; their photos are in `scripts/catalog-images`.
-- **money**: euros (`apps/web/lib/money.ts`, `apps/api/src/checkout/shipping.ts`). shipping is €4.90 flat and free from €60; the web shows the same rule from `apps/web/lib/shipping.ts`, so change both together.
+- **money**: euros (`apps/web/lib/money.ts`, `apps/api/src/checkout/shipping.ts`). shipping is €4.90 flat and free from €60, counted on the subtotal after any discount code; the web shows the same rule from `apps/web/lib/shipping.ts`, so change both together.
 - **orders** are numbered `OHB-1001`, `OHB-1002`…
 - **brand**: the ओho mark is `apps/web/components/brand/logo-mark.tsx` (also in `docs/brand`), with the favicon and app icons in `apps/web/app` and `apps/web/public/brand`. store copy and editorial photos live in `apps/web/lib/site.ts` and `apps/web/public/editorial`.
 
@@ -34,6 +34,7 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 - full-text product search (⌘K dialog with live results, and `/shop?q=`)
 - product pages with a gallery, colour swatches and size pills (sold-out variants struck through, `?variant=` links), offers with expiry
 - a bag drawer and `/cart` with live prices and quantities capped to stock
+- discount codes in the bag: a percentage or an amount off the whole bag (sale prices included), with an optional minimum order, start and end dates, a total number of uses and once per customer
 - stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold (€4.90, free from €60)
 - order history with a status timeline, tracking number and refund date
 - order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part
@@ -48,6 +49,7 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 - categories: a tree editor (add, rename, move under another parent, delete)
 - orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock
 - reviews: publish or hide, which updates the product's rating
+- coupons: create and edit discount codes, switch them on or off, see each one's uses, and delete one nobody has used
 - settings: the store's theme, with a live preview of each
 
 ## stack
@@ -108,7 +110,7 @@ flowchart LR
 
 - **sessions**: login sets two http-only cookies, a 15-minute access jwt and a refresh token tied to a row in `sessions`. refresh rotates the token with a compare-and-swap; a request that lost a concurrent refresh gets a 30-second grace window instead of a logout. sessions slide for 30 days and end after 90 at most. logout revokes the row, and a background job deletes expired sessions hourly.
 - **google**: "continue with google" sends the browser to `GET /auth/google`, which redirects to google (openid connect with pkce, the state in a 10-minute cookie). google comes back to `/auth/google/callback`, the api trades the code for the profile, and signs in the user linked to that google account, or creates a customer for a new email. a password account with the same email isn't linked, since registration doesn't verify emails; that person signs in with their password. a google-only account has no password until it sets one through "forgot password".
-- **limits**: failed logins are limited to 10 per account and address and 50 per address every 15 minutes (successful ones never count), sign-ups to 10 an hour, password reset requests to 5 and reset attempts to 10 per 15 minutes, and wrong current passwords to 10. a blocked request gets 429 `TOO_MANY_REQUESTS` with `Retry-After`. counts are kept in memory, so several api instances would each count alone (a redis store fixes that).
+- **limits**: failed logins are limited to 10 per account and address and 50 per address every 15 minutes (successful ones never count), sign-ups to 10 an hour, password reset requests to 5 and reset attempts to 10 per 15 minutes, wrong current passwords to 10, and discount codes that don't apply to 10 per user every 15 minutes. a blocked request gets 429 `TOO_MANY_REQUESTS` with `Retry-After`. counts are kept in memory, so several api instances would each count alone (a redis store fixes that).
 - **roles**: `customer` and `admin`, checked by `RequireAuth` / `RequireRole` middleware. the web's `proxy.ts` guards `/account`, `/cart`, `/checkout` and `/admin` and refreshes an expired access token before the page renders; in the browser, an axios interceptor queues requests while one refresh runs.
 - **responses**: every response is `{ success, message?, code?, data?, meta?, errors? }`: `meta` carries pagination, `errors` carries per-field validation errors, and `code` is a stable error code (`INSUFFICIENT_STOCK`, `INVALID_ORDER_TRANSITION`…) from one zod enum in `packages/types`, shared by the api and the web.
 
@@ -151,6 +153,7 @@ sequenceDiagram
 - webhooks are signature-checked, recorded in `stripe_events` so a retry is a no-op, and applied in a transaction. an order paid after its reservation was released takes back what stock it can and records the shortfall.
 - orders move through one tested transition table (`apps/api/src/checkout/fulfilment.ts`): `pending → paid → shipped → delivered`, `pending → cancelled`, and `paid | shipped | delivered → refunded`. every transition locks the order row. a refund is a full stripe refund with an idempotency key per order, so retrying can't refund twice. restocks return only what the order actually took.
 - each paid, shipped or refunded order queues its email in the same transaction (see [emails](#emails)).
+- **discount codes** (`apps/api/src/coupons`): one per bag, kept on the cart and checked again on every read, so the bag shows the discount or why it doesn't apply (expired, below its minimum, used up…). checkout checks it once more with the coupon row locked, records its use with the pending order and refuses the whole checkout (409 with the reason) if it no longer applies. a cancelled order gives its use back; a refunded one keeps it. stripe line items can't be negative, so the discount goes on stripe's page as a one-off coupon for that order, and stripe charges exactly the order's total. the code leaves the bag once the order is paid.
 - prices are in cents everywhere. an offer applies while `offer_price` is set and `offer_expires_at` is empty or in the future, and one sql expression decides it for listings, sorting, the cart and checkout. shipping is a flat rate, free from a threshold (`internal/constants/shipping.go`).
 
 ### caching

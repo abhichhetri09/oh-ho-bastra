@@ -92,6 +92,7 @@ export interface Cart {
   user_id: string;
   created_at: Date;
   updated_at: Date;
+  coupon_code: string | null;
 }
 
 export interface CartItem {
@@ -146,6 +147,8 @@ export interface Order {
   delivered_at: Date | null;
   refunded_at: Date | null;
   tracking_number: string | null;
+  discount: number;
+  coupon_code: string | null;
 }
 
 export interface OrderItem {
@@ -268,5 +271,28 @@ export interface PasswordResetToken {
   token_hash: string;
   expires_at: Date;
   used_at: Date | null;
+  created_at: Date;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  kind: string;
+  value: number;
+  min_subtotal: number;
+  starts_at: Date | null;
+  ends_at: Date | null;
+  max_redemptions: number | null;
+  once_per_customer: boolean;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CouponRedemption {
+  id: string;
+  coupon_id: string;
+  order_id: string;
+  email: string;
   created_at: Date;
 }

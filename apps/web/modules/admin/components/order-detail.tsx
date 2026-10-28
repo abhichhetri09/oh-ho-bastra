@@ -38,7 +38,7 @@ import {
   adminShipOrder,
 } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
-import { formatPrice } from "@/lib/money";
+import { formatDiscount, formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { optionSummary } from "@/modules/cart/lib/cart-math";
 import {
@@ -646,6 +646,17 @@ function Items({
           <dt className="text-muted-foreground">Subtotal</dt>
           <dd className="tabular-nums">{formatPrice(o.subtotal)}</dd>
         </div>
+        {o.discount > 0 && (
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">
+              Discount
+              {o.coupon_code && (
+                <span className="font-mono text-xs"> ({o.coupon_code})</span>
+              )}
+            </dt>
+            <dd className="tabular-nums">{formatDiscount(o.discount)}</dd>
+          </div>
+        )}
         <div className="flex justify-between">
           <dt className="text-muted-foreground">Shipping</dt>
           <dd className="tabular-nums">

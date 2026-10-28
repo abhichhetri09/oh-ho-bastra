@@ -39,6 +39,8 @@ export const adminKeys = {
   customerList: (filters: AdminCustomerFilters) =>
     [...adminKeys.customers(), "list", filters] as const,
   customer: (id: string) => [...adminKeys.customers(), "detail", id] as const,
+  coupons: () => [...adminKeys.all, "coupons"] as const,
+  couponList: (page: number) => [...adminKeys.coupons(), page] as const,
   reviews: () => [...adminKeys.all, "reviews"] as const,
   reviewList: (filters: AdminReviewFilters) =>
     [...adminKeys.reviews(), "list", filters] as const,

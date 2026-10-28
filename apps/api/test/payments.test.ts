@@ -123,6 +123,7 @@ describe("StripePayments", () => {
         },
         { name: "Mug", image: "", unitAmount: 1200, quantity: 1 },
       ],
+      discount: null,
       shipping: 0,
       successUrl:
         "http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}",
@@ -178,6 +179,46 @@ describe("StripePayments", () => {
     expect(
       seen[1]!.form["shipping_options[0][shipping_rate_data][display_name]"],
     ).toBe("Standard shipping");
+  });
+
+  it("takes a discount off through a one-off coupon, keyed by the order", async () => {
+    answers["POST /v1/coupons"] = {
+      status: 200,
+      body: { id: "co_1", object: "coupon" },
+    };
+    answers["POST /v1/checkout/sessions"] = { status: 200, body: session() };
+    await stripe().createSession({
+      orderId: "0f6ada99-b884-4c07-88d4-7843a41cdda8",
+      orderNumber: 1042,
+      email: "ada@example.com",
+      currency: "eur",
+      items: [{ name: "Tee", image: "", unitAmount: 2500, quantity: 2 }],
+      discount: { amount: 500, name: "SUMMER10" },
+      shipping: 490,
+      successUrl: "http://localhost:3000/checkout/success",
+      cancelUrl: "http://localhost:3000/cart",
+      expiresAt: new Date("2026-10-10T12:31:00Z"),
+    });
+    expect(seen.map((s) => `${s.method} ${s.path}`)).toEqual([
+      "POST /v1/coupons",
+      "POST /v1/checkout/sessions",
+    ]);
+    expect(seen[0]!.idempotencyKey).toBe(
+      "coupon-0f6ada99-b884-4c07-88d4-7843a41cdda8",
+    );
+    expect(seen[0]!.form).toEqual({
+      amount_off: "500",
+      currency: "eur",
+      duration: "once",
+      max_redemptions: "1",
+      name: "SUMMER10",
+      "metadata[order_id]": "0f6ada99-b884-4c07-88d4-7843a41cdda8",
+    });
+    expect(seen[1]!.form["discounts[0][coupon]"]).toBe("co_1");
+    // the line items stay at their own prices
+    expect(seen[1]!.form["line_items[0][price_data][unit_amount]"]).toBe(
+      "2500",
+    );
   });
 
   it("reads, and expires, a session", async () => {

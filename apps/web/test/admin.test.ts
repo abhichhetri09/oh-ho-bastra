@@ -6,6 +6,17 @@ import {
   orderTree,
   subtreeIds,
 } from "@/modules/admin/lib/categories";
+import type { AdminCoupon } from "@repo/types";
+import {
+  couponStatus,
+  couponsPage,
+  couponUses,
+  couponValue,
+  couponValues,
+  couponWindow,
+  EMPTY_COUPON,
+  parseCouponValues,
+} from "@/modules/admin/lib/coupons";
 import { fromLocalInput, toLocalInput } from "@/modules/admin/lib/datetime";
 import {
   adminProductsQuery,
@@ -363,6 +374,167 @@ describe("admin order and review filters", () => {
       page: 1,
       status: "",
       rating: null,
+    });
+  });
+});
+
+describe("admin coupons", () => {
+  const coupon = (over: Partial<AdminCoupon> = {}): AdminCoupon => ({
+    id: "c1",
+    code: "SUMMER10",
+    kind: "percent",
+    value: 10,
+    min_subtotal: 0,
+    starts_at: null,
+    ends_at: null,
+    max_redemptions: null,
+    once_per_customer: false,
+    is_active: true,
+    created_at: "2026-10-01T00:00:00Z",
+    updated_at: "2026-10-01T00:00:00Z",
+    redemptions: 0,
+    ...over,
+  });
+  const now = new Date("2026-10-10T12:00:00Z");
+
+  test("status, as the API checks a code", () => {
+    expect(couponStatus(coupon(), now)).toBe("active");
+    expect(couponStatus(coupon({ is_active: false }), now)).toBe("off");
+    expect(
+      couponStatus(coupon({ starts_at: "2026-10-11T00:00:00Z" }), now),
+    ).toBe("scheduled");
+    expect(couponStatus(coupon({ ends_at: "2026-10-10T12:00:00Z" }), now)).toBe(
+      "expired",
+    );
+    expect(
+      couponStatus(coupon({ max_redemptions: 3, redemptions: 3 }), now),
+    ).toBe("used-up");
+    // switched off wins over everything else
+    expect(
+      couponStatus(
+        coupon({ is_active: false, ends_at: "2026-01-01T00:00:00Z" }),
+        now,
+      ),
+    ).toBe("off");
+  });
+
+  test("how a coupon reads in the table", () => {
+    expect(couponValue(coupon())).toBe("10% off");
+    expect(couponValue(coupon({ kind: "fixed", value: 450 }))).toBe(
+      "€4.50 off",
+    );
+    expect(couponWindow(coupon())).toBe("Any time");
+    expect(couponWindow(coupon({ starts_at: "2026-11-01T12:00:00Z" }))).toBe(
+      "From 1 Nov 2026",
+    );
+    expect(couponWindow(coupon({ ends_at: "2026-11-30T12:00:00Z" }))).toBe(
+      "Until 30 Nov 2026",
+    );
+    expect(
+      couponWindow(
+        coupon({
+          starts_at: "2026-11-01T12:00:00Z",
+          ends_at: "2026-11-30T12:00:00Z",
+        }),
+      ),
+    ).toBe("1 Nov 2026 – 30 Nov 2026");
+    expect(couponUses(coupon({ redemptions: 3 }))).toBe("3");
+    expect(couponUses(coupon({ redemptions: 3, max_redemptions: 50 }))).toBe(
+      "3 / 50",
+    );
+    expect(couponsPage({ page: "3" })).toBe(3);
+    expect(couponsPage({ page: ["0"] })).toBe(1);
+    expect(couponsPage({})).toBe(1);
+  });
+
+  test("the form's values become the API's body", () => {
+    expect(
+      parseCouponValues({
+        ...EMPTY_COUPON,
+        code: " welcome-5 ",
+        kind: "fixed",
+        amount: "4.50",
+        minimum: "30",
+        maxUses: "100",
+        oncePerCustomer: true,
+      }),
+    ).toEqual({
+      body: {
+        code: "WELCOME-5",
+        kind: "fixed",
+        value: 450,
+        min_subtotal: 3000,
+        once_per_customer: true,
+        is_active: true,
+        max_redemptions: 100,
+      },
+    });
+    const iso = "2026-11-01T10:00:00.000Z";
+    const parsed = parseCouponValues({
+      ...EMPTY_COUPON,
+      code: "SALE",
+      amount: "20",
+      startsAt: toLocalInput(iso),
+    });
+    expect(parsed.body).toMatchObject({
+      kind: "percent",
+      value: 20,
+      starts_at: iso,
+    });
+  });
+
+  test("the form says what's wrong by each field", () => {
+    expect(
+      parseCouponValues({ ...EMPTY_COUPON, code: "x", amount: "abc" }).errors,
+    ).toEqual({
+      code: "Use 3 to 32 letters, digits, hyphens or underscores",
+      value: "Enter a whole percentage, like 10",
+    });
+    expect(
+      parseCouponValues({ ...EMPTY_COUPON, code: "SALE", amount: "150" })
+        .errors,
+    ).toEqual({ value: "A percentage can be at most 100" });
+    expect(
+      parseCouponValues({
+        ...EMPTY_COUPON,
+        code: "SALE",
+        kind: "fixed",
+        amount: "5",
+        minimum: "1.234",
+      }).errors,
+    ).toEqual({ min_subtotal: "Enter an amount, like 50" });
+  });
+
+  test("a coupon's values for editing it, and back", () => {
+    const c = coupon({
+      kind: "fixed",
+      value: 500,
+      min_subtotal: 5000,
+      ends_at: "2026-12-01T00:00:00.000Z",
+      max_redemptions: 10,
+      once_per_customer: true,
+      is_active: false,
+    });
+    const values = couponValues(c);
+    expect(values).toMatchObject({
+      code: "SUMMER10",
+      kind: "fixed",
+      amount: "5",
+      minimum: "50",
+      startsAt: "",
+      maxUses: "10",
+      oncePerCustomer: true,
+      isActive: false,
+    });
+    expect(parseCouponValues(values).body).toEqual({
+      code: "SUMMER10",
+      kind: "fixed",
+      value: 500,
+      min_subtotal: 5000,
+      ends_at: "2026-12-01T00:00:00.000Z",
+      max_redemptions: 10,
+      once_per_customer: true,
+      is_active: false,
     });
   });
 });

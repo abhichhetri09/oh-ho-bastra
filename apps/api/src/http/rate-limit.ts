@@ -9,7 +9,8 @@ import { rlog } from "../log";
 import { fail } from "./response";
 
 // Limits on the auth endpoints, against password guessing (one account or
-// many), account spam and email flooding. Counts live in memory: one API
+// many), account spam and email flooding, and on discount codes, against
+// guessing them. Counts live in memory: one API
 // instance. With several instances behind a load balancer, give them a
 // shared store (express-rate-limit supports Redis) or each counts alone.
 //
@@ -130,5 +131,19 @@ export function contactLimit(enabled = true): RequestHandler {
     windowMs: 60 * MINUTE,
     limit: 5,
     keyGenerator: ip,
+  });
+}
+
+/**
+ * Failed discount codes per signed-in user (else per ip), against guessing
+ * codes; a code that applies never counts. Runs after requireAuth.
+ */
+export function couponLimit(enabled = true): RequestHandler {
+  if (!enabled) return (_req, _res, next) => next();
+  return limiter("coupon", {
+    windowMs: 15 * MINUTE,
+    limit: 10,
+    failuresOnly: true,
+    keyGenerator: (req) => req.auth?.userId ?? ip(req),
   });
 }

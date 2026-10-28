@@ -73,7 +73,7 @@
           "message",
           "code"
         ],
-        "description": "Every non-2xx response. `errors` is only present for VALIDATION_FAILED."
+        "description": "Every non-2xx response. `errors` lists the fields at fault: for VALIDATION_FAILED, and for a conflict on one field (COUPON_ALREADY_EXISTS)."
       },
       "ErrorCode": {
         "type": "string",
@@ -116,6 +116,14 @@
           "CART_QUANTITY_LIMIT",
           "CART_FULL",
           "CART_ITEM_NOT_FOUND",
+          "COUPON_NOT_FOUND",
+          "COUPON_EXPIRED",
+          "COUPON_MIN_SUBTOTAL",
+          "COUPON_USED_UP",
+          "COUPON_ALREADY_USED",
+          "COUPON_ALREADY_EXISTS",
+          "COUPON_IN_USE",
+          "INVALID_COUPON_ID",
           "CART_EMPTY",
           "CART_HAS_ISSUES",
           "PAYMENTS_UNAVAILABLE",
@@ -1968,7 +1976,85 @@
           "subtotal": {
             "type": "integer",
             "minimum": 0,
-            "description": "Cents, over the lines that can be checked out"
+            "description": "Cents, over the lines that can be checked out (sale prices, before any code)"
+          },
+          "discount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What the code takes off the subtotal"
+          },
+          "shipping": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "On the subtotal after the discount; 0 when nothing can be checked out"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "subtotal − discount + shipping, as checkout charges"
+          },
+          "coupon": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "kind": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "percent",
+                  "fixed",
+                  null
+                ],
+                "description": "null when the code is COUPON_NOT_FOUND"
+              },
+              "value": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "exclusiveMinimum": 0,
+                "description": "null when the code is COUPON_NOT_FOUND"
+              },
+              "discount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "What it takes off now; 0 with an issue"
+              },
+              "issue": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "code": {
+                    "$ref": "#/components/schemas/CouponIssueCode"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "description": "Why the code doesn't apply right now (it stays on the bag; checkout refuses with this code until it is fixed or removed)"
+              }
+            },
+            "required": [
+              "code",
+              "kind",
+              "value",
+              "discount",
+              "issue"
+            ],
+            "description": "null without a code"
           },
           "has_issues": {
             "type": "boolean",
@@ -1979,6 +2065,10 @@
           "items",
           "item_count",
           "subtotal",
+          "discount",
+          "shipping",
+          "total",
+          "coupon",
           "has_issues"
         ]
       },
@@ -2079,6 +2169,17 @@
         ],
         "description": "One cart line, priced live."
       },
+      "CouponIssueCode": {
+        "type": "string",
+        "enum": [
+          "COUPON_NOT_FOUND",
+          "COUPON_EXPIRED",
+          "COUPON_MIN_SUBTOTAL",
+          "COUPON_USED_UP",
+          "COUPON_ALREADY_USED"
+        ],
+        "description": "COUPON_NOT_FOUND also covers a code that is switched off or not started yet"
+      },
       "AddCartItemBody": {
         "type": "object",
         "properties": {
@@ -2110,6 +2211,20 @@
         "required": [
           "quantity"
         ]
+      },
+      "ApplyCouponBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "description": "Any case; spaces around it are ignored."
       },
       "CheckoutResponse": {
         "type": "object",
@@ -2289,7 +2404,8 @@
           },
           "total": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "subtotal − discount + shipping"
           },
           "currency": {
             "type": "string"
@@ -2361,6 +2477,18 @@
             ],
             "description": "The carrier's, when the order shipped with one"
           },
+          "discount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Taken off the subtotal by coupon_code"
+          },
+          "coupon_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The discount code used, as it was then"
+          },
           "items": {
             "type": "array",
             "items": {
@@ -2397,6 +2525,8 @@
           "delivered_at",
           "refunded_at",
           "tracking_number",
+          "discount",
+          "coupon_code",
           "items",
           "reviewed_product_ids"
         ]
@@ -4582,7 +4712,8 @@
           },
           "total": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "subtotal − discount + shipping"
           },
           "currency": {
             "type": "string"
@@ -4653,6 +4784,18 @@
               "null"
             ],
             "description": "The carrier's, when the order shipped with one"
+          },
+          "discount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Taken off the subtotal by coupon_code"
+          },
+          "coupon_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The discount code used, as it was then"
           },
           "items": {
             "type": "array",
@@ -4763,6 +4906,8 @@
           "delivered_at",
           "refunded_at",
           "tracking_number",
+          "discount",
+          "coupon_code",
           "items",
           "customer",
           "payment"
@@ -5074,6 +5219,210 @@
           "business_phone"
         ],
         "description": "Replaces the seller's details shown in the footer, contact page and legal pages. Empty strings clear a field."
+      },
+      "AdminCouponListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCoupon"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "meta"
+        ]
+      },
+      "AdminCoupon": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CouponKind"
+          },
+          "value": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "min_subtotal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "starts_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "max_redemptions": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "once_per_customer": {
+            "type": "boolean"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "redemptions": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Orders that used it, unpaid checkouts included (a cancelled one gives its use back)"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "kind",
+          "value",
+          "min_subtotal",
+          "starts_at",
+          "ends_at",
+          "max_redemptions",
+          "once_per_customer",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "redemptions"
+        ]
+      },
+      "CouponKind": {
+        "type": "string",
+        "enum": [
+          "percent",
+          "fixed"
+        ],
+        "description": "percent: value is 1–100 (%); fixed: value is cents off"
+      },
+      "AdminCouponResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AdminCoupon"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CouponBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_-]{3,32}$",
+            "description": "Any case; stored uppercased, and unique"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CouponKind"
+          },
+          "value": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000,
+            "description": "percent: 1–100; fixed: cents"
+          },
+          "min_subtotal": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000,
+            "description": "The subtotal the bag needs, in cents; 0 or omitted for any"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Omit to start at once"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Omit to never end"
+          },
+          "max_redemptions": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000,
+            "description": "Uses across every customer; omit for no limit"
+          },
+          "once_per_customer": {
+            "type": "boolean",
+            "description": "One use per email address (default false)"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Default true"
+          }
+        },
+        "required": [
+          "code",
+          "kind",
+          "value"
+        ],
+        "description": "Create or replace a coupon: an omitted optional field is cleared (or its default)."
+      },
+      "CouponActiveBody": {
+        "type": "object",
+        "properties": {
+          "is_active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "is_active"
+        ]
       }
     },
     "parameters": {}
@@ -7839,7 +8188,7 @@
           "Cart"
         ],
         "summary": "Get my cart",
-        "description": "One cart per user, priced live; empty until something is added. Capped at 50 lines, so it is not paginated.",
+        "description": "One cart per user, priced live; empty until something is added. Capped at 50 lines, so it is not paginated. With a discount code, its discount and any issue are worked out on each read.",
         "security": [
           {
             "accessTokenCookie": []
@@ -8184,6 +8533,148 @@
         }
       }
     },
+    "/api/v1/cart/coupon": {
+      "put": {
+        "operationId": "applyCartCoupon",
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Apply a discount code",
+        "description": "Checks the code against the bag as it is now and puts it on the bag, replacing any other (one code per bag). Codes are case-insensitive. Failed attempts are limited to 10 per 15 minutes per user, against guessing.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyCouponBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Code applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such code, or it isn't active (COUPON_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The code can't be used (COUPON_EXPIRED, COUPON_MIN_SUBTOTAL (the message names the amount), COUPON_USED_UP, COUPON_ALREADY_USED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failed codes (TOO_MANY_REQUESTS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeCartCoupon",
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Remove the discount code",
+        "description": "Removing when there is none succeeds.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Code removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/checkout": {
       "post": {
         "operationId": "startCheckout",
@@ -8191,7 +8682,7 @@
           "Checkout"
         ],
         "summary": "Start checkout",
-        "description": "Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines once payment lands.",
+        "description": "Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. The cart's discount code is checked again and its use held by the order until it is paid or cancelled. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines (and its code) once payment lands.",
         "security": [
           {
             "accessTokenCookie": []
@@ -8249,7 +8740,7 @@
             }
           },
           "409": {
-            "description": "The cart is empty, or a line is off sale or short (CART_EMPTY, CART_HAS_ISSUES)",
+            "description": "The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -11546,6 +12037,471 @@
           },
           "403": {
             "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/coupons": {
+      "get": {
+        "operationId": "adminListCoupons",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Discount codes",
+        "description": "Newest first, 20 per page, each with its uses (unpaid checkouts hold theirs until they are cancelled).",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Coupons fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCouponListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid page (INVALID_PAGE_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateCoupon",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create a discount code",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CouponBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Coupon created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCouponResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another coupon has the code (COUPON_ALREADY_EXISTS, with the field in errors)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/coupons/{couponID}": {
+      "put": {
+        "operationId": "adminUpdateCoupon",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Change a discount code",
+        "description": "Replaces every field. Orders keep the code and discount they were placed with; bags holding the old code see it checked against the new rules.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "couponID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CouponBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Coupon updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCouponResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id or body (INVALID_COUPON_ID, VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such coupon (COUPON_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another coupon has the code (COUPON_ALREADY_EXISTS, with the field in errors)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "adminDeleteCoupon",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Delete a discount code",
+        "description": "Only a code that was never used; one that was is switched off instead, so its orders keep their record.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "couponID",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Coupon deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id (INVALID_COUPON_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such coupon (COUPON_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The code has been used (COUPON_IN_USE)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/coupons/{couponID}/active": {
+      "put": {
+        "operationId": "adminSetCouponActive",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Switch a discount code on or off",
+        "description": "A code that is off can't be applied or checked out with; to shoppers it doesn't exist.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "couponID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CouponActiveBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Coupon updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCouponResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id or body (INVALID_COUPON_ID, VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such coupon (COUPON_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {

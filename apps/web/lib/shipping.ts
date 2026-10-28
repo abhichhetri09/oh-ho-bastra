@@ -1,9 +1,14 @@
-// Display copy of the shipping rule. The API decides what an order is
-// charged (from the checkout PR on); keep these in step with it.
+// Display copy of the shipping rule (apps/api/src/checkout/shipping.ts):
+// the API decides what an order is charged, and the cart answers with its
+// shipping and total. This copy prices optimistic bag updates and the
+// free-shipping bar; keep the two in step.
 export const FREE_SHIPPING_FROM = 6_000;
 export const FLAT_SHIPPING = 490;
 
-/** Shipping for a subtotal in cents. */
+/**
+ * Shipping for a subtotal in cents, after any discount code: the free
+ * threshold counts what is paid for the items.
+ */
 export function shippingFor(subtotal: number): number {
-  return subtotal === 0 || subtotal >= FREE_SHIPPING_FROM ? 0 : FLAT_SHIPPING;
+  return subtotal >= FREE_SHIPPING_FROM ? 0 : FLAT_SHIPPING;
 }

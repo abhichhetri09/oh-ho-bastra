@@ -6,6 +6,7 @@ import {
   createOrderItem,
   ensureCart,
   getAddress,
+  getCartCoupon,
   getCartLines,
   getUserByID,
   listExpiredPendingOrders,
@@ -18,6 +19,7 @@ import {
   type GetCartLinesRow,
   type Order,
 } from "../db/gen";
+import { checkoutCoupon, recordRedemption } from "../coupons/coupons";
 import type { Queryable } from "../db/queryable";
 import { withTx, type Pool } from "../db/pool";
 import { log } from "../log";
@@ -132,25 +134,42 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
         if (p.stripe_session_id !== null) staleSlots.push(p.stripe_session_id);
       }
 
-      await reserve(tx, lines);
-      const address = await this.address(tx, userId, req);
-
       const subtotal = lines.reduce(
         (sum, line) => sum + line.price * line.quantity,
         0,
       );
-      const shipping = shippingFor(subtotal);
+      // The bag's code, checked again now that the replaced checkouts gave
+      // their uses back, and locked until this order holds its own use.
+      const code = (await getCartCoupon(tx, userId))?.coupon_code ?? null;
+      const applied =
+        code === null
+          ? null
+          : await checkoutCoupon(tx, code, {
+              subtotal,
+              email: user.email,
+              now: this.now(),
+            });
+      const discount = applied?.discount ?? 0;
+
+      await reserve(tx, lines);
+      const address = await this.address(tx, userId, req);
+
+      // Free shipping counts what is paid for the items, after the code.
+      const shipping = shippingFor(subtotal - discount);
       const order = await createOrder(tx, {
         user_id: userId,
         subtotal,
+        discount,
+        coupon_code: applied?.coupon.code ?? null,
         shipping,
-        total: subtotal + shipping,
+        total: subtotal - discount + shipping,
         currency: CURRENCY,
         email: user.email,
         shipping_address: address,
         expires_at: new Date(this.now().getTime() + RESERVATION_TTL_MS),
       });
       if (!order) throw new Error("create order: no rows in result set");
+      if (applied) await recordRedemption(tx, applied.coupon, order);
       for (const line of lines) {
         await createOrderItem(tx, {
           order_id: order.id,
@@ -265,6 +284,10 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
         unitAmount: line.price,
         quantity: line.quantity,
       })),
+      discount:
+        order.discount > 0
+          ? { amount: order.discount, name: order.coupon_code ?? "Discount" }
+          : null,
       shipping: order.shipping,
       successUrl:
         this.frontendUrl + "/checkout/success?session_id={CHECKOUT_SESSION_ID}",

@@ -550,9 +550,9 @@ describe("GET /admin/orders/export.csv", () => {
     expect(res.headers["cache-control"]).toBe("no-store");
     expect(res.headers.etag).toBeUndefined();
     expect(res.text).toBe(
-      "order,status,placed_at,paid_at,shipped_at,customer,email,items,subtotal,shipping,total,currency,tracking_number,ship_city,ship_country\n" +
-        `OHB-${b.number},pending,2026-10-03T00:00:00Z,,,"Bob, ""the"" Builder",bob@example.org,0,0.05,0.00,0.05,usd,,Kathmandu,NP\n` +
-        `OHB-${a.number},shipped,2026-10-01T10:00:00Z,2026-10-01T10:05:00Z,2026-10-02T08:00:00Z,"'=HYPERLINK(""x"")",ada@example.org,3,1234.05,0.50,1234.55,usd,'+1Z999," Lalitpur",NP\n`,
+      "order,status,placed_at,paid_at,shipped_at,customer,email,items,subtotal,discount,shipping,total,currency,coupon_code,tracking_number,ship_city,ship_country\n" +
+        `OHB-${b.number},pending,2026-10-03T00:00:00Z,,,"Bob, ""the"" Builder",bob@example.org,0,0.05,0.00,0.00,0.05,usd,,,Kathmandu,NP\n` +
+        `OHB-${a.number},shipped,2026-10-01T10:00:00Z,2026-10-01T10:05:00Z,2026-10-02T08:00:00Z,"'=HYPERLINK(""x"")",ada@example.org,3,1234.05,0.00,0.50,1234.55,usd,,'+1Z999," Lalitpur",NP\n`,
     );
 
     const filtered = await get(`/orders/export.csv?status=pending`);
@@ -563,7 +563,7 @@ describe("GET /admin/orders/export.csv", () => {
     const res = await get("/orders/export.csv?q=nobody");
     expect(res.status).toBe(200);
     expect(res.text).toBe(
-      "order,status,placed_at,paid_at,shipped_at,customer,email,items,subtotal,shipping,total,currency,tracking_number,ship_city,ship_country\n",
+      "order,status,placed_at,paid_at,shipped_at,customer,email,items,subtotal,discount,shipping,total,currency,coupon_code,tracking_number,ship_city,ship_country\n",
     );
   });
 
@@ -647,6 +647,8 @@ describe("GET /admin/orders/:number", () => {
       "delivered_at",
       "refunded_at",
       "tracking_number",
+      "discount",
+      "coupon_code",
       "items",
       "customer",
       "payment",

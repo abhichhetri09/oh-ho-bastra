@@ -16,6 +16,11 @@ export function formatPrice(cents: number): string {
   return formatter.format(cents / 100);
 }
 
+/** An amount taken off, with a minus sign: 600 → "−€6.00". */
+export function formatDiscount(cents: number): string {
+  return "\u2212" + formatPrice(cents);
+}
+
 /** Drops ".00" from whole amounts: 2900 → "€29", 2950 → "€29.50". */
 export function formatPriceShort(cents: number): string {
   return cents % 100 === 0

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CartLine } from "@repo/types";
+import type { CartCoupon, CartLine } from "@repo/types";
 import type {
   ProductDetail,
   StorefrontVariant,
@@ -11,12 +11,21 @@ import {
   type LinePreview,
   optionSummary,
   productPreview,
+  removeCoupon,
   removeLine,
   savedPreview,
   setLineQuantity,
   unitCount,
   withTotals,
 } from "@/modules/cart/lib/cart-math";
+import {
+  couponDiscount,
+  couponRefusalMessage,
+  couponSummary,
+  isCouponIssue,
+  repriceCoupon,
+} from "@/modules/cart/lib/coupon";
+import { formatDiscount, formatPriceShort } from "@/lib/money";
 import { shippingFor } from "@/lib/shipping";
 
 const line = (over: Partial<CartLine>): CartLine => ({
@@ -58,6 +67,10 @@ describe("cart math", () => {
       items: [],
       item_count: 0,
       subtotal: 0,
+      discount: 0,
+      shipping: 0,
+      total: 0,
+      coupon: null,
       has_issues: false,
     });
   });
@@ -95,10 +108,23 @@ describe("cart math", () => {
     ).toBe("Black · M");
   });
 
-  test("shipping is free over the threshold and for an empty bag", () => {
-    expect(shippingFor(0)).toBe(0);
+  test("shipping is free from the threshold, and for an empty bag", () => {
     expect(shippingFor(5_999)).toBe(490);
     expect(shippingFor(6_000)).toBe(0);
+    expect(withTotals([line({ quantity: 3, price: 2000 })])).toMatchObject({
+      subtotal: 6000,
+      shipping: 0,
+      total: 6000,
+    });
+    expect(withTotals([line({ price: 2000 })])).toMatchObject({
+      shipping: 490,
+      total: 2490,
+    });
+    // nothing that can be checked out: nothing to ship
+    expect(withTotals([line({ available: false })])).toMatchObject({
+      shipping: 0,
+      total: 0,
+    });
   });
 });
 
@@ -208,5 +234,83 @@ describe("optimistic add", () => {
       price: 2000,
       options: [],
     });
+  });
+});
+
+describe("discount codes", () => {
+  const coupon = (over: Partial<CartCoupon> = {}): CartCoupon => ({
+    code: "SUMMER10",
+    kind: "percent",
+    value: 10,
+    discount: 0,
+    issue: null,
+    ...over,
+  });
+
+  test("the maths match the API's", () => {
+    expect(couponDiscount("percent", 15, 3333)).toBe(499); // rounded down
+    expect(couponDiscount("percent", 100, 2500)).toBe(2500);
+    expect(couponDiscount("fixed", 500, 2500)).toBe(500);
+    expect(couponDiscount("fixed", 5000, 2500)).toBe(2500); // capped
+    expect(couponDiscount("fixed", 500, 0)).toBe(0);
+  });
+
+  test("totals take the discount off before shipping", () => {
+    const cart = withTotals([line({ quantity: 3, price: 2000 })], coupon());
+    expect(cart).toMatchObject({
+      subtotal: 6000,
+      discount: 600,
+      // 5400 after the code: below the free threshold
+      shipping: 490,
+      total: 5890,
+      coupon: { discount: 600 },
+    });
+    // a quantity change reprices the code
+    expect(setLineQuantity(cart, "v1", 1)).toMatchObject({
+      subtotal: 2000,
+      discount: 200,
+      total: 2290,
+      coupon: { code: "SUMMER10", discount: 200 },
+    });
+    expect(removeCoupon(cart)).toMatchObject({
+      coupon: null,
+      discount: 0,
+      shipping: 0,
+      total: 6000,
+    });
+  });
+
+  test("a code with an issue takes nothing off", () => {
+    const issue = {
+      code: "COUPON_MIN_SUBTOTAL" as const,
+      message: "This code needs a subtotal of €50.00 or more",
+    };
+    expect(repriceCoupon(coupon({ issue, discount: 0 }), 9000)).toMatchObject({
+      discount: 0,
+      issue,
+    });
+    expect(
+      repriceCoupon(coupon({ kind: null, value: null, discount: 5 }), 9000),
+    ).toMatchObject({ discount: 0 });
+    expect(repriceCoupon(null, 9000)).toBeNull();
+    const cart = withTotals([line({ price: 2000 })], coupon({ issue }));
+    expect(cart).toMatchObject({ discount: 0, total: 2490 });
+  });
+
+  test("words the code and checkout's refusal", () => {
+    expect(couponSummary(coupon(), formatPriceShort)).toBe("10% off");
+    expect(
+      couponSummary(coupon({ kind: "fixed", value: 500 }), formatPriceShort),
+    ).toBe("€5 off");
+    expect(
+      couponSummary(coupon({ kind: null, value: null }), formatPriceShort),
+    ).toBe("");
+    expect(formatDiscount(600)).toBe("−€6.00");
+    expect(isCouponIssue("COUPON_EXPIRED")).toBe(true);
+    expect(isCouponIssue("CART_EMPTY")).toBe(false);
+    expect(isCouponIssue(undefined)).toBe(false);
+    expect(couponRefusalMessage("SUMMER10", "This code has expired")).toBe(
+      "Your code SUMMER10 can't be used: this code has expired. Remove it from your bag, or change your bag, to check out.",
+    );
   });
 });

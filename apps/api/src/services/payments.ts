@@ -35,6 +35,14 @@ export interface LineItem {
   quantity: number;
 }
 
+/** A discount code's amount off an order, as the page shows it. */
+export interface SessionDiscount {
+  /** cents, at most the items' total */
+  amount: number;
+  /** The code, shown beside the amount. */
+  name: string;
+}
+
 /**
  * The hosted checkout page for one order. The amounts come from our own
  * prices, never from the client.
@@ -45,6 +53,8 @@ export interface SessionRequest {
   email: string;
   currency: string;
   items: LineItem[];
+  /** Taken off the items (not shipping); null without a code. */
+  discount: SessionDiscount | null;
   /** cents; 0 shows as free shipping */
   shipping: number;
   successUrl: string;
@@ -156,12 +166,24 @@ export class StripePayments implements PaymentProvider {
       },
     }));
     const number = String(req.orderNumber);
+    const discounts = req.discount
+      ? [
+          {
+            coupon: await this.orderCoupon(
+              req.orderId,
+              req.currency,
+              req.discount,
+            ),
+          },
+        ]
+      : undefined;
     const params: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       // Charge exactly the order total in its currency: with Adaptive
       // Pricing on, Stripe may present (and report) a converted amount.
       adaptive_pricing: { enabled: false },
       line_items: lineItems,
+      ...(discounts ? { discounts } : {}),
       customer_email: req.email,
       client_reference_id: req.orderId,
       metadata: { order_id: req.orderId, order_number: number },
@@ -191,6 +213,34 @@ export class StripePayments implements PaymentProvider {
       return fromStripe(session);
     } catch (err) {
       throw wrap("stripe: create checkout session", err);
+    }
+  }
+
+  /**
+   * A one-off Stripe coupon for an order's discount: line items can't be
+   * negative, so the amount our code took off goes on the page as Stripe's
+   * own discount, usable once. Keyed by the order, so a retry reuses it.
+   */
+  private async orderCoupon(
+    orderId: string,
+    currency: string,
+    discount: SessionDiscount,
+  ): Promise<string> {
+    try {
+      const coupon = await this.client.coupons.create(
+        {
+          amount_off: discount.amount,
+          currency,
+          duration: "once",
+          max_redemptions: 1,
+          name: discount.name,
+          metadata: { order_id: orderId },
+        },
+        { idempotencyKey: "coupon-" + orderId },
+      );
+      return coupon.id;
+    } catch (err) {
+      throw wrap("stripe: create coupon", err);
     }
   }
 

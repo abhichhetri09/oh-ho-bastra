@@ -27,12 +27,12 @@ import { startCheckout } from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
 import { friendlyFieldErrors } from "@/lib/forms";
 import { formatPrice } from "@/lib/money";
-import { shippingFor } from "@/lib/shipping";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { CartTotals } from "@/modules/cart/components/cart-summary";
 import { cartKeys } from "@/modules/cart/keys";
 import { optionSummary } from "@/modules/cart/lib/cart-math";
+import { couponRefusalMessage, isCouponIssue } from "@/modules/cart/lib/coupon";
 import { useCart } from "@/modules/cart/queries";
 import { countryName } from "../lib/countries";
 import { useAddresses } from "../queries";
@@ -202,12 +202,20 @@ function CheckoutForm({
     onError: (error) => {
       const apiError = getApiError(error);
       // Something sold out (or the bag emptied) since this page loaded:
-      // the fresh cart switches the page to "Review your bag".
+      // the fresh cart switches the page to "Review your bag". A discount
+      // code that stopped applying shows its reason in the summary.
       if (
         apiError?.code === "CART_HAS_ISSUES" ||
-        apiError?.code === "CART_EMPTY"
+        apiError?.code === "CART_EMPTY" ||
+        isCouponIssue(apiError?.code)
       ) {
         void queryClient.invalidateQueries({ queryKey: cartKeys.all });
+      }
+      if (apiError && isCouponIssue(apiError.code)) {
+        toast.error(
+          couponRefusalMessage(cart.coupon?.code ?? "", apiError.message),
+        );
+        return;
       }
       // Field errors come back as "address.city"; the form uses "city".
       const fields = mapFieldErrors(
@@ -265,7 +273,6 @@ function CheckoutForm({
     });
   }
 
-  const shipping = shippingFor(cart.subtotal);
   const busy = checkout.isPending || redirecting;
 
   return (
@@ -387,7 +394,7 @@ function CheckoutForm({
               <p className="text-xs text-muted-foreground">2–4 working days</p>
             </div>
             <p className="tabular-nums">
-              {shipping === 0 ? "Free" : formatPrice(shipping)}
+              {cart.shipping === 0 ? "Free" : formatPrice(cart.shipping)}
             </p>
           </div>
         </Section>
@@ -438,13 +445,21 @@ function CheckoutForm({
           ))}
         </ul>
         <CartTotals cart={cart} />
+        {cart.coupon?.issue && (
+          <p className="text-xs text-clay" role="status">
+            {couponRefusalMessage(cart.coupon.code, cart.coupon.issue.message)}{" "}
+            <Link href="/cart" className="link-underline text-foreground">
+              Go to your bag
+            </Link>
+          </p>
+        )}
         <Button type="submit" size="lg" className="w-full" disabled={busy}>
           <LockSimpleIcon />
           {redirecting
             ? "Opening secure payment…"
             : checkout.isPending
               ? "Reserving your items…"
-              : `Pay ${formatPrice(cart.subtotal + shipping)}`}
+              : `Pay ${formatPrice(cart.total)}`}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
           You&apos;ll pay on Stripe&apos;s secure page. Items are held for you

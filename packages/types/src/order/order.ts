@@ -137,7 +137,7 @@ export const OrderSchema = z
     status: OrderStatusSchema,
     subtotal: Cents,
     shipping: Cents,
-    total: Cents,
+    total: Cents.describe("subtotal − discount + shipping"),
     currency: z.string(),
     email: z.string(),
     shipping_address: AddressSnapshotSchema,
@@ -156,6 +156,11 @@ export const OrderSchema = z
       .string()
       .nullable()
       .describe("The carrier's, when the order shipped with one"),
+    discount: Cents.describe("Taken off the subtotal by coupon_code"),
+    coupon_code: z
+      .string()
+      .nullable()
+      .describe("The discount code used, as it was then"),
   })
   .meta({ id: "Order" });
 export type Order = z.infer<typeof OrderSchema>;
