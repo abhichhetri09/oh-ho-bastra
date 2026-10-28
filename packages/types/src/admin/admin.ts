@@ -166,6 +166,7 @@ export const AdminOrderRowSchema = z
     currency: z.string(),
     email: z.string(),
     customer_name: z.string(),
+    guest: z.boolean().describe("Placed without an account"),
     item_count: z.int().nonnegative(),
     created_at: Timestamp,
     paid_at: Timestamp.nullable(),
@@ -204,7 +205,14 @@ export const AdminOrderItemSchema = OrderItemSchema.extend({
 
 export const AdminOrderDetailSchema = OrderSchema.extend({
   items: z.array(AdminOrderItemSchema),
-  customer: z.object({ id: Uuid, name: z.string(), email: z.string() }),
+  customer: z.object({
+    id: Uuid,
+    name: z.string(),
+    email: z
+      .string()
+      .describe("The account's email; a guest's is the order's own"),
+    guest: z.boolean().describe("Placed without an account"),
+  }),
   payment: PaymentSchema.nullable().describe("null until the order is paid"),
 }).meta({ id: "AdminOrderDetail" });
 export type AdminOrderDetail = z.infer<typeof AdminOrderDetailSchema>;

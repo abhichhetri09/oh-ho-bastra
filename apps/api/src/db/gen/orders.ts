@@ -230,6 +230,35 @@ export async function getOrderByNumber(db: Queryable, p: GetOrderByNumberParams)
   return (rows[0] as Order | undefined) ?? null;
 }
 
+// A placed order by its number and the email it was placed with (any
+// case), for shoppers without an account.
+export const lookupOrderSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code FROM orders\nWHERE number = $1 AND lower(email) = lower($2::text)\n  AND status <> 'pending' AND NOT (status = 'cancelled' AND paid_at IS NULL)";
+
+export interface LookupOrderParams {
+  number: number;
+  email: string;
+}
+
+export async function lookupOrder(db: Queryable, p: LookupOrderParams): Promise<Order | null> {
+  const { rows } = await db.query(lookupOrderSql, [p["number"], p["email"]]);
+  return (rows[0] as Order | undefined) ?? null;
+}
+
+// Moves a guest's orders placed with the account's email to the account.
+export const reassignGuestOrdersSql = "UPDATE orders SET user_id = $1\nWHERE user_id = $2 AND lower(email) = lower($3::text)";
+
+export interface ReassignGuestOrdersParams {
+  account_id: string;
+  guest_id: string;
+  email: string;
+}
+
+/** Resolves to the number of affected rows. */
+export async function reassignGuestOrders(db: Queryable, p: ReassignGuestOrdersParams): Promise<number> {
+  const { rowCount } = await db.query(reassignGuestOrdersSql, [p["account_id"], p["guest_id"], p["email"]]);
+  return rowCount ?? 0;
+}
+
 export const getOrderItemsSql = "SELECT id, order_id, variant_id, product_id, product_name, product_slug, sku, options, image, unit_price, quantity, line_total, stock_shortfall FROM order_items WHERE order_id = $1 ORDER BY product_name, id";
 
 export async function getOrderItems(db: Queryable, order_id: string): Promise<OrderItem[]> {
@@ -297,7 +326,7 @@ export async function countAdminOrders(db: Queryable, p: CountAdminOrdersParams)
   return (rows[0] as CountAdminOrdersRow | undefined) ?? null;
 }
 
-export const adminListOrdersSql = "SELECT\n    o.id, o.number, o.status, o.total, o.currency, o.email, u.name AS customer_name,\n    (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id)::int AS item_count,\n    o.created_at, o.paid_at\nFROM orders o\nJOIN users u ON u.id = o.user_id\nWHERE ($1::text IS NULL OR o.status = $1::text)\n  AND ($2::bigint IS NULL OR o.number = $2::bigint)\n  AND ($3::text IS NULL OR o.email ILIKE $3::text)\n  AND ($4::uuid IS NULL OR o.user_id = $4::uuid)\n  AND ($5::date IS NULL OR o.created_at >= $5::date)\n  AND ($6::date IS NULL OR o.created_at < $6::date + 1)\nORDER BY\n    CASE WHEN $7::text = 'total' AND $8::text = 'asc' THEN o.total END ASC,\n    CASE WHEN $7::text = 'total' AND $8::text = 'desc' THEN o.total END DESC,\n    CASE WHEN $7::text = 'created' AND $8::text = 'asc' THEN o.created_at END ASC,\n    o.created_at DESC, o.id DESC\nLIMIT $10 OFFSET $9";
+export const adminListOrdersSql = "SELECT\n    o.id, o.number, o.status, o.total, o.currency, o.email, u.name AS customer_name,\n    (u.role = 'guest')::bool AS guest,\n    (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id)::int AS item_count,\n    o.created_at, o.paid_at\nFROM orders o\nJOIN users u ON u.id = o.user_id\nWHERE ($1::text IS NULL OR o.status = $1::text)\n  AND ($2::bigint IS NULL OR o.number = $2::bigint)\n  AND ($3::text IS NULL OR o.email ILIKE $3::text)\n  AND ($4::uuid IS NULL OR o.user_id = $4::uuid)\n  AND ($5::date IS NULL OR o.created_at >= $5::date)\n  AND ($6::date IS NULL OR o.created_at < $6::date + 1)\nORDER BY\n    CASE WHEN $7::text = 'total' AND $8::text = 'asc' THEN o.total END ASC,\n    CASE WHEN $7::text = 'total' AND $8::text = 'desc' THEN o.total END DESC,\n    CASE WHEN $7::text = 'created' AND $8::text = 'asc' THEN o.created_at END ASC,\n    o.created_at DESC, o.id DESC\nLIMIT $10 OFFSET $9";
 
 export interface AdminListOrdersParams {
   status: string | null;
@@ -320,6 +349,7 @@ export interface AdminListOrdersRow {
   currency: string;
   email: string;
   customer_name: string;
+  guest: boolean;
   item_count: number;
   created_at: Date;
   paid_at: Date | null;

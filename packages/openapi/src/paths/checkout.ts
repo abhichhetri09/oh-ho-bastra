@@ -13,7 +13,7 @@ export function registerCheckoutPaths() {
     tag: "Checkout",
     summary: "Start checkout",
     description:
-      "Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. The cart's discount code is checked again and its use held by the order until it is paid or cancelled. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines (and its code) once payment lands.",
+      "Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. The cart's discount code is checked again and its use held by the order until it is paid or cancelled. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines (and its code) once payment lands. The order's email (where its emails go, Stripe's receipt email, and who a once-per-customer code counts) is the account's; a guest gives it as `email` and ships to a new `address` (nothing is saved).",
     auth: "user",
     request: body(schemas.CheckoutBodySchema),
     success: {
@@ -22,7 +22,7 @@ export function registerCheckoutPaths() {
       schema: schemas.CheckoutResponseSchema,
     },
     errors: {
-      400: "Invalid body, or not exactly one of address_id and address (VALIDATION_FAILED)",
+      400: "Invalid body, not exactly one of address_id and address, or a guest without an email or with an address_id (VALIDATION_FAILED)",
       404: "No such saved address (ADDRESS_NOT_FOUND)",
       409: "The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED)",
       502: "Stripe could not be reached; the reservation was released (PAYMENT_PROVIDER_ERROR)",
@@ -118,6 +118,27 @@ export function registerCheckoutPaths() {
   });
 
   operation({
+    method: "post",
+    path: "/api/v1/orders/lookup",
+    operationId: "lookupOrder",
+    tag: "Orders",
+    summary: "Find an order by number and email",
+    description:
+      "For shoppers without an account (the order tracking page): the placed order with that number and email (any case), as GET /orders/{number} answers it, with `reviewed_product_ids` empty. A wrong email answers the same 404 as an unknown number. Abandoned checkouts aren't found.",
+    request: body(schemas.OrderLookupBodySchema),
+    success: {
+      status: 200,
+      description: "Order fetched",
+      schema: schemas.OrderDetailResponseSchema,
+    },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      404: "No order with that number and email (ORDER_NOT_FOUND)",
+      429: "Too many lookups that found nothing from this address (TOO_MANY_REQUESTS); see Retry-After",
+    },
+  });
+
+  operation({
     method: "get",
     path: "/api/v1/addresses",
     operationId: "listAddresses",
@@ -125,7 +146,7 @@ export function registerCheckoutPaths() {
     summary: "My saved addresses",
     description:
       "Saved at checkout with save_address; at most 10. The default comes first, then the newest.",
-    auth: "user",
+    auth: "account",
     success: {
       status: 200,
       description: "Addresses fetched",
@@ -140,7 +161,7 @@ export function registerCheckoutPaths() {
     tag: "Orders",
     summary: "Delete a saved address",
     description: "Orders keep their own copy of the address.",
-    auth: "user",
+    auth: "account",
     request: { params: z.object({ addressID: Uuid }) },
     success: {
       status: 200,
@@ -161,7 +182,7 @@ export function registerCheckoutPaths() {
     summary: "Make a saved address the default",
     description:
       "Checkout picks the default first. The previous default is unmarked; setting the current one again changes nothing.",
-    auth: "user",
+    auth: "account",
     request: { params: z.object({ addressID: Uuid }) },
     success: {
       status: 200,

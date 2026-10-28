@@ -120,6 +120,18 @@ SELECT * FROM orders WHERE stripe_session_id = $1 AND user_id = $2;
 -- name: GetOrderByNumber :one
 SELECT * FROM orders WHERE number = $1 AND user_id = $2;
 
+-- name: LookupOrder :one
+-- A placed order by its number and the email it was placed with (any
+-- case), for shoppers without an account.
+SELECT * FROM orders
+WHERE number = $1 AND lower(email) = lower(@email::text)
+  AND status <> 'pending' AND NOT (status = 'cancelled' AND paid_at IS NULL);
+
+-- name: ReassignGuestOrders :execrows
+-- Moves a guest's orders placed with the account's email to the account.
+UPDATE orders SET user_id = @account_id
+WHERE user_id = @guest_id AND lower(email) = lower(@email::text);
+
 -- name: GetOrderItems :many
 SELECT * FROM order_items WHERE order_id = $1 ORDER BY product_name, id;
 
@@ -159,6 +171,7 @@ WHERE (sqlc.narg(status)::text IS NULL OR o.status = sqlc.narg(status)::text)
 -- name: AdminListOrders :many
 SELECT
     o.id, o.number, o.status, o.total, o.currency, o.email, u.name AS customer_name,
+    (u.role = 'guest')::bool AS guest,
     (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id)::int AS item_count,
     o.created_at, o.paid_at
 FROM orders o

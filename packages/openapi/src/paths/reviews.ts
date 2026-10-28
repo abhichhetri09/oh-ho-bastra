@@ -36,7 +36,7 @@ export function registerReviewPaths() {
     summary: "My review of a product",
     description:
       "Whether I may review it (I bought it) and my review, hidden or not.",
-    auth: "user",
+    auth: "account",
     request: { params },
     success: {
       status: 200,
@@ -54,7 +54,7 @@ export function registerReviewPaths() {
     summary: "Write or edit my review",
     description:
       "One review per buyer and product; writing again edits it. A review an admin hid stays hidden.",
-    auth: "user",
+    auth: "account",
     request: { params, ...body(schemas.ReviewBodySchema) },
     success: {
       status: 200,
@@ -74,7 +74,7 @@ export function registerReviewPaths() {
     operationId: "deleteReview",
     tag,
     summary: "Delete my review",
-    auth: "user",
+    auth: "account",
     request: { params },
     success: {
       status: 200,

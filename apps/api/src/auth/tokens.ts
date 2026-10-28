@@ -52,7 +52,7 @@ export function newAccessToken(cfg: Config, user: TokenUser): string {
   const claims: Record<string, unknown> = {
     user_id: user.id,
     role: user.role,
-    email: user.email,
+    email: user.email ?? "", // a guest has none
     name: user.name,
   };
   if (user.image_url) claims.image_url = user.image_url; // omitempty

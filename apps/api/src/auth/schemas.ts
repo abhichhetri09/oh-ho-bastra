@@ -72,6 +72,9 @@ const email = goString({
   emailMessage: "Enter a valid email address",
 });
 
+/** The email rule, for other bodies that take one (a guest's checkout, order lookups). */
+export const EmailField = email;
+
 export const RegisterBody = z.object({
   name,
   email,

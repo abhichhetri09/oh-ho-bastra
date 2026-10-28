@@ -463,6 +463,7 @@ describe("GET /admin/orders", () => {
       currency: "usd",
       email: "ada@example.org",
       customer_name: "Ada Lovelace",
+      guest: false,
       item_count: 0,
       created_at: "2026-10-01T10:00:00.000Z",
       paid_at: null,
@@ -662,6 +663,7 @@ describe("GET /admin/orders/:number", () => {
       id: ada.id,
       name: "Ada Lovelace",
       email: "ada@example.org",
+      guest: false,
     });
     expect(d.payment).toBeNull();
     expect(d.items).toHaveLength(1);

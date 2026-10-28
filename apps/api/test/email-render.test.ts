@@ -123,6 +123,37 @@ describe("render", () => {
     expect(plain.html).not.toContain("Discount");
   });
 
+  it("greets a guest by the address and links to order tracking", () => {
+    const r = render(
+      "order_shipped",
+      testOrder(),
+      "Guest",
+      null,
+      "https://shop.example",
+      { guest: true },
+    );
+    expect(r.text).toContain("Hi Ada,");
+    expect(r.text).toContain(
+      "Track your order: https://shop.example/orders/track?number=1042",
+    );
+    expect(r.html).toContain(
+      `<a href="https://shop.example/orders/track?number=1042" style="display:inline-block;padding:12px 22px;font-size:14px;color:#faf8f4;text-decoration:none;">Track your order</a>`,
+    );
+    expect(r.text).not.toContain("/account/orders");
+
+    const account = render(
+      "order_shipped",
+      testOrder(),
+      "Grace Hopper",
+      null,
+      "https://shop.example",
+    );
+    expect(account.text).toContain("Hi Grace,");
+    expect(account.text).toContain(
+      "View your order: https://shop.example/account/orders/OHB-1042",
+    );
+  });
+
   it("renders the other kinds", () => {
     const order = { ...testOrder(), shipping: 0 };
     for (const [kind, subject] of [

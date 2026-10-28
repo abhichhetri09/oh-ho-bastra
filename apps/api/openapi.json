@@ -100,6 +100,7 @@
           "INVALID_RESET_TOKEN",
           "MAIL_UNAVAILABLE",
           "GOOGLE_UNAVAILABLE",
+          "GUEST_NOT_ALLOWED",
           "PRODUCT_NOT_FOUND",
           "INVALID_PRODUCT_ID",
           "VARIANT_NOT_FOUND",
@@ -222,8 +223,12 @@
             "type": "string"
           },
           "email": {
-            "type": "string",
-            "format": "email"
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "email",
+            "description": "null for a guest"
           },
           "role": {
             "$ref": "#/components/schemas/UserRole"
@@ -249,8 +254,10 @@
         "type": "string",
         "enum": [
           "admin",
-          "customer"
-        ]
+          "customer",
+          "guest"
+        ],
+        "description": "guest: a hidden account for shopping without one (bag, checkout and its own orders only)"
       },
       "RegisterBody": {
         "type": "object",
@@ -2269,10 +2276,16 @@
       "CheckoutBody": {
         "type": "object",
         "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "description": "Where a guest's order emails go (required for a guest, ignored for an account); trimmed and lowercased"
+          },
           "address_id": {
             "type": "string",
             "format": "uuid",
-            "description": "A saved address"
+            "description": "A saved address (not for a guest)"
           },
           "address": {
             "type": "object",
@@ -2333,7 +2346,7 @@
             "description": "With save_address: make the new address the default"
           }
         },
-        "description": "Ship to a saved address or a new one: exactly one of the two."
+        "description": "Ship to a saved address or a new one: exactly one of the two. A guest gives an email and a new address."
       },
       "Country": {
         "type": "string",
@@ -2742,6 +2755,27 @@
           "item_count",
           "preview_images"
         ]
+      },
+      "OrderLookupBody": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "The order number (1042 for OHB-1042)"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "description": "The email the order was placed with"
+          }
+        },
+        "required": [
+          "number",
+          "email"
+        ],
+        "description": "Finds an order without an account."
       },
       "AddressListResponse": {
         "type": "object",
@@ -3927,6 +3961,10 @@
           "customer_name": {
             "type": "string"
           },
+          "guest": {
+            "type": "boolean",
+            "description": "Placed without an account"
+          },
           "item_count": {
             "type": "integer",
             "minimum": 0
@@ -3951,6 +3989,7 @@
           "currency",
           "email",
           "customer_name",
+          "guest",
           "item_count",
           "created_at",
           "paid_at"
@@ -4814,13 +4853,19 @@
                 "type": "string"
               },
               "email": {
-                "type": "string"
+                "type": "string",
+                "description": "The account's email; a guest's is the order's own"
+              },
+              "guest": {
+                "type": "boolean",
+                "description": "Placed without an account"
               }
             },
             "required": [
               "id",
               "name",
-              "email"
+              "email",
+              "guest"
             ]
           },
           "payment": {
@@ -5466,7 +5511,7 @@
           "Auth"
         ],
         "summary": "Register",
-        "description": "Creates a customer account and starts a session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. The email is trimmed and lowercased.",
+        "description": "Creates a customer account and starts a session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. The email is trimmed and lowercased. From a guest session (by its refresh cookie), the guest's bag joins the account's (quantities add up, capped to stock; the account keeps its own discount code, else takes the guest's), the guest's orders placed with the account's email move to the account, and the guest is signed out and deleted once it has no orders left, all in one transaction.",
         "requestBody": {
           "required": true,
           "content": {
@@ -5531,6 +5576,48 @@
         }
       }
     },
+    "/api/v1/auth/guest": {
+      "post": {
+        "operationId": "startGuestSession",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Start a guest session",
+        "description": "For shopping without an account: creates a hidden guest user (role `guest`, no email or password, name \"Guest\") and starts its session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. A guest can use the bag, its discount code, checkout (giving an email) and its own orders; the wishlist, reviews, the address book and account settings answer 403 GUEST_NOT_ALLOWED. A request that already has a session (guest or not) gets its user back unchanged, with 200.",
+        "responses": {
+          "201": {
+            "description": "Guest session started (200: already signed in)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many guest sessions from this address (TOO_MANY_REQUESTS); see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "operationId": "login",
@@ -5538,7 +5625,7 @@
           "Auth"
         ],
         "summary": "Log in",
-        "description": "Starts a new session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie.",
+        "description": "Starts a new session. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. From a guest session (by its refresh cookie), the guest's bag joins the account's (quantities add up, capped to stock; the account keeps its own discount code, else takes the guest's), the guest's orders placed with the account's email move to the account, and the guest is signed out and deleted once it has no orders left, all in one transaction. A guest has no email or password, so it can never log in itself.",
         "requestBody": {
           "required": true,
           "content": {
@@ -5666,7 +5753,7 @@
           "Auth"
         ],
         "summary": "Google sign-in callback",
-        "description": "Where Google sends the browser back. Checks the state against the `google_oauth` cookie, trades the code for the Google profile and signs in the customer linked to that Google account, creating one for a new email. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. Then redirects to `?next=` from the start (else the home page, or /admin for an admin). Any failure redirects to the login page with `?google_error=` set to `cancelled`, `failed`, `unverified` (the Google email isn't verified) or `exists` (a password account already uses the email).",
+        "description": "Where Google sends the browser back. Checks the state against the `google_oauth` cookie, trades the code for the Google profile and signs in the customer linked to that Google account, creating one for a new email. Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie. From a guest session (by its refresh cookie), the guest's bag joins the account's (quantities add up, capped to stock; the account keeps its own discount code, else takes the guest's), the guest's orders placed with the account's email move to the account, and the guest is signed out and deleted once it has no orders left, all in one transaction. Then redirects to `?next=` from the start (else the home page, or /admin for an admin). Any failure redirects to the login page with `?google_error=` set to `cancelled`, `failed`, `unverified` (the Google email isn't verified) or `exists` (a password account already uses the email).",
         "parameters": [
           {
             "schema": {
@@ -6056,6 +6143,16 @@
               }
             }
           },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "404": {
             "description": "The user no longer exists (USER_NOT_FOUND)",
             "content": {
@@ -6125,6 +6222,16 @@
           },
           "401": {
             "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -8682,7 +8789,7 @@
           "Checkout"
         ],
         "summary": "Start checkout",
-        "description": "Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. The cart's discount code is checked again and its use held by the order until it is paid or cancelled. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines (and its code) once payment lands.",
+        "description": "Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. The cart's discount code is checked again and its use held by the order until it is paid or cancelled. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines (and its code) once payment lands. The order's email (where its emails go, Stripe's receipt email, and who a once-per-customer code counts) is the account's; a guest gives it as `email` and ships to a new `address` (nothing is saved).",
         "security": [
           {
             "accessTokenCookie": []
@@ -8710,7 +8817,7 @@
             }
           },
           "400": {
-            "description": "Invalid body, or not exactly one of address_id and address (VALIDATION_FAILED)",
+            "description": "Invalid body, not exactly one of address_id and address, or a guest without an email or with an address_id (VALIDATION_FAILED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9079,6 +9186,78 @@
         }
       }
     },
+    "/api/v1/orders/lookup": {
+      "post": {
+        "operationId": "lookupOrder",
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Find an order by number and email",
+        "description": "For shoppers without an account (the order tracking page): the placed order with that number and email (any case), as GET /orders/{number} answers it, with `reviewed_product_ids` empty. A wrong email answers the same 404 as an unknown number. Abandoned checkouts aren't found.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLookupBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No order with that number and email (ORDER_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many lookups that found nothing from this address (TOO_MANY_REQUESTS); see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/addresses": {
       "get": {
         "operationId": "listAddresses",
@@ -9105,6 +9284,16 @@
           },
           "401": {
             "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9173,6 +9362,16 @@
           },
           "401": {
             "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9251,6 +9450,16 @@
           },
           "401": {
             "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9410,6 +9619,16 @@
               }
             }
           },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
             "content": {
@@ -9449,6 +9668,16 @@
           },
           "401": {
             "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9517,6 +9746,16 @@
           },
           "401": {
             "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9603,6 +9842,16 @@
           },
           "401": {
             "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9832,6 +10081,16 @@
               }
             }
           },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No such product, or no review of yours (PRODUCT_NOT_FOUND, REVIEW_NOT_FOUND)",
             "content": {
@@ -9891,6 +10150,16 @@
           },
           "401": {
             "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
             "content": {
               "application/json": {
                 "schema": {

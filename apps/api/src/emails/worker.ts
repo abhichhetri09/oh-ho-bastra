@@ -163,6 +163,7 @@ export class EmailWorker {
         order.customer_name,
         items,
         this.frontendUrl,
+        { guest: order.guest },
       );
     } catch (err) {
       // A template or kind error fails the same way every time.

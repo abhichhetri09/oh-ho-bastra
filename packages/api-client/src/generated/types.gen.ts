@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -56,12 +56,18 @@ export type UserResponse = {
 export type PublicUser = {
     id: string;
     name: string;
-    email: string;
+    /**
+     * null for a guest
+     */
+    email: string | null;
     role: UserRole;
     image_url: string | null;
 };
 
-export type UserRole = 'admin' | 'customer';
+/**
+ * guest: a hidden account for shopping without one (bag, checkout and its own orders only)
+ */
+export type UserRole = 'admin' | 'customer' | 'guest';
 
 export type RegisterBody = {
     name: string;
@@ -770,11 +776,15 @@ export type Checkout = {
 };
 
 /**
- * Ship to a saved address or a new one: exactly one of the two.
+ * Ship to a saved address or a new one: exactly one of the two. A guest gives an email and a new address.
  */
 export type CheckoutBody = {
     /**
-     * A saved address
+     * Where a guest's order emails go (required for a guest, ignored for an account); trimmed and lowercased
+     */
+    email?: string;
+    /**
+     * A saved address (not for a guest)
      */
     address_id?: string;
     /**
@@ -913,6 +923,20 @@ export type OrderSummary = {
      * Up to 3, priciest first
      */
     preview_images: Array<string>;
+};
+
+/**
+ * Finds an order without an account.
+ */
+export type OrderLookupBody = {
+    /**
+     * The order number (1042 for OHB-1042)
+     */
+    number: number;
+    /**
+     * The email the order was placed with
+     */
+    email: string;
 };
 
 export type AddressListResponse = {
@@ -1326,6 +1350,10 @@ export type AdminOrderRow = {
     currency: string;
     email: string;
     customer_name: string;
+    /**
+     * Placed without an account
+     */
+    guest: boolean;
     item_count: number;
     created_at: string;
     paid_at: string | null;
@@ -1598,7 +1626,14 @@ export type AdminOrderDetail = {
     customer: {
         id: string;
         name: string;
+        /**
+         * The account's email; a guest's is the order's own
+         */
         email: string;
+        /**
+         * Placed without an account
+         */
+        guest: boolean;
     };
     /**
      * null until the order is paid
@@ -1862,6 +1897,35 @@ export type RegisterResponses = {
 
 export type RegisterResponse = RegisterResponses[keyof RegisterResponses];
 
+export type StartGuestSessionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/guest';
+};
+
+export type StartGuestSessionErrors = {
+    /**
+     * Too many guest sessions from this address (TOO_MANY_REQUESTS); see Retry-After
+     */
+    429: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type StartGuestSessionError = StartGuestSessionErrors[keyof StartGuestSessionErrors];
+
+export type StartGuestSessionResponses = {
+    /**
+     * Guest session started (200: already signed in)
+     */
+    201: UserResponse;
+};
+
+export type StartGuestSessionResponse = StartGuestSessionResponses[keyof StartGuestSessionResponses];
+
 export type LoginData = {
     body: LoginBody;
     path?: never;
@@ -2122,6 +2186,10 @@ export type UpdateProfileErrors = {
      */
     401: ApiError;
     /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
+    /**
      * The user no longer exists (USER_NOT_FOUND)
      */
     404: ApiError;
@@ -2158,6 +2226,10 @@ export type ChangePasswordErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * The user no longer exists (USER_NOT_FOUND)
      */
@@ -3383,7 +3455,7 @@ export type StartCheckoutData = {
 
 export type StartCheckoutErrors = {
     /**
-     * Invalid body, or not exactly one of address_id and address (VALIDATION_FAILED)
+     * Invalid body, not exactly one of address_id and address, or a guest without an email or with an address_id (VALIDATION_FAILED)
      */
     400: ApiError;
     /**
@@ -3579,6 +3651,43 @@ export type GetOrderResponses = {
 
 export type GetOrderResponse = GetOrderResponses[keyof GetOrderResponses];
 
+export type LookupOrderData = {
+    body: OrderLookupBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/orders/lookup';
+};
+
+export type LookupOrderErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * No order with that number and email (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Too many lookups that found nothing from this address (TOO_MANY_REQUESTS); see Retry-After
+     */
+    429: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type LookupOrderError = LookupOrderErrors[keyof LookupOrderErrors];
+
+export type LookupOrderResponses = {
+    /**
+     * Order fetched
+     */
+    200: OrderDetailResponse;
+};
+
+export type LookupOrderResponse = LookupOrderResponses[keyof LookupOrderResponses];
+
 export type ListAddressesData = {
     body?: never;
     path?: never;
@@ -3591,6 +3700,10 @@ export type ListAddressesErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
@@ -3626,6 +3739,10 @@ export type DeleteAddressErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such address of yours (ADDRESS_NOT_FOUND)
      */
@@ -3665,6 +3782,10 @@ export type SetDefaultAddressErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such address of yours (ADDRESS_NOT_FOUND)
      */
@@ -3742,6 +3863,10 @@ export type ListWishlistErrors = {
      */
     401: ApiError;
     /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
+    /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
     500: ApiError;
@@ -3770,6 +3895,10 @@ export type ListWishlistIdsErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
@@ -3806,6 +3935,10 @@ export type RemoveFromWishlistErrors = {
      */
     401: ApiError;
     /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
+    /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
     500: ApiError;
@@ -3840,6 +3973,10 @@ export type AddToWishlistErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such product on sale (PRODUCT_NOT_FOUND)
      */
@@ -3879,6 +4016,10 @@ export type DeleteReviewErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such product, or no review of yours (PRODUCT_NOT_FOUND, REVIEW_NOT_FOUND)
      */
@@ -3994,6 +4135,10 @@ export type GetMyReviewErrors = {
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */
     401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
     /**
      * No such product on sale (PRODUCT_NOT_FOUND)
      */

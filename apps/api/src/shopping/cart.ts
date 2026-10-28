@@ -125,6 +125,69 @@ export function checkUpdate(
   return null;
 }
 
+/**
+ * What a line holds once `incoming` more are merged into `existing` (0 for
+ * a new line, with `lines` lines in the cart): the sum, capped to the stock
+ * and the line limit as adding is, and never below what was already there.
+ * Null leaves the line as it is: nothing changes, the variant is off sale
+ * or out of stock, or a new line wouldn't fit.
+ */
+export function mergedQuantity(
+  existing: number,
+  incoming: number,
+  lines: number,
+  v: Availability,
+): number | null {
+  if (!v.available) return null;
+  if (existing === 0 && lines >= MAX_CART_LINES) return null;
+  const capped = Math.min(existing + incoming, v.stock, MAX_LINE);
+  return capped > existing ? capped : null;
+}
+
+/**
+ * Moves one user's cart into another's (a guest's into the account it
+ * signed in to), in the caller's transaction: quantities add up within
+ * mergedQuantity's caps, and the target keeps its own code if it has one,
+ * else takes the source's. The source cart is left empty.
+ */
+export async function mergeCarts(
+  tx: Queryable,
+  fromUserId: string,
+  toUserId: string,
+): Promise<void> {
+  // Both locked, as every cart write does.
+  const from = await ensureCart(tx, fromUserId);
+  const to = await ensureCart(tx, toUserId);
+  if (!from || !to) throw new Error("ensure cart returned no row");
+
+  let lines = (await countCartItems(tx, to.id))?.count ?? 0;
+  for (const line of await getCartLines(tx, fromUserId)) {
+    const existing =
+      (
+        await getCartItemQuantity(tx, {
+          cart_id: to.id,
+          variant_id: line.variant_id,
+        })
+      )?.quantity ?? 0;
+    const quantity = mergedQuantity(existing, line.quantity, lines, line);
+    if (quantity === null) continue;
+    await setCartItemQuantity(tx, {
+      cart_id: to.id,
+      variant_id: line.variant_id,
+      quantity,
+    });
+    if (existing === 0) lines++;
+  }
+
+  const fromCode = (await getCartCoupon(tx, fromUserId))?.coupon_code ?? null;
+  const toCode = (await getCartCoupon(tx, toUserId))?.coupon_code ?? null;
+  if (toCode === null && fromCode !== null)
+    await setCartCoupon(tx, { id: to.id, coupon_code: fromCode });
+
+  await clearCart(tx, from.id);
+  await setCartCoupon(tx, { id: from.id, coupon_code: null });
+}
+
 /** The lines priced, and totals over what can be checked out. */
 export function buildCart(rows: GetCartLinesRow[]) {
   const cart = {

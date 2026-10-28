@@ -88,13 +88,19 @@ const MONTHS = [
   "December",
 ];
 
-/** Builds the email of the given kind for an order; throws on an unknown kind. */
+/**
+ * Builds the email of the given kind for an order; throws on an unknown
+ * kind. A guest's order (placed without an account) greets the name it
+ * ships to and links to the order tracking page, which needs no sign-in,
+ * instead of the account's order page.
+ */
 export function render(
   kind: string,
   order: EmailOrder,
   customerName: string,
   items: EmailItem[] | null,
   frontendUrl: string,
+  { guest = false }: { guest?: boolean } = {},
 ): Rendered {
   if (!isEmailKind(kind))
     throw new Error(`unknown email kind ${JSON.stringify(kind)}`);
@@ -107,12 +113,17 @@ export function render(
     preheader: c.preheader,
     heading: c.heading,
     intro: c.intro,
-    greeting: greeting(customerName),
+    greeting: greeting(
+      guest ? (addressName(order.shipping_address) ?? "") : customerName,
+    ),
     label,
     placedOn: placed
       ? `${placed.getUTCDate()} ${MONTHS[placed.getUTCMonth()]} ${String(placed.getUTCFullYear()).padStart(4, "0")}`
       : "",
-    url: frontendUrl + "/account/orders/" + label,
+    url: guest
+      ? frontendUrl + "/orders/track?number=" + order.number
+      : frontendUrl + "/account/orders/" + label,
+    cta: guest ? "Track your order" : "View your order",
     shopUrl: frontendUrl,
     items: (items ?? []).map((it) => ({
       name: it.product_name,
@@ -289,6 +300,11 @@ export function addressLines(raw: unknown): string[] | null {
     (Object.hasOwn(COUNTRY_NAMES, a.country) ? COUNTRY_NAMES[a.country] : "") ||
     a.country;
   return nonEmpty(a.full_name, a.line1, a.line2, city, country);
+}
+
+/** The name an address snapshot ships to, or null when it isn't one. */
+function addressName(raw: unknown): string | null {
+  return stringFields(raw, ADDRESS_FIELDS)?.full_name ?? null;
 }
 
 const nonEmpty = (...parts: string[]) =>

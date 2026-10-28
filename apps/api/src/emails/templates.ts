@@ -15,6 +15,7 @@ export interface OrderView {
   label: string; // "OHB-1001"
   placedOn: string;
   url: string; // the order on the storefront
+  cta: string; // the link's label: "View your order", or "Track your order"
   shopUrl: string;
   items: ItemView[];
   subtotal: string;
@@ -137,7 +138,7 @@ export function orderHtml(v: OrderView): string {
 
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
 <tr><td style="background:#24201c;">
-<a href="${u(v.url)}" style="display:inline-block;padding:12px 22px;font-size:14px;color:#faf8f4;text-decoration:none;">View your order</a>
+<a href="${u(v.url)}" style="display:inline-block;padding:12px 22px;font-size:14px;color:#faf8f4;text-decoration:none;">${h(v.cta)}</a>
 </td></tr>
 </table>
 
@@ -173,7 +174,7 @@ ${v.greeting}
 
 ${v.intro}
 ${v.tracking ? `\nTracking number: ${v.tracking}\n` : ""}
-View your order: ${v.url}
+${v.cta}: ${v.url}
 
 ${v.items.map((it) => `${it.quantity} × ${it.name}${it.options ? ` (${it.options})` : ""}  ${it.lineTotal}\n`).join("")}
 Subtotal  ${v.subtotal}

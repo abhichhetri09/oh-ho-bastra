@@ -3,8 +3,17 @@ import { z, type ZodType } from "zod";
 import { registry } from "../registry.ts";
 import { ACCESS_COOKIE, REFRESH_COOKIE, schemas } from "../schemas.ts";
 
-/** "refresh-optional": the refresh cookie is used when present. */
-type Auth = "public" | "user" | "admin" | "refresh" | "refresh-optional";
+/**
+ * "user": any session, a guest's too; "account": a customer or admin, not
+ * a guest; "refresh-optional": the refresh cookie is used when present.
+ */
+type Auth =
+  | "public"
+  | "user"
+  | "account"
+  | "admin"
+  | "refresh"
+  | "refresh-optional";
 
 type Operation = {
   method: RouteConfig["method"];
@@ -44,6 +53,7 @@ const json = (schema: ZodType, description: string) => ({
 const security: Record<Auth, RouteConfig["security"]> = {
   public: undefined,
   user: [{ [ACCESS_COOKIE]: [] }],
+  account: [{ [ACCESS_COOKIE]: [] }],
   admin: [{ [ACCESS_COOKIE]: [] }],
   refresh: [{ [REFRESH_COOKIE]: [] }],
   "refresh-optional": [{ [REFRESH_COOKIE]: [] }, {}],
@@ -56,9 +66,13 @@ export function operation(op: Operation) {
   for (const [status, description] of Object.entries(op.errors ?? {})) {
     if (description) errors[Number(status)] = description;
   }
-  if (auth === "user" || auth === "admin") {
+  if (auth === "user" || auth === "account" || auth === "admin") {
     errors[401] ??=
       "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)";
+  }
+  if (auth === "account") {
+    errors[403] ??=
+      "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)";
   }
   if (auth === "admin") {
     errors[403] ??= "Not an admin (FORBIDDEN)";

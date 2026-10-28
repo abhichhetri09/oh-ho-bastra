@@ -9,7 +9,7 @@ import {
   storefrontProductExists,
 } from "../db/gen";
 import type { Deps } from "../deps";
-import { requireAuth } from "../http/middleware";
+import { requireAccount, requireAuth } from "../http/middleware";
 import {
   checkPageInRange,
   offset,
@@ -31,7 +31,7 @@ const productParam = (req: Request, res: Response) =>
 
 export function wishlistRoutes(api: Group, deps: Deps) {
   const { db, cfg } = deps;
-  const w = api.group("/wishlist", requireAuth(cfg));
+  const w = api.group("/wishlist", requireAuth(cfg), requireAccount);
 
   /** The saved products still on sale, newest saved first. */
   w.get("", async (req, res) => {

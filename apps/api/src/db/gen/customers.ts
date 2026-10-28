@@ -30,7 +30,7 @@ export interface AdminListCustomersParams {
 export interface AdminListCustomersRow {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   created_at: Date;
   orders: number;
   spend: number;
@@ -47,7 +47,7 @@ export const adminGetCustomerSql = "SELECT\n    u.id, u.name, u.email, u.created
 export interface AdminGetCustomerRow {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   created_at: Date;
   orders: number;
   spend: number;
