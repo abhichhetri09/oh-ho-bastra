@@ -484,6 +484,57 @@ export type ProductBody = {
     is_featured: boolean;
 };
 
+export type SaleResponse = {
+    success: true;
+    message: string;
+    data: SaleResult;
+};
+
+export type SaleResult = {
+    /**
+     * Products with a variant changed
+     */
+    products: number;
+    /**
+     * Variants changed
+     */
+    variants: number;
+};
+
+/**
+ * Each variant's offer becomes its selling price less percent_off (rounded to the cent), replacing any offer it had. A variant whose price is too low to discount keeps its own.
+ */
+export type PutOnSaleBody = {
+    target: SaleTarget;
+    percent_off: number;
+    /**
+     * When the sale ends, in the future; null or omitted for no end.
+     */
+    ends_at?: string | null;
+};
+
+/**
+ * The products a sale applies to: a list of them, a category or all of them. Exactly one.
+ */
+export type SaleTarget = {
+    product_ids: Array<string>;
+} | {
+    category_id: string;
+    /**
+     * Also the products of every category under it
+     */
+    include_subcategories: boolean;
+} | {
+    all: true;
+};
+
+/**
+ * Clears the offer of every variant of the targeted products.
+ */
+export type EndSaleBody = {
+    target: SaleTarget;
+};
+
 export type VariantResponse = {
     success: true;
     message: string;
@@ -2525,6 +2576,88 @@ export type AdminCreateVariantResponses = {
 };
 
 export type AdminCreateVariantResponse = AdminCreateVariantResponses[keyof AdminCreateVariantResponses];
+
+export type AdminPutOnSaleData = {
+    body: PutOnSaleBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/products/sale';
+};
+
+export type AdminPutOnSaleErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Category not found (CATEGORY_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminPutOnSaleError = AdminPutOnSaleErrors[keyof AdminPutOnSaleErrors];
+
+export type AdminPutOnSaleResponses = {
+    /**
+     * Products put on sale
+     */
+    200: SaleResponse;
+};
+
+export type AdminPutOnSaleResponse = AdminPutOnSaleResponses[keyof AdminPutOnSaleResponses];
+
+export type AdminEndSaleData = {
+    body: EndSaleBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/products/sale/end';
+};
+
+export type AdminEndSaleErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Category not found (CATEGORY_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminEndSaleError = AdminEndSaleErrors[keyof AdminEndSaleErrors];
+
+export type AdminEndSaleResponses = {
+    /**
+     * Sale ended
+     */
+    200: SaleResponse;
+};
+
+export type AdminEndSaleResponse = AdminEndSaleResponses[keyof AdminEndSaleResponses];
 
 export type AdminDeleteProductData = {
     body?: never;

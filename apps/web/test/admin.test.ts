@@ -32,6 +32,13 @@ import {
   parseAdminOrderFilters,
   parseAdminReviewFilters,
 } from "@/modules/admin/lib/order-filters";
+import {
+  parsePercent,
+  salePreview,
+  salePrice,
+  saleSummary,
+  saleTarget,
+} from "@/modules/admin/lib/sale";
 import { move, rejectImage } from "@/modules/admin/lib/upload";
 
 describe("admin product filters", () => {
@@ -176,6 +183,58 @@ describe("admin helpers", () => {
     expect(withoutErrors(errors, "name")).toEqual({ price: "Enter a price" });
     // unchanged errors keep their identity (no re-render)
     expect(withoutErrors(errors, "stock")).toBe(errors);
+  });
+});
+
+describe("mass sale", () => {
+  test("prices round half up like the API, and skip what it skips", () => {
+    expect(salePrice(2500, 20)).toBe(2000);
+    expect(salePrice(2999, 15)).toBe(2549); // 2549.15
+    expect(salePrice(250, 5)).toBe(238); // 237.5
+    expect(salePrice(1, 5)).toBeNull(); // rounds back to the full price
+    expect(salePrice(2, 90)).toBeNull(); // rounds to nothing
+  });
+
+  test("the preview line", () => {
+    expect(salePreview(20, 2500)).toBe("20% off — €25.00 → €20.00");
+    expect(salePreview(5, 1)).toBe("5% off — €0.01 is too low to discount");
+  });
+
+  test("parsePercent takes 1 to 90", () => {
+    expect(parsePercent("20")).toBe(20);
+    expect(parsePercent(" 90 ")).toBe(90);
+    for (const bad of ["", "0", "91", "12.5", "-5", "abc", "100"]) {
+      expect(parsePercent(bad)).toBeNull();
+    }
+  });
+
+  test("the target for each scope", () => {
+    const picks = {
+      productIds: ["a", "b"],
+      categoryId: "c",
+      includeSubcategories: false,
+    };
+    expect(saleTarget("selected", picks)).toEqual({ product_ids: ["a", "b"] });
+    expect(saleTarget("category", picks)).toEqual({
+      category_id: "c",
+      include_subcategories: false,
+    });
+    expect(saleTarget("all", picks)).toEqual({ all: true });
+    const none = { ...picks, productIds: [], categoryId: "" };
+    expect(saleTarget("selected", none)).toBeNull();
+    expect(saleTarget("category", none)).toBeNull();
+  });
+
+  test("the toast", () => {
+    expect(saleSummary({ products: 3, variants: 12 }, false)).toBe(
+      "3 products (12 variants) put on sale",
+    );
+    expect(saleSummary({ products: 1, variants: 1 }, true)).toBe(
+      "Sale ended on 1 product (1 variant)",
+    );
+    expect(saleSummary({ products: 0, variants: 0 }, true)).toBe(
+      "Nothing was on sale there.",
+    );
   });
 });
 

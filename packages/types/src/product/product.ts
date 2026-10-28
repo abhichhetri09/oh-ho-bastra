@@ -182,3 +182,58 @@ export const ProductListingResponseSchema = successResponse(
 export type ProductListingResponse = z.infer<
   typeof ProductListingResponseSchema
 >;
+
+// A mass sale: a percentage off every variant of many products at once,
+// written as each variant's own offer (offer_price, offer_expires_at), so
+// the storefront prices it like any other offer.
+export const SaleTargetSchema = z
+  .union([
+    z.object({ product_ids: z.array(Uuid).min(1).max(200) }),
+    z.object({
+      category_id: Uuid,
+      include_subcategories: z
+        .boolean()
+        .describe("Also the products of every category under it"),
+    }),
+    z.object({ all: z.literal(true) }),
+  ])
+  .meta({
+    id: "SaleTarget",
+    description:
+      "The products a sale applies to: a list of them, a category or all of them. Exactly one.",
+  });
+export type SaleTarget = z.infer<typeof SaleTargetSchema>;
+
+export const PutOnSaleBodySchema = z
+  .object({
+    target: SaleTargetSchema,
+    percent_off: z.int().min(1).max(90),
+    ends_at: Timestamp.nullish().describe(
+      "When the sale ends, in the future; null or omitted for no end.",
+    ),
+  })
+  .meta({
+    id: "PutOnSaleBody",
+    description:
+      "Each variant's offer becomes its selling price less percent_off (rounded to the cent), replacing any offer it had. A variant whose price is too low to discount keeps its own.",
+  });
+export type PutOnSaleBody = z.infer<typeof PutOnSaleBodySchema>;
+
+export const EndSaleBodySchema = z.object({ target: SaleTargetSchema }).meta({
+  id: "EndSaleBody",
+  description: "Clears the offer of every variant of the targeted products.",
+});
+export type EndSaleBody = z.infer<typeof EndSaleBodySchema>;
+
+export const SaleResultSchema = z
+  .object({
+    products: z.int().nonnegative().describe("Products with a variant changed"),
+    variants: z.int().nonnegative().describe("Variants changed"),
+  })
+  .meta({ id: "SaleResult" });
+export type SaleResult = z.infer<typeof SaleResultSchema>;
+
+export const SaleResponseSchema = successResponse(SaleResultSchema).meta({
+  id: "SaleResponse",
+});
+export type SaleResponse = z.infer<typeof SaleResponseSchema>;

@@ -13,6 +13,7 @@ import { validationFailed, type AppError } from "./response";
 /** Labels that aren't the humanized field name. */
 const LABELS: Record<string, string> = {
   image_public_ids: "Image public IDs",
+  product_ids: "Product IDs",
   category_id: "Category",
   token: "Reset link",
 };

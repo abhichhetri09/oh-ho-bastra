@@ -1,4 +1,5 @@
 import { adminProductRoutes } from "../catalog-admin/products";
+import { adminSaleRoutes } from "../catalog-admin/sale";
 import { adminVariantRoutes } from "../catalog-admin/variants";
 import type { Deps } from "../deps";
 import { requireAuth, requireRole } from "../http/middleware";
@@ -7,14 +8,16 @@ import type { Group } from "../http/router";
 import { PRODUCT_FOLDER } from "../services/cloudinary";
 
 // The admin catalog: products (internal/handlers/product/admin), their
-// variants (internal/handlers/variant/admin) and signed image uploads
-// (SignUpload in internal/handlers/admin/dashboard.go). All admin-only.
+// variants (internal/handlers/variant/admin), mass sales and signed image
+// uploads (SignUpload in internal/handlers/admin/dashboard.go). All
+// admin-only.
 
 export function adminCatalogRoutes(api: Group, deps: Deps) {
   const { cfg, cloudinary } = deps;
   const adminOnly = [requireAuth(cfg), requireRole("admin")];
 
   adminProductRoutes(api.group("/admin/products", ...adminOnly), deps);
+  adminSaleRoutes(api.group("/admin/products/sale", ...adminOnly), deps);
   adminVariantRoutes(
     api.group("/admin/products/:productID/variants", ...adminOnly),
     deps,

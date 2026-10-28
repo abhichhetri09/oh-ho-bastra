@@ -1523,6 +1523,138 @@
         ],
         "description": "Create or fully replace a product."
       },
+      "SaleResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SaleResult"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "SaleResult": {
+        "type": "object",
+        "properties": {
+          "products": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Products with a variant changed"
+          },
+          "variants": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Variants changed"
+          }
+        },
+        "required": [
+          "products",
+          "variants"
+        ]
+      },
+      "PutOnSaleBody": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/SaleTarget"
+          },
+          "percent_off": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 90
+          },
+          "ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the sale ends, in the future; null or omitted for no end."
+          }
+        },
+        "required": [
+          "target",
+          "percent_off"
+        ],
+        "description": "Each variant's offer becomes its selling price less percent_off (rounded to the cent), replacing any offer it had. A variant whose price is too low to discount keeps its own."
+      },
+      "SaleTarget": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "product_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "minItems": 1,
+                "maxItems": 200
+              }
+            },
+            "required": [
+              "product_ids"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "category_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "include_subcategories": {
+                "type": "boolean",
+                "description": "Also the products of every category under it"
+              }
+            },
+            "required": [
+              "category_id",
+              "include_subcategories"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "all": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              }
+            },
+            "required": [
+              "all"
+            ]
+          }
+        ],
+        "description": "The products a sale applies to: a list of them, a category or all of them. Exactly one."
+      },
+      "EndSaleBody": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/SaleTarget"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "description": "Clears the offer of every variant of the targeted products."
+      },
       "VariantResponse": {
         "type": "object",
         "properties": {
@@ -6824,6 +6956,180 @@
           },
           "409": {
             "description": "Same option combination, or a second default variant (VARIANT_ALREADY_EXISTS, DEFAULT_VARIANT_EXISTS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/products/sale": {
+      "post": {
+        "operationId": "adminPutOnSale",
+        "tags": [
+          "Products"
+        ],
+        "summary": "Put products on sale",
+        "description": "Sets an offer of percent_off on every variant of the targeted products (active or not), in one transaction. Variants whose discounted price would round to 0 or to their full price are skipped.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutOnSaleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Products put on sale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Category not found (CATEGORY_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/products/sale/end": {
+      "post": {
+        "operationId": "adminEndSale",
+        "tags": [
+          "Products"
+        ],
+        "summary": "End a sale",
+        "description": "Clears the offer (and its end) of every variant of the targeted products. Counts only the variants that had one.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndSaleBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sale ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Category not found (CATEGORY_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {

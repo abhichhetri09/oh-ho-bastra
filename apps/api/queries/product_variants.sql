@@ -54,3 +54,63 @@ DELETE FROM product_variants WHERE id = @id AND product_id = @product_id;
 UPDATE product_variants SET is_default = FALSE
 WHERE product_id = @product_id AND is_default
   AND (sqlc.narg(keep_id)::uuid IS NULL OR id <> sqlc.narg(keep_id)::uuid);
+
+-- A mass sale's products are chosen by one of: product_ids, a category
+-- (category_id, and its subcategories when include_subcategories) or
+-- all_products. The subtree is the one the admin listings walk, by id here;
+-- UNION (not UNION ALL) stops even on a cycle.
+
+-- name: PutVariantsOnSale :one
+-- Every variant of the chosen products gets percent_off off its selling
+-- price as its offer, replacing the one it had, ending at ends_at (NULL: no
+-- end). A price too low to discount (the offer would round to 0 or to the
+-- full price, which offer_price's CHECK refuses) keeps its own offer. The
+-- maths is numeric: selling_price * 99 can overflow an int.
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.id = sqlc.narg(category_id)::uuid
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+    WHERE sqlc.arg(include_subcategories)::bool
+),
+discounted AS (
+    SELECT
+        pv.id,
+        ROUND(pv.selling_price::numeric * (100 - sqlc.arg(percent_off)::int) / 100)::int AS offer_price
+    FROM product_variants pv
+    JOIN products p ON p.id = pv.product_id
+    WHERE sqlc.arg(all_products)::bool
+       OR p.id = ANY(sqlc.arg(product_ids)::uuid[])
+       OR p.category_id IN (SELECT id FROM subtree)
+),
+updated AS (
+    UPDATE product_variants pv SET
+        offer_price = d.offer_price,
+        offer_expires_at = sqlc.narg(ends_at)::timestamptz
+    FROM discounted d
+    WHERE pv.id = d.id AND d.offer_price > 0 AND d.offer_price < pv.selling_price
+    RETURNING pv.product_id
+)
+SELECT COUNT(DISTINCT product_id)::int AS products, COUNT(*)::int AS variants
+FROM updated;
+
+-- name: EndVariantsSale :one
+-- Clears the offer of every variant of the chosen products; only those that
+-- had one (an expired one too) change and are counted.
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.id = sqlc.narg(category_id)::uuid
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+    WHERE sqlc.arg(include_subcategories)::bool
+),
+updated AS (
+    UPDATE product_variants pv SET offer_price = NULL, offer_expires_at = NULL
+    FROM products p
+    WHERE p.id = pv.product_id
+      AND (pv.offer_price IS NOT NULL OR pv.offer_expires_at IS NOT NULL)
+      AND (sqlc.arg(all_products)::bool
+           OR p.id = ANY(sqlc.arg(product_ids)::uuid[])
+           OR p.category_id IN (SELECT id FROM subtree))
+    RETURNING pv.product_id
+)
+SELECT COUNT(DISTINCT product_id)::int AS products, COUNT(*)::int AS variants
+FROM updated;
