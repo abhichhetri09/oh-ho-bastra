@@ -1,2 +1,0 @@
-ALTER TABLE "product_variant" ADD COLUMN "price_cents" integer;--> statement-breakpoint
-ALTER TABLE "product_variant" ADD CONSTRAINT "product_variant_price_positive" CHECK ("price_cents" is null or "price_cents" > 0);
