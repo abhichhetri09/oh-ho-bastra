@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { LISTING_PAGE_SIZE, parseListingQuery } from "../catalog/listing-query";
+import { storeSettings } from "../catalog/settings";
 import {
   countStorefrontProducts,
   getCategoryBySlug,
@@ -146,7 +147,7 @@ export function catalogRoutes(api: Group, deps: Deps) {
     await listing(req, res, slug);
   });
 
-  /** The store's public settings (its theme, font and corners, banner and business details). */
+  /** The store's public settings (its theme, font and corners, banner, business details and delivery price). */
   api.get("/settings", async (req, res) => {
     let settings;
     try {
@@ -165,6 +166,6 @@ export function catalogRoutes(api: Group, deps: Deps) {
       );
       return;
     }
-    ok(res, 200, "Store settings fetched", settings);
+    ok(res, 200, "Store settings fetched", storeSettings(settings));
   });
 }

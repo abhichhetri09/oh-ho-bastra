@@ -1,15 +1,19 @@
 import type { Cart } from "@repo/types";
 import { formatDiscount, formatPrice } from "@/lib/money";
-import { FREE_SHIPPING_FROM } from "@/lib/shipping";
+import { freeShippingProgress } from "@/lib/shipping";
 import { cn } from "@/lib/utils";
+import { useShippingRule } from "@/providers/shipping-provider";
 
 /**
- * How far the bag is from free shipping, as a sentence and a bar. Pass the
- * subtotal after any discount code: that's what the threshold counts.
+ * How far the bag is from free shipping under the store's rule, as a
+ * sentence and a bar; nothing when shipping is never free (or always is).
+ * Pass the subtotal after any discount code: that's what the threshold
+ * counts.
  */
 export function FreeShippingProgress({ subtotal }: { subtotal: number }) {
-  const remaining = Math.max(FREE_SHIPPING_FROM - subtotal, 0);
-  const share = Math.min(subtotal / FREE_SHIPPING_FROM, 1);
+  const progress = freeShippingProgress(subtotal, useShippingRule());
+  if (!progress) return null;
+  const { remaining, share } = progress;
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground" aria-live="polite">

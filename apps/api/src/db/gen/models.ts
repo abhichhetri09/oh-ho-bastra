@@ -252,6 +252,8 @@ export interface StoreSetting {
   business_phone: string;
   heading_font: string | null;
   corners: string | null;
+  shipping_flat: number;
+  free_shipping_from: number | null;
 }
 
 export interface EmailOutbox {

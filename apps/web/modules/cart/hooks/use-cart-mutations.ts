@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { useAuth } from "@/providers/auth-provider";
+import { useShippingRule } from "@/providers/shipping-provider";
 import { cartKeys } from "../keys";
 import {
   addLine,
@@ -51,6 +52,8 @@ export type AddToBagVars = {
 export function useCartMutations() {
   const queryClient = useQueryClient();
   const userId = useAuth((s) => s.user?.id ?? "");
+  // Prices the optimistic bag as the API will, until its answer arrives.
+  const rule = useShippingRule();
   const key = cartKeys.mine(userId);
 
   function settle(cart: Cart) {
@@ -94,7 +97,7 @@ export function useCartMutations() {
       return data.data;
     },
     onMutate: ({ variant_id, quantity, preview }) =>
-      optimistic((cart) => addLine(cart, variant_id, quantity, preview)),
+      optimistic((cart) => addLine(cart, variant_id, quantity, rule, preview)),
     onError: (error, vars, context) =>
       rollback(error, context, `add-${vars.variant_id}`),
     onSuccess: (cart, vars) => {
@@ -124,7 +127,7 @@ export function useCartMutations() {
       return data.data;
     },
     onMutate: ({ variantId, quantity }) =>
-      optimistic((cart) => setLineQuantity(cart, variantId, quantity)),
+      optimistic((cart) => setLineQuantity(cart, variantId, quantity, rule)),
     onError: (error, _vars, context) => rollback(error, context),
     onSuccess: settle,
   });
@@ -138,7 +141,8 @@ export function useCartMutations() {
       });
       return data.data;
     },
-    onMutate: (line) => optimistic((cart) => removeLine(cart, line.variant_id)),
+    onMutate: (line) =>
+      optimistic((cart) => removeLine(cart, line.variant_id, rule)),
     onError: (error, _line, context) => rollback(error, context),
     onSuccess: (cart, line) => {
       settle(cart);
@@ -179,7 +183,7 @@ export function useCartMutations() {
       const { data } = await removeCartCoupon({ throwOnError: true });
       return data.data;
     },
-    onMutate: () => optimistic(removeCoupon),
+    onMutate: () => optimistic((cart) => removeCoupon(cart, rule)),
     onError: (error, _vars, context) => rollback(error, context),
     onSuccess: settle,
   });

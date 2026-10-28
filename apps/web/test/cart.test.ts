@@ -26,7 +26,18 @@ import {
   repriceCoupon,
 } from "@/modules/cart/lib/coupon";
 import { formatDiscount, formatPriceShort } from "@/lib/money";
-import { shippingFor } from "@/lib/shipping";
+import {
+  DEFAULT_SHIPPING,
+  freeShippingFrom,
+  freeShippingProgress,
+  shippingExample,
+  shippingFor,
+  shippingPerk,
+  shippingSentence,
+} from "@/lib/shipping";
+
+// The store's starting rule: €4.90, free from €60.
+const RULE = DEFAULT_SHIPPING;
 
 const line = (over: Partial<CartLine>): CartLine => ({
   variant_id: "v1",
@@ -50,11 +61,15 @@ const line = (over: Partial<CartLine>): CartLine => ({
 
 describe("cart math", () => {
   test("totals skip lines that can't be checked out", () => {
-    const cart = withTotals([
-      line({ variant_id: "a", quantity: 2, line_total: 4000 }),
-      line({ variant_id: "b", quantity: 3, stock: 1 }), // short
-      line({ variant_id: "c", available: false }), // off sale
-    ]);
+    const cart = withTotals(
+      [
+        line({ variant_id: "a", quantity: 2, line_total: 4000 }),
+        line({ variant_id: "b", quantity: 3, stock: 1 }), // short
+        line({ variant_id: "c", available: false }), // off sale
+      ],
+      null,
+      RULE,
+    );
     expect(cart).toMatchObject({
       item_count: 2,
       subtotal: 4000,
@@ -76,25 +91,29 @@ describe("cart math", () => {
   });
 
   test("quantity changes reprice the line and the totals", () => {
-    const cart = withTotals([
-      line({ variant_id: "a" }),
-      line({ variant_id: "b", price: 500 }),
-    ]);
-    const next = setLineQuantity(cart, "b", 4);
+    const cart = withTotals(
+      [line({ variant_id: "a" }), line({ variant_id: "b", price: 500 })],
+      null,
+      RULE,
+    );
+    const next = setLineQuantity(cart, "b", 4, RULE);
     expect(next.items[1]).toMatchObject({ quantity: 4, line_total: 2000 });
     expect(next).toMatchObject({ item_count: 5, subtotal: 4000 });
     // fixing a short line clears the issue
-    const short = withTotals([line({ quantity: 5, stock: 2 })]);
-    expect(setLineQuantity(short, "v1", 2).has_issues).toBe(false);
+    const short = withTotals([line({ quantity: 5, stock: 2 })], null, RULE);
+    expect(setLineQuantity(short, "v1", 2, RULE).has_issues).toBe(false);
   });
 
   test("removing a line", () => {
-    const cart = withTotals([
-      line({ variant_id: "a" }),
-      line({ variant_id: "b" }),
+    const cart = withTotals(
+      [line({ variant_id: "a" }), line({ variant_id: "b" })],
+      null,
+      RULE,
+    );
+    expect(removeLine(cart, "a", RULE).items.map((l) => l.variant_id)).toEqual([
+      "b",
     ]);
-    expect(removeLine(cart, "a").items.map((l) => l.variant_id)).toEqual(["b"]);
-    expect(removeLine(cart, "a").item_count).toBe(1);
+    expect(removeLine(cart, "a", RULE).item_count).toBe(1);
   });
 
   test("option summary", () => {
@@ -109,22 +128,104 @@ describe("cart math", () => {
   });
 
   test("shipping is free from the threshold, and for an empty bag", () => {
-    expect(shippingFor(5_999)).toBe(490);
-    expect(shippingFor(6_000)).toBe(0);
-    expect(withTotals([line({ quantity: 3, price: 2000 })])).toMatchObject({
+    expect(shippingFor(5_999, RULE)).toBe(490);
+    expect(shippingFor(6_000, RULE)).toBe(0);
+    expect(
+      withTotals([line({ quantity: 3, price: 2000 })], null, RULE),
+    ).toMatchObject({
       subtotal: 6000,
       shipping: 0,
       total: 6000,
     });
-    expect(withTotals([line({ price: 2000 })])).toMatchObject({
+    expect(withTotals([line({ price: 2000 })], null, RULE)).toMatchObject({
       shipping: 490,
       total: 2490,
     });
     // nothing that can be checked out: nothing to ship
-    expect(withTotals([line({ available: false })])).toMatchObject({
+    expect(withTotals([line({ available: false })], null, RULE)).toMatchObject({
       shipping: 0,
       total: 0,
     });
+  });
+
+  test("totals follow the store's rule", () => {
+    const bag = [line({ quantity: 3, price: 2000 })];
+    expect(withTotals(bag, null, { flat: 700, free_from: 8000 })).toMatchObject(
+      { subtotal: 6000, shipping: 700, total: 6700 },
+    );
+    // never free
+    expect(withTotals(bag, null, { flat: 490, free_from: null })).toMatchObject(
+      { shipping: 490, total: 6490 },
+    );
+    // a quantity change reprices shipping under the rule it's given
+    const cart = withTotals(bag, null, RULE);
+    expect(
+      setLineQuantity(cart, "v1", 1, { flat: 300, free_from: 1000 }),
+    ).toMatchObject({ subtotal: 2000, shipping: 0, total: 2000 });
+  });
+});
+
+describe("shipping rule", () => {
+  test("free from the threshold, never without one, always at 0", () => {
+    expect(shippingFor(0, RULE)).toBe(490);
+    expect(shippingFor(6_000, RULE)).toBe(0);
+    expect(shippingFor(1_000_000, { flat: 590, free_from: null })).toBe(590);
+    expect(shippingFor(100, { flat: 0, free_from: null })).toBe(0);
+  });
+
+  test("the free-shipping bar, hidden when there's nothing to count", () => {
+    expect(freeShippingProgress(4_500, RULE)).toEqual({
+      remaining: 1_500,
+      share: 0.75,
+    });
+    expect(freeShippingProgress(7_000, RULE)).toEqual({
+      remaining: 0,
+      share: 1,
+    });
+    expect(freeShippingProgress(0, RULE)).toEqual({
+      remaining: 6_000,
+      share: 0,
+    });
+    expect(freeShippingFrom({ flat: 490, free_from: null })).toBeNull();
+    expect(
+      freeShippingProgress(100, { flat: 490, free_from: null }),
+    ).toBeNull();
+    // free for everyone: no bar either
+    expect(freeShippingProgress(100, { flat: 0, free_from: 6_000 })).toBeNull();
+  });
+
+  test("words the rule for the shop", () => {
+    expect(shippingPerk(RULE)).toBe("Free shipping over €60");
+    expect(shippingPerk({ flat: 490, free_from: null })).toBe(
+      "Flat €4.90 shipping",
+    );
+    expect(shippingPerk({ flat: 0, free_from: null })).toBe(
+      "Free shipping on every order",
+    );
+    expect(shippingSentence(RULE)).toBe(
+      "Standard shipping is free on orders over €60; otherwise it is a flat €4.90.",
+    );
+    expect(shippingSentence({ flat: 590, free_from: 7_550 })).toBe(
+      "Standard shipping is free on orders over €75.50; otherwise it is a flat €5.90.",
+    );
+    expect(shippingSentence({ flat: 490, free_from: null })).toBe(
+      "Standard shipping is a flat €4.90.",
+    );
+    expect(shippingSentence({ flat: 0, free_from: 6_000 })).toBe(
+      "Standard shipping is free on every order.",
+    );
+  });
+
+  test("the admin's example", () => {
+    expect(shippingExample(RULE)).toBe(
+      "Orders under €60.00 pay €4.90; €60.00 and over ship free.",
+    );
+    expect(shippingExample({ flat: 500, free_from: null })).toBe(
+      "Every order pays €5.00 for delivery.",
+    );
+    expect(shippingExample({ flat: 0, free_from: null })).toBe(
+      "Every order ships free.",
+    );
   });
 });
 
@@ -144,20 +245,28 @@ describe("optimistic add", () => {
   };
 
   test("grows an existing line, up to what it can hold", () => {
-    const cart = withTotals([line({ quantity: 9, line_total: 18000 })]);
-    const once = addLine(cart, "v1", 1);
+    const cart = withTotals(
+      [line({ quantity: 9, line_total: 18000 })],
+      null,
+      RULE,
+    );
+    const once = addLine(cart, "v1", 1, RULE);
     expect(once.items[0]).toMatchObject({ quantity: 10, line_total: 20000 });
     expect(once.item_count).toBe(10);
     // at the cap: unchanged, the API says why
-    expect(addLine(once, "v1", 1).items[0]?.quantity).toBe(10);
+    expect(addLine(once, "v1", 1, RULE).items[0]?.quantity).toBe(10);
     // a line already above its stock never shrinks
-    const over = withTotals([line({ quantity: 5, stock: 2, max_quantity: 2 })]);
-    expect(addLine(over, "v1", 1).items[0]?.quantity).toBe(5);
+    const over = withTotals(
+      [line({ quantity: 5, stock: 2, max_quantity: 2 })],
+      null,
+      RULE,
+    );
+    expect(addLine(over, "v1", 1, RULE).items[0]?.quantity).toBe(5);
   });
 
   test("appends a new line from its preview", () => {
-    const cart = withTotals([line({})]);
-    const next = addLine(cart, "new", 2, preview);
+    const cart = withTotals([line({})], null, RULE);
+    const next = addLine(cart, "new", 2, RULE, preview);
     expect(next.items).toHaveLength(2);
     expect(next.items[1]).toMatchObject({
       variant_id: "new",
@@ -170,8 +279,8 @@ describe("optimistic add", () => {
   });
 
   test("waits for the API without a preview", () => {
-    const cart = withTotals([line({})]);
-    expect(addLine(cart, "new", 1)).toBe(cart);
+    const cart = withTotals([line({})], null, RULE);
+    expect(addLine(cart, "new", 1, RULE)).toBe(cart);
   });
 
   test("previews the chosen variant, else the default", () => {
@@ -256,7 +365,11 @@ describe("discount codes", () => {
   });
 
   test("totals take the discount off before shipping", () => {
-    const cart = withTotals([line({ quantity: 3, price: 2000 })], coupon());
+    const cart = withTotals(
+      [line({ quantity: 3, price: 2000 })],
+      coupon(),
+      RULE,
+    );
     expect(cart).toMatchObject({
       subtotal: 6000,
       discount: 600,
@@ -266,13 +379,13 @@ describe("discount codes", () => {
       coupon: { discount: 600 },
     });
     // a quantity change reprices the code
-    expect(setLineQuantity(cart, "v1", 1)).toMatchObject({
+    expect(setLineQuantity(cart, "v1", 1, RULE)).toMatchObject({
       subtotal: 2000,
       discount: 200,
       total: 2290,
       coupon: { code: "SUMMER10", discount: 200 },
     });
-    expect(removeCoupon(cart)).toMatchObject({
+    expect(removeCoupon(cart, RULE)).toMatchObject({
       coupon: null,
       discount: 0,
       shipping: 0,
@@ -293,7 +406,7 @@ describe("discount codes", () => {
       repriceCoupon(coupon({ kind: null, value: null, discount: 5 }), 9000),
     ).toMatchObject({ discount: 0 });
     expect(repriceCoupon(null, 9000)).toBeNull();
-    const cart = withTotals([line({ price: 2000 })], coupon({ issue }));
+    const cart = withTotals([line({ price: 2000 })], coupon({ issue }), RULE);
     expect(cart).toMatchObject({ discount: 0, total: 2490 });
   });
 

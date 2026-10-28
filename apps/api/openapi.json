@@ -3465,6 +3465,9 @@
             "type": "string",
             "description": "The seller's phone number; optional."
           },
+          "shipping": {
+            "$ref": "#/components/schemas/ShippingRule"
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time"
@@ -3481,6 +3484,7 @@
           "business_address",
           "business_email",
           "business_phone",
+          "shipping",
           "updated_at"
         ],
         "description": "Store-wide settings."
@@ -3493,6 +3497,29 @@
           "botanical",
           "blaze"
         ]
+      },
+      "ShippingRule": {
+        "type": "object",
+        "properties": {
+          "flat": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What an order below free_from pays for delivery, in cents."
+          },
+          "free_from": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "description": "Orders from this subtotal, in cents and counted after any discount code, ship free; null: never free."
+          }
+        },
+        "required": [
+          "flat",
+          "free_from"
+        ],
+        "description": "What delivery costs. Checkout charges it as it is then, and each order keeps what it was charged."
       },
       "AdminStatsResponse": {
         "type": "object",
@@ -5326,6 +5353,30 @@
           "business_phone"
         ],
         "description": "Replaces the seller's details shown in the footer, contact page and legal pages. Empty strings clear a field."
+      },
+      "ShippingBody": {
+        "type": "object",
+        "properties": {
+          "flat": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000,
+            "description": "Cents, 0 to 100000; 0 ships every order free."
+          },
+          "free_from": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 10000000,
+            "description": "Cents, 1 to 10000000; left out or null: never free."
+          }
+        },
+        "required": [
+          "flat"
+        ],
+        "description": "Replaces what delivery costs: the flat price, and the subtotal (after any discount code) from which orders ship free."
       },
       "AdminCouponListResponse": {
         "type": "object",
@@ -10260,7 +10311,7 @@
           "Settings"
         ],
         "summary": "Store settings",
-        "description": "Store-wide settings the storefront needs: its theme (with the headline font and corners the store uses in place of the theme's), the top banner's messages and the seller's business details.",
+        "description": "Store-wide settings the storefront needs: its theme (with the headline font and corners the store uses in place of the theme's), the top banner's messages, the seller's business details and what delivery costs.",
         "responses": {
           "200": {
             "description": "Settings fetched",
@@ -12348,6 +12399,83 @@
           },
           "400": {
             "description": "A field too long, or an invalid email (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/settings/shipping": {
+      "put": {
+        "operationId": "adminSetShipping",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Change the delivery price",
+        "description": "Replaces what delivery costs: a flat price, free from a subtotal counted after any discount code (left out or null: never free). Bags and checkouts are priced with it at once; placed orders keep what they were charged.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShippingBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Delivery price updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A price or threshold out of range, or not whole cents (VALIDATION_FAILED)",
             "content": {
               "application/json": {
                 "schema": {

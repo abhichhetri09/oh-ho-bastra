@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { shippingSentence } from "@/lib/shipping";
 import { site } from "@/lib/site";
+import { storeShipping } from "@/lib/theme-server";
 import {
   LegalPage,
   LegalSection,
@@ -13,7 +15,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/terms" },
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const shipping = await storeShipping();
   return (
     <LegalPage eyebrow="Legal" title="Terms of sale">
       <LegalSection title="1. Who you're buying from">
@@ -56,8 +59,8 @@ export default function TermsPage() {
 
       <LegalSection id="shipping" title="4. Delivery">
         <p>
-          Standard shipping is free on orders over €60; otherwise it is a flat
-          €4.90. Orders are dispatched within two to four working days.
+          {shippingSentence(shipping)} Orders are dispatched within two to four
+          working days.
         </p>
         <p>
           We ship to the countries listed at checkout. Delivery times after

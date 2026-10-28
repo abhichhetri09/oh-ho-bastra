@@ -49,7 +49,7 @@ import {
   errGuestEmail,
   errProvider,
 } from "./refusal";
-import { CURRENCY, shippingFor } from "./shipping";
+import { CURRENCY, loadShippingRule, shippingFor } from "./shipping";
 import { fulfil, release, sessionOrderId } from "./settle";
 
 // Turns a cart into an order and a hosted Stripe Checkout page, and settles
@@ -177,8 +177,11 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
         guest ? { address: req.address } : req,
       );
 
-      // Free shipping counts what is paid for the items, after the code.
-      const shipping = shippingFor(subtotal - discount);
+      // The store's rule as of now, which the order keeps (orders.shipping)
+      // whatever the admin sets later. Free shipping counts what is paid
+      // for the items, after the code.
+      const rule = await loadShippingRule(tx);
+      const shipping = shippingFor(subtotal - discount, rule);
       const order = await createOrder(tx, {
         user_id: userId,
         subtotal,

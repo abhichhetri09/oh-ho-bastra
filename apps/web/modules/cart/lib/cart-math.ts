@@ -4,14 +4,17 @@ import {
   type CartLine,
   MAX_LINE_QUANTITY,
   type ProductDetail,
+  type ShippingRule,
   type StorefrontVariant,
   type WishlistProduct,
 } from "@repo/types";
-import { shippingFor } from "@/lib/shipping";
+import { DEFAULT_SHIPPING, shippingFor } from "@/lib/shipping";
 import { repriceCoupon } from "./coupon";
 
 // Client copies of the API's cart arithmetic (handlers/cart buildCart), for
-// optimistic updates. The server's answer replaces them once it arrives.
+// optimistic updates, priced with the store's shipping rule as the layout
+// read it (useShippingRule). The server's answer replaces them once it
+// arrives.
 
 /** Whether a line can be checked out as it stands. */
 export function lineIsReady(line: CartLine): boolean {
@@ -20,11 +23,12 @@ export function lineIsReady(line: CartLine): boolean {
 
 /**
  * Recomputes the totals from the lines, with the bag's discount code (if
- * any) taken off before shipping, as the API does.
+ * any) taken off before shipping under rule, as the API does.
  */
 export function withTotals(
   items: CartLine[],
-  coupon: CartCoupon | null = null,
+  coupon: CartCoupon | null,
+  rule: ShippingRule,
 ): Cart {
   let itemCount = 0;
   let subtotal = 0;
@@ -40,7 +44,7 @@ export function withTotals(
   const repriced = repriceCoupon(coupon, subtotal);
   const discount = repriced?.discount ?? 0;
   // Nothing to check out ships for nothing.
-  const shipping = itemCount === 0 ? 0 : shippingFor(subtotal - discount);
+  const shipping = itemCount === 0 ? 0 : shippingFor(subtotal - discount, rule);
   return {
     items,
     item_count: itemCount,
@@ -57,6 +61,7 @@ export function setLineQuantity(
   cart: Cart,
   variantId: string,
   quantity: number,
+  rule: ShippingRule,
 ): Cart {
   return withTotals(
     cart.items.map((line) =>
@@ -65,19 +70,25 @@ export function setLineQuantity(
         : line,
     ),
     cart.coupon,
+    rule,
   );
 }
 
-export function removeLine(cart: Cart, variantId: string): Cart {
+export function removeLine(
+  cart: Cart,
+  variantId: string,
+  rule: ShippingRule,
+): Cart {
   return withTotals(
     cart.items.filter((l) => l.variant_id !== variantId),
     cart.coupon,
+    rule,
   );
 }
 
 /** The bag without its discount code. */
-export function removeCoupon(cart: Cart): Cart {
-  return withTotals(cart.items, null);
+export function removeCoupon(cart: Cart, rule: ShippingRule): Cart {
+  return withTotals(cart.items, null, rule);
 }
 
 /** What a page knows about a variant, enough to show it in the bag. */
@@ -140,6 +151,7 @@ export function addLine(
   cart: Cart,
   variantId: string,
   quantity: number,
+  rule: ShippingRule,
   preview?: LinePreview,
 ): Cart {
   const line = cart.items.find((l) => l.variant_id === variantId);
@@ -150,6 +162,7 @@ export function addLine(
       cart,
       variantId,
       Math.min(line.quantity + quantity, cap),
+      rule,
     );
   }
   if (!preview) return cart;
@@ -166,10 +179,12 @@ export function addLine(
       },
     ],
     cart.coupon,
+    rule,
   );
 }
 
-export const EMPTY_CART: Cart = withTotals([]);
+/** Nothing in it ships for nothing, whatever the rule. */
+export const EMPTY_CART: Cart = withTotals([], null, DEFAULT_SHIPPING);
 
 /**
  * Units in the bag, ready or not: what the badge and headings count, so a

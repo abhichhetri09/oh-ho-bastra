@@ -14,15 +14,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { formatPriceShort } from "@/lib/money";
 import { EASE_OUT } from "@/lib/motion";
-import { FREE_SHIPPING_FROM } from "@/lib/shipping";
+import { shippingPerk } from "@/lib/shipping";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { AddToBag } from "@/modules/cart/components/add-to-bag";
 import { productPreview } from "@/modules/cart/lib/cart-math";
 import { Stars } from "@/modules/reviews/components/stars";
 import { WishlistButton } from "@/modules/wishlist/components/wishlist-button";
+import { useShippingRule } from "@/providers/shipping-provider";
 import { optionGroups, pickOption, selectionOf } from "../lib/variants";
 import { Price } from "./price";
 import { ProductGallery } from "./product-gallery";
@@ -56,6 +56,7 @@ export function ProductView({
 }) {
   const [variantId, setVariantId] = useState(initialVariantId);
   const variant = variants.find((v) => v.id === variantId);
+  const shipping = useShippingRule();
 
   const images = [
     ...new Set([
@@ -167,7 +168,7 @@ export function ProductView({
               className="size-5 shrink-0 text-muted-foreground"
               weight="light"
             />
-            Free shipping over {formatPriceShort(FREE_SHIPPING_FROM)}
+            {shippingPerk(shipping)}
           </li>
           <li className="flex items-center gap-3">
             <ArrowCounterClockwiseIcon
@@ -224,7 +225,7 @@ export function ProductView({
             </AccordionTrigger>
             <AccordionContent>
               <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
-                {site.shippingCopy}
+                {site.shippingCopy(shipping)}
               </p>
             </AccordionContent>
           </AccordionItem>

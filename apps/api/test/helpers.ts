@@ -83,7 +83,11 @@ export function fakeCloudinary(): Cloudinary & { deleted: string[] } {
   };
 }
 
-/** Empties every table except the migration bookkeeping. */
+/**
+ * Empties every table except the migration bookkeeping, then seeds the
+ * store's settings row as its migration does (the cart and checkout read
+ * the shipping rule from it).
+ */
 export async function resetDatabase(db: Pool) {
   const { rows } = await db.query<{ tablename: string }>(
     "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'schema_migrations'",
@@ -93,6 +97,7 @@ export async function resetDatabase(db: Pool) {
       `TRUNCATE ${rows.map((r) => `"${r.tablename}"`).join(", ")} RESTART IDENTITY CASCADE`,
     );
   }
+  await db.query("INSERT INTO store_settings DEFAULT VALUES");
 }
 
 export const TEST_PASSWORD = "secret123";

@@ -2,8 +2,9 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { getStoreSettings } from "@repo/api-client/server";
-import type { StoreSettings } from "@repo/types";
+import type { ShippingRule, StoreSettings } from "@repo/types";
 import { publicClient, SETTINGS_TAG } from "./api/public";
+import { DEFAULT_SHIPPING } from "./shipping";
 import { site } from "./site";
 import {
   DEFAULT_THEME,
@@ -22,9 +23,10 @@ const SETTINGS_TTL = 300;
 const SETTINGS_TIMEOUT_MS = 2000;
 
 /**
- * What an admin saved in Admin → Settings (the theme, font and corners, and
- * the top banner's messages), through Next's data cache (expired on save). Null when the API
- * can't answer, so callers fall back and pages still render.
+ * What an admin saved in Admin → Settings and Admin → Business (the theme,
+ * font and corners, the top banner's messages, the seller's details and
+ * the delivery price), through Next's data cache (expired on save). Null
+ * when the API can't answer, so callers fall back and pages still render.
  */
 export const storeSettings = cache(async (): Promise<StoreSettings | null> => {
   try {
@@ -123,4 +125,12 @@ export async function storeBusiness(): Promise<BusinessDetails> {
     business_email: s?.business_email ?? "",
     business_phone: s?.business_phone ?? "",
   };
+}
+
+/**
+ * What delivery costs, as an admin set it in Admin → Business; the store's
+ * default while the API can't answer (checkout charges the API's own).
+ */
+export async function storeShipping(): Promise<ShippingRule> {
+  return (await storeSettings())?.shipping ?? DEFAULT_SHIPPING;
 }
