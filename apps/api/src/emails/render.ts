@@ -59,6 +59,8 @@ export type EmailOrder = Pick<
   Order,
   | "number"
   | "subtotal"
+  | "discount"
+  | "coupon_code"
   | "shipping"
   | "total"
   | "currency"
@@ -120,6 +122,15 @@ export function render(
       image: thumbnail(it.image),
     })),
     subtotal: formatMoney(order.subtotal, order.currency),
+    discount:
+      order.discount > 0
+        ? {
+            label: order.coupon_code
+              ? `Discount (${order.coupon_code})`
+              : "Discount",
+            amount: "−" + formatMoney(order.discount, order.currency),
+          }
+        : null,
     shipping:
       order.shipping === 0
         ? "Free"

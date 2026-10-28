@@ -18,6 +18,8 @@ export interface OrderView {
   shopUrl: string;
   items: ItemView[];
   subtotal: string;
+  /** The code's line ("Discount (SUMMER10)", "−€5.00"); null without one. */
+  discount: { label: string; amount: string } | null;
   shipping: string;
   total: string;
   tracking: string;
@@ -143,7 +145,12 @@ export function orderHtml(v: OrderView): string {
 </table>
 
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:16px 0 0;font-size:14px;">
-<tr><td style="padding:3px 0;color:#4a423a;">Subtotal</td><td align="right" style="padding:3px 0;">${h(v.subtotal)}</td></tr>
+<tr><td style="padding:3px 0;color:#4a423a;">Subtotal</td><td align="right" style="padding:3px 0;">${h(v.subtotal)}</td></tr>${
+      v.discount
+        ? `
+<tr><td style="padding:3px 0;color:#4a423a;">${h(v.discount.label)}</td><td align="right" style="padding:3px 0;">${h(v.discount.amount)}</td></tr>`
+        : ""
+    }
 <tr><td style="padding:3px 0;color:#4a423a;">Shipping</td><td align="right" style="padding:3px 0;">${h(v.shipping)}</td></tr>
 <tr><td style="padding:10px 0 0;font-size:15px;color:#24201c;"><strong>Total</strong></td><td align="right" style="padding:10px 0 0;font-size:15px;"><strong>${h(v.total)}</strong></td></tr>
 </table>${address}
@@ -170,7 +177,7 @@ View your order: ${v.url}
 
 ${v.items.map((it) => `${it.quantity} × ${it.name}${it.options ? ` (${it.options})` : ""}  ${it.lineTotal}\n`).join("")}
 Subtotal  ${v.subtotal}
-Shipping  ${v.shipping}
+${v.discount ? `${v.discount.label}  ${v.discount.amount}\n` : ""}Shipping  ${v.shipping}
 Total     ${v.total}
 ${v.address?.length ? `\nShipping to:\n${v.address.map((line) => line + "\n").join("")}` : ""}
 --

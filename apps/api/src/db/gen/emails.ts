@@ -59,7 +59,7 @@ export async function failEmail(db: Queryable, p: FailEmailParams): Promise<void
 }
 
 // The order an email is about, with the customer's name for the greeting.
-export const getEmailOrderSql = "SELECT orders.id, orders.number, orders.user_id, orders.status, orders.subtotal, orders.shipping, orders.total, orders.currency, orders.email, orders.shipping_address, orders.stripe_session_id, orders.expires_at, orders.paid_at, orders.cancelled_at, orders.created_at, orders.updated_at, orders.shipped_at, orders.delivered_at, orders.refunded_at, orders.tracking_number, users.name AS customer_name\nFROM orders JOIN users ON users.id = orders.user_id\nWHERE orders.id = $1";
+export const getEmailOrderSql = "SELECT orders.id, orders.number, orders.user_id, orders.status, orders.subtotal, orders.shipping, orders.total, orders.currency, orders.email, orders.shipping_address, orders.stripe_session_id, orders.expires_at, orders.paid_at, orders.cancelled_at, orders.created_at, orders.updated_at, orders.shipped_at, orders.delivered_at, orders.refunded_at, orders.tracking_number, orders.discount, orders.coupon_code, users.name AS customer_name\nFROM orders JOIN users ON users.id = orders.user_id\nWHERE orders.id = $1";
 
 export interface GetEmailOrderRow {
   order: Order;
@@ -68,7 +68,7 @@ export interface GetEmailOrderRow {
 
 export async function getEmailOrder(db: Queryable, id: string): Promise<GetEmailOrderRow | null> {
   const { rows } = await db.query({ text: getEmailOrderSql, values: [id], rowMode: "array" });
-  return rows[0] ? ((r: unknown[]) => ({ order: { id: r[0], number: r[1], user_id: r[2], status: r[3], subtotal: r[4], shipping: r[5], total: r[6], currency: r[7], email: r[8], shipping_address: r[9], stripe_session_id: r[10], expires_at: r[11], paid_at: r[12], cancelled_at: r[13], created_at: r[14], updated_at: r[15], shipped_at: r[16], delivered_at: r[17], refunded_at: r[18], tracking_number: r[19] }, customer_name: r[20] }) as GetEmailOrderRow)(rows[0]) : null;
+  return rows[0] ? ((r: unknown[]) => ({ order: { id: r[0], number: r[1], user_id: r[2], status: r[3], subtotal: r[4], shipping: r[5], total: r[6], currency: r[7], email: r[8], shipping_address: r[9], stripe_session_id: r[10], expires_at: r[11], paid_at: r[12], cancelled_at: r[13], created_at: r[14], updated_at: r[15], shipped_at: r[16], delivered_at: r[17], refunded_at: r[18], tracking_number: r[19], discount: r[20], coupon_code: r[21] }, customer_name: r[22] }) as GetEmailOrderRow)(rows[0]) : null;
 }
 
 // Admin: the outbox, newest first, by status.

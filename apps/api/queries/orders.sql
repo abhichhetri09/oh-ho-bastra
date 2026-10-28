@@ -51,8 +51,11 @@ FROM order_items oi
 WHERE oi.order_id = $1 AND pv.id = oi.variant_id;
 
 -- name: CreateOrder :one
-INSERT INTO orders (user_id, subtotal, shipping, total, currency, email, shipping_address, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO orders (
+    user_id, subtotal, discount, coupon_code, shipping, total, currency,
+    email, shipping_address, expires_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: CreateOrderItem :exec
@@ -179,7 +182,7 @@ SELECT
     o.number, o.status, o.created_at, o.paid_at, o.shipped_at,
     u.name AS customer_name, o.email,
     (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id)::int AS item_count,
-    o.subtotal, o.shipping, o.total, o.currency, o.tracking_number,
+    o.subtotal, o.discount, o.shipping, o.total, o.currency, o.coupon_code, o.tracking_number,
     COALESCE(o.shipping_address->>'city', '')::text AS ship_city,
     COALESCE(o.shipping_address->>'country', '')::text AS ship_country
 FROM orders o

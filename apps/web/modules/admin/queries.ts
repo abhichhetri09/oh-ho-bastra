@@ -9,6 +9,7 @@ import {
   adminGetOrder,
   adminGetProduct,
   adminGetStats,
+  adminListCoupons,
   adminListCustomers,
   adminListEmails,
   adminListInventory,
@@ -204,6 +205,22 @@ export function useAdminInventory(filters: AdminInventoryFilters) {
     queryFn: async ({ signal }) => {
       const { data } = await adminListInventory({
         query: adminInventoryQuery(filters),
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** One page of the discount codes; the last page stays up while the next loads. */
+export function useAdminCoupons(page: number) {
+  return useQuery({
+    queryKey: adminKeys.couponList(page),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListCoupons({
+        query: { page },
         signal,
         throwOnError: true,
       });

@@ -25,7 +25,7 @@ export const ApiErrorSchema = z
   .meta({
     id: "ApiError",
     description:
-      "Every non-2xx response. `errors` is only present for VALIDATION_FAILED.",
+      "Every non-2xx response. `errors` lists the fields at fault: for VALIDATION_FAILED, and for a conflict on one field (COUPON_ALREADY_EXISTS).",
   });
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 

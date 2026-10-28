@@ -6,6 +6,7 @@ export * from "./auth/auth";
 export * from "./category/category";
 export * from "./product/product";
 export * from "./variant/variant";
+export * from "./coupon/coupon";
 export * from "./cart/cart";
 export * from "./order/order";
 export * from "./wishlist/wishlist";

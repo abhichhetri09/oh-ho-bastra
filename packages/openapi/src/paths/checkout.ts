@@ -13,7 +13,7 @@ export function registerCheckoutPaths() {
     tag: "Checkout",
     summary: "Start checkout",
     description:
-      "Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines once payment lands.",
+      "Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. The cart's discount code is checked again and its use held by the order until it is paid or cancelled. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines (and its code) once payment lands.",
     auth: "user",
     request: body(schemas.CheckoutBodySchema),
     success: {
@@ -24,7 +24,7 @@ export function registerCheckoutPaths() {
     errors: {
       400: "Invalid body, or not exactly one of address_id and address (VALIDATION_FAILED)",
       404: "No such saved address (ADDRESS_NOT_FOUND)",
-      409: "The cart is empty, or a line is off sale or short (CART_EMPTY, CART_HAS_ISSUES)",
+      409: "The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED)",
       502: "Stripe could not be reached; the reservation was released (PAYMENT_PROVIDER_ERROR)",
       503: unavailable,
     },

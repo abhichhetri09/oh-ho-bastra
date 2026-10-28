@@ -8,7 +8,7 @@ import { m } from "motion/react";
 import type { OrderDetail } from "@repo/types";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { buttonVariants } from "@/components/ui/button";
-import { formatPrice } from "@/lib/money";
+import { formatDiscount, formatPrice } from "@/lib/money";
 import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { cartKeys } from "@/modules/cart/keys";
@@ -215,6 +215,19 @@ export function OrderTotals({
         <dt className="text-muted-foreground">Subtotal</dt>
         <dd className="tabular-nums">{formatPrice(order.subtotal)}</dd>
       </div>
+      {order.discount > 0 && (
+        <div className="flex justify-between gap-3">
+          <dt className="text-muted-foreground">
+            Discount
+            {order.coupon_code && (
+              <span className="font-mono text-xs"> ({order.coupon_code})</span>
+            )}
+          </dt>
+          <dd className="text-success tabular-nums">
+            {formatDiscount(order.discount)}
+          </dd>
+        </div>
+      )}
       <div className="flex justify-between">
         <dt className="text-muted-foreground">Shipping</dt>
         <dd className="tabular-nums">

@@ -41,6 +41,8 @@ async function placeOrder(): Promise<Order> {
   const order = await createOrder(db, {
     user_id: user.id,
     subtotal: 2900,
+    discount: 0,
+    coupon_code: null,
     shipping: 800,
     total: 3700,
     currency: "usd",

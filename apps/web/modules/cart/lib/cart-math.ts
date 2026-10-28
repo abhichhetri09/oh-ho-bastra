@@ -1,11 +1,14 @@
 import {
   type Cart,
+  type CartCoupon,
   type CartLine,
   MAX_LINE_QUANTITY,
   type ProductDetail,
   type StorefrontVariant,
   type WishlistProduct,
 } from "@repo/types";
+import { shippingFor } from "@/lib/shipping";
+import { repriceCoupon } from "./coupon";
 
 // Client copies of the API's cart arithmetic (handlers/cart buildCart), for
 // optimistic updates. The server's answer replaces them once it arrives.
@@ -15,8 +18,14 @@ export function lineIsReady(line: CartLine): boolean {
   return line.available && line.quantity <= line.stock;
 }
 
-/** Recomputes the totals from the lines. */
-export function withTotals(items: CartLine[]): Cart {
+/**
+ * Recomputes the totals from the lines, with the bag's discount code (if
+ * any) taken off before shipping, as the API does.
+ */
+export function withTotals(
+  items: CartLine[],
+  coupon: CartCoupon | null = null,
+): Cart {
   let itemCount = 0;
   let subtotal = 0;
   let hasIssues = false;
@@ -28,7 +37,20 @@ export function withTotals(items: CartLine[]): Cart {
     itemCount += line.quantity;
     subtotal += line.price * line.quantity;
   }
-  return { items, item_count: itemCount, subtotal, has_issues: hasIssues };
+  const repriced = repriceCoupon(coupon, subtotal);
+  const discount = repriced?.discount ?? 0;
+  // Nothing to check out ships for nothing.
+  const shipping = itemCount === 0 ? 0 : shippingFor(subtotal - discount);
+  return {
+    items,
+    item_count: itemCount,
+    subtotal,
+    discount,
+    shipping,
+    total: subtotal - discount + shipping,
+    coupon: repriced,
+    has_issues: hasIssues,
+  };
 }
 
 export function setLineQuantity(
@@ -42,11 +64,20 @@ export function setLineQuantity(
         ? { ...line, quantity, line_total: line.price * quantity }
         : line,
     ),
+    cart.coupon,
   );
 }
 
 export function removeLine(cart: Cart, variantId: string): Cart {
-  return withTotals(cart.items.filter((l) => l.variant_id !== variantId));
+  return withTotals(
+    cart.items.filter((l) => l.variant_id !== variantId),
+    cart.coupon,
+  );
+}
+
+/** The bag without its discount code. */
+export function removeCoupon(cart: Cart): Cart {
+  return withTotals(cart.items, null);
 }
 
 /** What a page knows about a variant, enough to show it in the bag. */
@@ -122,17 +153,20 @@ export function addLine(
     );
   }
   if (!preview) return cart;
-  return withTotals([
-    ...cart.items,
-    {
-      ...preview,
-      quantity,
-      added_at: new Date().toISOString(),
-      available: true,
-      line_total: preview.price * quantity,
-      max_quantity: Math.min(preview.stock, MAX_LINE_QUANTITY),
-    },
-  ]);
+  return withTotals(
+    [
+      ...cart.items,
+      {
+        ...preview,
+        quantity,
+        added_at: new Date().toISOString(),
+        available: true,
+        line_total: preview.price * quantity,
+        max_quantity: Math.min(preview.stock, MAX_LINE_QUANTITY),
+      },
+    ],
+    cart.coupon,
+  );
 }
 
 export const EMPTY_CART: Cart = withTotals([]);
