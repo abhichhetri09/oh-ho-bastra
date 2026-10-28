@@ -821,6 +821,8 @@ describe("GET /settings", () => {
       message: "Store settings fetched",
       data: {
         theme: "editorial",
+        heading_font: null,
+        corners: null,
         announcements: [
           "Free shipping on orders over €60",
           "30-day returns on plain tees",
@@ -834,6 +836,18 @@ describe("GET /settings", () => {
         business_phone: "",
         updated_at: expect.any(String),
       },
+    });
+  });
+
+  it("sends the font and corners the store uses in place of the theme's", async () => {
+    await db.query(
+      "UPDATE store_settings SET heading_font = 'playfair', corners = 'round'",
+    );
+    const res = await http().get("/api/v1/settings");
+    expect(res.body.data).toMatchObject({
+      theme: "editorial",
+      heading_font: "playfair",
+      corners: "round",
     });
   });
 

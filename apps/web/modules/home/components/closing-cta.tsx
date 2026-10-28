@@ -6,7 +6,9 @@ import { buttonVariants } from "@/components/ui/button";
 export function ClosingCta() {
   return (
     <section className="container-page">
-      <Reveal className="relative overflow-hidden bg-primary px-6 py-20 text-center text-primary-foreground sm:py-28">
+      {/* Blaze's emphasis is its orange, which this panel is filled with:
+          there it's black instead, beside the white. */}
+      <Reveal className="relative overflow-hidden bg-primary px-6 py-20 text-center text-primary-foreground in-data-[theme=blaze]:[--em-color:var(--foreground)] sm:py-28">
         <p className="font-mono text-[0.6875rem] tracking-[0.16em] uppercase opacity-70">
           The Oh Ho Bastra way
         </p>

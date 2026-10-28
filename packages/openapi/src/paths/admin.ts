@@ -432,7 +432,8 @@ export function registerAdminPaths() {
     operationId: "adminSetStoreTheme",
     tag: "Admin",
     summary: "Change the store's theme",
-    description: "The storefront switches to the theme on its next render.",
+    description:
+      "Sets the theme, and the headline font and corner style used in place of the theme's (left out or null: the theme's own). The storefront switches on its next render.",
     auth: "admin",
     request: body(schemas.StoreThemeBodySchema),
     success: {
@@ -440,7 +441,7 @@ export function registerAdminPaths() {
       description: "Store theme updated",
       schema: schemas.StoreSettingsResponseSchema,
     },
-    errors: { 400: "Unknown theme (VALIDATION_FAILED)" },
+    errors: { 400: "Unknown theme, font or corner style (VALIDATION_FAILED)" },
   });
 
   operation({

@@ -3405,6 +3405,35 @@
           "theme": {
             "$ref": "#/components/schemas/StoreTheme"
           },
+          "heading_font": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "instrument-serif",
+              "fraunces",
+              "geist",
+              "space-grotesk",
+              "playfair",
+              "archivo",
+              null
+            ],
+            "description": "The headline font in place of the theme's; null is the theme's own."
+          },
+          "corners": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "sharp",
+              "soft",
+              "round",
+              null
+            ],
+            "description": "The corner style in place of the theme's; null is the theme's own."
+          },
           "announcements": {
             "type": "array",
             "items": {
@@ -3443,6 +3472,8 @@
         },
         "required": [
           "theme",
+          "heading_font",
+          "corners",
           "announcements",
           "announcements_enabled",
           "business_name",
@@ -5204,11 +5235,41 @@
         "properties": {
           "theme": {
             "$ref": "#/components/schemas/StoreTheme"
+          },
+          "heading_font": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "instrument-serif",
+              "fraunces",
+              "geist",
+              "space-grotesk",
+              "playfair",
+              "archivo",
+              null
+            ],
+            "description": "Left out or null for the theme's own."
+          },
+          "corners": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "sharp",
+              "soft",
+              "round",
+              null
+            ],
+            "description": "Left out or null for the theme's own."
           }
         },
         "required": [
           "theme"
-        ]
+        ],
+        "description": "Replaces the store's look: its theme, and the headline font and corners it uses in place of the theme's."
       },
       "AnnouncementsBody": {
         "type": "object",
@@ -10199,7 +10260,7 @@
           "Settings"
         ],
         "summary": "Store settings",
-        "description": "Store-wide settings the storefront needs: its theme, the top banner's messages and the seller's business details.",
+        "description": "Store-wide settings the storefront needs: its theme (with the headline font and corners the store uses in place of the theme's), the top banner's messages and the seller's business details.",
         "responses": {
           "200": {
             "description": "Settings fetched",
@@ -12104,7 +12165,7 @@
           "Admin"
         ],
         "summary": "Change the store's theme",
-        "description": "The storefront switches to the theme on its next render.",
+        "description": "Sets the theme, and the headline font and corner style used in place of the theme's (left out or null: the theme's own). The storefront switches on its next render.",
         "security": [
           {
             "accessTokenCookie": []
@@ -12132,7 +12193,7 @@
             }
           },
           "400": {
-            "description": "Unknown theme (VALIDATION_FAILED)",
+            "description": "Unknown theme, font or corner style (VALIDATION_FAILED)",
             "content": {
               "application/json": {
                 "schema": {

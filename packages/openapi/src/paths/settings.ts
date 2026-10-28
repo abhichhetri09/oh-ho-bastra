@@ -9,7 +9,7 @@ export function registerSettingsPaths() {
     tag: "Settings",
     summary: "Store settings",
     description:
-      "Store-wide settings the storefront needs: its theme, the top banner's messages and the seller's business details.",
+      "Store-wide settings the storefront needs: its theme (with the headline font and corners the store uses in place of the theme's), the top banner's messages and the seller's business details.",
     success: {
       status: 200,
       description: "Settings fetched",

@@ -40,7 +40,7 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 - order history with a status timeline, tracking number and refund date
 - order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part; a guest's link to the tracking page
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
-- four light themes (editorial, studio, botanical, blaze), chosen in the admin with live previews, plus a demo-only theme picker for showing the store to clients
+- four light themes (editorial, studio, botanical, blaze), chosen in the admin with live previews, each with a choice of six headline fonts and three corner styles, plus a demo-only theme picker for showing the store to clients
 - seo: canonical urls, a sitemap and robots.txt, generated share images for products and collections, and json-ld (products with per-variant offers, shipping and returns; breadcrumbs; the store)
 
 **admin** (`/admin`, admin role only)
@@ -51,7 +51,7 @@ under the hood it's a full-stack store: an express + typescript api and a next.j
 - orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock; guest orders are marked as such, with the order's email
 - reviews: publish or hide, which updates the product's rating
 - coupons: create and edit discount codes, switch them on or off, see each one's uses, and delete one nobody has used
-- settings: the store's theme, with a live preview of each
+- settings: the store's theme, with a live preview of each, and its headline font and corners
 
 ## stack
 
@@ -260,14 +260,21 @@ the templates are in `apps/api/src/emails/templates.ts` (one layout for all thre
 the store ships four light themes: **editorial** (warm paper, a light serif, softly rounded corners; the default), **studio** (crisp white, bold sans-serif, soft corners) **botanical** (cream and forest green, a soft serif, rounded shapes) and **blaze** (pure white and black with signal orange `#F46B10`, a bold sans-serif, square corners).
 
 - the store owner picks the theme in **admin → settings**. each option shows a live preview in its own theme, and choosing one previews it across the admin before saving. saving applies it to every page at once: the setting is cached in next's data cache, and the cache is expired on save.
+- under the selected theme, **customise** swaps its headline font (instrument serif, fraunces, playfair display, geist, space grotesk or archivo) and its corners (sharp, soft or round). each choice is drawn in its own font or corners, and previews across the admin like a theme does. "theme default" (the starting point, and what another theme starts from) keeps the theme's own. one save covers the theme, font and corners (`PUT /api/v1/admin/settings`; a font or corners left out or null is the theme's own).
 - `STORE_THEME` is the fallback while the api can't be reached (default: editorial).
 - `DEMO_THEME_PICKER=true` adds a floating picker in the bottom-right corner for demos. A visitor's pick is kept in a cookie and applied on the server, so pages never flash the wrong theme. Leave it off for a real store.
 
 a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`: colours, the headline font and its style, and four corner radii (`rounded-control`, `rounded-field`, `rounded-panel`, `rounded-media`). to add a theme:
 
 1. add that block to `globals.css`
-2. add an entry to `THEMES` in `apps/web/lib/themes.ts`, and its id to `StoreThemeSchema` in `packages/types/src/settings` (then `bun run generate`); the api validates against that schema
-3. load a new font in `app/layout.tsx` with `preload: false`, if the theme needs one
+2. add an entry to `THEMES` in `apps/web/lib/themes.ts` (with its headline font's id), and its id to `StoreThemeSchema` in `packages/types/src/settings` (then `bun run generate`); the api validates against that schema
+3. load a new font in `apps/web/lib/fonts.ts` with `preload: false`, if the theme needs one
+
+the store's font and corners are `[data-font="…"]` and `[data-corners="…"]` blocks after the themes, set on `<html>` only when the store picked one. they set the same tokens as a theme (the headline ones, or the radii) and win over it: each selector is `:is(own, own [data-theme]:not(own))`, so it outranks a `[data-theme]` block on the same element wherever it sits, and reaches into the admin's nested theme previews too. faces that are wider than instrument serif set `data-headline="wide"` on `<html>`, which shrinks the logo wordmark (`in-data-[headline=wide]:…`). to add a headline font:
+
+1. load it in `apps/web/lib/fonts.ts` with `preload: false` and add its variable to `fontVariables`. every page declares its `@font-face`, but a browser downloads a face only when text uses it, so stores without it never fetch it
+2. add a `[data-font="…"]` block to `globals.css` setting every headline token (`--heading-font`, weight, tracking, leading, variation, size adjust, `--em-style`)
+3. add an entry to `HEADING_FONTS` in `apps/web/lib/themes.ts` (name, a one-word character, and whether it's wide), and its id to `StoreHeadingFontSchema` in `packages/types/src/settings` (then `bun run generate`). no migration: the column is plain text
 
 ## scripts
 

@@ -1,9 +1,21 @@
 import { describe, expect, test } from "bun:test";
-import { StoreThemeSchema } from "@repo/types";
 import {
+  StoreCornersSchema,
+  StoreHeadingFontSchema,
+  StoreThemeSchema,
+} from "@repo/types";
+import {
+  appearanceAttributes,
+  appearanceName,
+  CORNERS,
   DEFAULT_THEME,
+  HEADING_FONTS,
+  headlineFont,
+  isCornersId,
+  isHeadingFontId,
   isThemeId,
   resolveTheme,
+  sameAppearance,
   THEMES,
   themeById,
   themePickerEnabled,
@@ -60,5 +72,80 @@ describe("themes", () => {
     expect(themePickerEnabled("1")).toBe(false);
     expect(themePickerEnabled("")).toBe(false);
     expect(themePickerEnabled(undefined)).toBe(false);
+  });
+});
+
+describe("fonts and corners", () => {
+  test("ids", () => {
+    // the web's fonts and corners are exactly the ones the API accepts
+    // (the fonts in the admin's order: serifs, then sans)
+    expect(HEADING_FONTS.map((f) => f.id).sort()).toEqual(
+      [...StoreHeadingFontSchema.options].sort(),
+    );
+    expect(CORNERS.map((c) => c.id)).toEqual([...StoreCornersSchema.options]);
+    expect(isHeadingFontId("playfair")).toBe(true);
+    expect(isHeadingFontId("comic-sans")).toBe(false);
+    expect(isHeadingFontId(null)).toBe(false);
+    expect(isCornersId("round")).toBe(true);
+    expect(isCornersId("theme")).toBe(false);
+    // every theme names its own face
+    for (const theme of THEMES) expect(isHeadingFontId(theme.font)).toBe(true);
+  });
+
+  test("the store's font, or the theme's own", () => {
+    expect(headlineFont({ theme: "editorial", font: null })).toBe(
+      "instrument-serif",
+    );
+    expect(headlineFont({ theme: "botanical", font: null })).toBe("fraunces");
+    expect(headlineFont({ theme: "studio", font: "playfair" })).toBe(
+      "playfair",
+    );
+  });
+
+  test("the <html> attributes, with a wide headline marked", () => {
+    expect(
+      appearanceAttributes({ theme: "editorial", font: null, corners: null }),
+    ).toEqual({
+      "data-theme": "editorial",
+      "data-font": undefined,
+      "data-corners": undefined,
+      "data-headline": undefined,
+    });
+    expect(
+      appearanceAttributes({ theme: "studio", font: null, corners: "round" }),
+    ).toEqual({
+      "data-theme": "studio",
+      "data-font": undefined,
+      "data-corners": "round",
+      "data-headline": "wide",
+    });
+    // a narrow face on a wide theme, and the other way round
+    expect(
+      appearanceAttributes({
+        theme: "blaze",
+        font: "instrument-serif",
+        corners: null,
+      })["data-headline"],
+    ).toBeUndefined();
+    expect(
+      appearanceAttributes({
+        theme: "editorial",
+        font: "archivo",
+        corners: null,
+      }),
+    ).toMatchObject({ "data-font": "archivo", "data-headline": "wide" });
+  });
+
+  test("names and comparison", () => {
+    const studio = { theme: "studio", font: null, corners: null } as const;
+    expect(appearanceName(studio)).toBe("Studio");
+    expect(appearanceName({ ...studio, font: "playfair" })).toBe(
+      "Studio with Playfair Display",
+    );
+    expect(
+      appearanceName({ ...studio, font: "archivo", corners: "sharp" }),
+    ).toBe("Studio with Archivo and sharp corners");
+    expect(sameAppearance(studio, { ...studio })).toBe(true);
+    expect(sameAppearance(studio, { ...studio, corners: "soft" })).toBe(false);
   });
 });

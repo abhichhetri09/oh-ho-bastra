@@ -25,8 +25,8 @@ export default function AdminLayout({
           href="/admin"
           className="flex h-16 items-baseline gap-3 border-b border-sidebar-border px-5 pt-5"
         >
-          {/* One line in every theme: Studio's, Botanical's and Blaze's faces are wider. */}
-          <span className="font-serif text-[1.65rem] leading-none whitespace-nowrap in-data-[theme=botanical]:text-[1.25rem] in-data-[theme=studio]:text-[1.25rem] in-data-[theme=blaze]:text-[1.25rem]">
+          {/* One line with every headline face: the wide ones get a smaller size. */}
+          <span className="font-serif text-[1.65rem] leading-none whitespace-nowrap in-data-[headline=wide]:text-[1.25rem]">
             <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
             {site.name}
           </span>

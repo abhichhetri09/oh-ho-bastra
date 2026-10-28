@@ -250,6 +250,8 @@ export interface StoreSetting {
   business_address: string;
   business_email: string;
   business_phone: string;
+  heading_font: string | null;
+  corners: string | null;
 }
 
 export interface EmailOutbox {

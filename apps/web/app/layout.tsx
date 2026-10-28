@@ -4,8 +4,12 @@ import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { getSessionUser } from "@/lib/auth/session";
 import { Providers } from "@/providers/providers";
-import { currentTheme } from "@/lib/theme-server";
-import { themeById, themePickerEnabled } from "@/lib/themes";
+import { currentAppearance, currentTheme } from "@/lib/theme-server";
+import {
+  appearanceAttributes,
+  themeById,
+  themePickerEnabled,
+} from "@/lib/themes";
 import { ThemePicker } from "@/components/theme/theme-picker";
 import { fontVariables } from "@/lib/fonts";
 import { indexable, siteUrl } from "@/lib/site-url";
@@ -38,13 +42,16 @@ export async function generateViewport(): Promise<Viewport> {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [user, theme] = await Promise.all([getSessionUser(), currentTheme()]);
+  const [user, appearance] = await Promise.all([
+    getSessionUser(),
+    currentAppearance(),
+  ]);
   const picker = themePickerEnabled();
 
   return (
     <html
       lang="en"
-      data-theme={theme}
+      {...appearanceAttributes(appearance)}
       className={cn("h-full antialiased", fontVariables)}
     >
       {/* Children never shrink: a scroll lock (dialogs, menus) can pin the
@@ -53,7 +60,7 @@ export default async function RootLayout({
       <body className="flex min-h-full flex-col *:shrink-0">
         <Providers user={user}>
           {children}
-          {picker && <ThemePicker initial={theme} />}
+          {picker && <ThemePicker initial={appearance} />}
         </Providers>
       </body>
     </html>

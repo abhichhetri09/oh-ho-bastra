@@ -6,6 +6,8 @@ import {
   OrderTrackingBodySchema,
   RefundOrderBodySchema,
   ShipOrderBodySchema,
+  StoreCornersSchema,
+  StoreHeadingFontSchema,
   StoreThemeSchema,
 } from "@repo/types";
 import { exportCsv } from "../admin/csv";
@@ -53,7 +55,7 @@ import {
   setOrderTracking,
   updateAnnouncements,
   updateBusinessDetails,
-  updateStoreTheme,
+  updateStoreAppearance,
 } from "../db/gen";
 import type { Order } from "../db/gen";
 import type { Queryable } from "../db/queryable";
@@ -95,10 +97,14 @@ const STOCK_LEVELS = ["out", "low", "in"];
 
 /**
  * Go trimmed the theme and checked required before oneof, so a blank theme
- * is "Theme is required" and a number "Theme must be a string".
+ * is "Theme is required" and a number "Theme must be a string". The font
+ * and corners are optional: left out (or null, see parseBody) is the
+ * theme's own.
  */
 const ThemeBody = z.object({
   theme: z.string().trim().min(1).pipe(StoreThemeSchema),
+  heading_font: StoreHeadingFontSchema.optional(),
+  corners: StoreCornersSchema.optional(),
 });
 
 /** A :one row that can't be missing (an aggregate); Go's ErrNoRows was a 500. */
@@ -545,7 +551,11 @@ export function adminRoutes(api: Group, deps: Deps) {
     });
   });
 
-  /** SetStoreTheme switches the storefront's theme. */
+  /**
+   * SetStoreTheme switches the storefront's theme, with the headline font
+   * and corners it uses in place of the theme's. One save for the whole
+   * look: what's left out goes back to the theme's own.
+   */
   admin.put("/settings", async (req, res) => {
     const body = parseBody(ThemeBody, req, res);
     if (body === null) return;
@@ -553,7 +563,13 @@ export function adminRoutes(api: Group, deps: Deps) {
       res,
       200,
       "Store theme updated",
-      must(await updateStoreTheme(db, body.theme)),
+      must(
+        await updateStoreAppearance(db, {
+          theme: body.theme,
+          heading_font: body.heading_font ?? null,
+          corners: body.corners ?? null,
+        }),
+      ),
     );
   });
 

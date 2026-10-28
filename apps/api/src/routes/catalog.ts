@@ -146,7 +146,7 @@ export function catalogRoutes(api: Group, deps: Deps) {
     await listing(req, res, slug);
   });
 
-  /** The store's public settings (its theme). */
+  /** The store's public settings (its theme, font and corners, banner and business details). */
   api.get("/settings", async (req, res) => {
     let settings;
     try {

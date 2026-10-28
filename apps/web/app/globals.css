@@ -128,6 +128,7 @@
   --heading-weight: 600;
   --heading-tracking: -0.035em;
   --heading-leading: 0.8;
+  --heading-variation: normal;
   --heading-size-adjust: 0.4;
   --em-style: normal;
   --em-color: var(--clay);
@@ -181,6 +182,7 @@
   --heading-tracking: -0.015em;
   --heading-leading: 1;
   --heading-variation: "SOFT" 100;
+  --heading-size-adjust: none;
   --em-style: italic;
   --em-color: var(--clay);
   --theme-radius-control: 9999px;
@@ -227,14 +229,16 @@
 
 /* Blaze: signal orange (#F46B10) as the main colour on pure white and
    black, a bold sans-serif and square corners. Orange fills (buttons, the
-   banner, selected sizes) carry black text: white on this orange is only
-   3:1, black is 7:1. Small orange text (--clay: sale prices, warnings) is a
-   deeper orange that still reads at 4.5:1 on white. */
+   banner, selected sizes) carry white text, the store owner's choice: it is
+   3:1 on this orange (black would be 7:1), so it suits bold and large text
+   best. Small orange text (--clay: sale prices, warnings) is a deeper
+   orange that still reads at 4.5:1 on white. */
 [data-theme="blaze"] {
   --heading-font: var(--font-geist-sans);
   --heading-weight: 700;
   --heading-tracking: -0.04em;
   --heading-leading: 0.8;
+  --heading-variation: normal;
   --heading-size-adjust: 0.4;
   --em-style: normal;
   --em-color: var(--blaze);
@@ -251,7 +255,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.686 0.189 45.9);
-  --primary-foreground: oklch(0.145 0 0);
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.95 0.04 55);
   --secondary-foreground: oklch(0.145 0 0);
   --muted: oklch(0.97 0 0);
@@ -274,11 +278,135 @@
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.686 0.189 45.9);
-  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.94 0.05 55);
   --sidebar-accent-foreground: oklch(0.145 0 0);
   --sidebar-border: oklch(0.9 0 0);
   --sidebar-ring: oklch(0.686 0.189 45.9);
+}
+
+/*
+ * The store's own headline font and corners (Admin → Settings), over the
+ * theme's: <html data-font="…" data-corners="…">, set only when the store
+ * picked one (lib/themes.ts). Each block also reaches into a nested
+ * [data-theme] (the admin's theme previews) that doesn't set its own, and
+ * :is() gives every selector the specificity of its strongest (0,3,0), so
+ * these beat a [data-theme] block (0,1,0) on the same element wherever
+ * they sit. Each block sets every token, so nothing leaks in from the
+ * theme it replaces.
+ */
+
+/* The serifs keep italic emphasis; the sans faces set it upright, in the
+   theme's --em-color. Playfair and the sans faces set font-size-adjust (as
+   Studio does) so the same headline sizes fit; Fraunces is Botanical's. */
+:is(
+  [data-font="instrument-serif"],
+  [data-font="instrument-serif"] [data-theme]:not([data-font])
+) {
+  --heading-font: var(--font-instrument-serif);
+  --heading-weight: 400;
+  --heading-tracking: -0.02em;
+  --heading-leading: 0.95;
+  --heading-variation: normal;
+  --heading-size-adjust: none;
+  --em-style: italic;
+}
+
+:is(
+  [data-font="fraunces"],
+  [data-font="fraunces"] [data-theme]:not([data-font])
+) {
+  --heading-font: var(--font-fraunces);
+  --heading-weight: 400;
+  --heading-tracking: -0.015em;
+  --heading-leading: 1;
+  --heading-variation: "SOFT" 100;
+  --heading-size-adjust: none;
+  --em-style: italic;
+}
+
+:is(
+  [data-font="playfair"],
+  [data-font="playfair"] [data-theme]:not([data-font])
+) {
+  --heading-font: var(--font-playfair);
+  --heading-weight: 400;
+  --heading-tracking: -0.015em;
+  --heading-leading: 0.95;
+  --heading-variation: normal;
+  --heading-size-adjust: 0.42;
+  --em-style: italic;
+}
+
+:is([data-font="geist"], [data-font="geist"] [data-theme]:not([data-font])) {
+  --heading-font: var(--font-geist-sans);
+  --heading-weight: 600;
+  --heading-tracking: -0.035em;
+  --heading-leading: 0.8;
+  --heading-variation: normal;
+  --heading-size-adjust: 0.4;
+  --em-style: normal;
+}
+
+:is(
+  [data-font="space-grotesk"],
+  [data-font="space-grotesk"] [data-theme]:not([data-font])
+) {
+  --heading-font: var(--font-space-grotesk);
+  --heading-weight: 600;
+  --heading-tracking: -0.03em;
+  --heading-leading: 0.85;
+  --heading-variation: normal;
+  --heading-size-adjust: 0.4;
+  --em-style: normal;
+}
+
+/* Heavy and tight, for the loudest headlines. */
+:is(
+  [data-font="archivo"],
+  [data-font="archivo"] [data-theme]:not([data-font])
+) {
+  --heading-font: var(--font-archivo);
+  --heading-weight: 800;
+  --heading-tracking: -0.035em;
+  --heading-leading: 0.82;
+  --heading-variation: normal;
+  --heading-size-adjust: 0.4;
+  --em-style: normal;
+}
+
+/* Corners: square everywhere; Studio's soft ones; Botanical's pills. */
+:is(
+  [data-corners="sharp"],
+  [data-corners="sharp"] [data-theme]:not([data-corners])
+) {
+  --theme-radius-control: 0;
+  --theme-radius-field: 0;
+  --theme-radius-panel: 0;
+  --theme-radius-media: 0;
+  --radius: 0;
+}
+
+:is(
+  [data-corners="soft"],
+  [data-corners="soft"] [data-theme]:not([data-corners])
+) {
+  --theme-radius-control: 0.5rem;
+  --theme-radius-field: 0.5rem;
+  --theme-radius-panel: 0.75rem;
+  --theme-radius-media: 0.75rem;
+  --radius: 0.5rem;
+}
+
+:is(
+  [data-corners="round"],
+  [data-corners="round"] [data-theme]:not([data-corners])
+) {
+  --theme-radius-control: 9999px;
+  --theme-radius-field: 0.75rem;
+  --theme-radius-panel: 1rem;
+  --theme-radius-media: 1.25rem;
+  --radius: 0.75rem;
 }
 
 @layer base {

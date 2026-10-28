@@ -1148,6 +1148,14 @@ export type StoreSettingsResponse = {
 export type StoreSettings = {
     theme: StoreTheme;
     /**
+     * The headline font in place of the theme's; null is the theme's own.
+     */
+    heading_font: 'instrument-serif' | 'fraunces' | 'geist' | 'space-grotesk' | 'playfair' | 'archivo' | null;
+    /**
+     * The corner style in place of the theme's; null is the theme's own.
+     */
+    corners: 'sharp' | 'soft' | 'round' | null;
+    /**
      * The messages in the storefront's scrolling top banner, in order; empty hides it.
      */
     announcements: Array<string>;
@@ -1729,8 +1737,19 @@ export type ReviewStatusBody = {
     status: ReviewStatus;
 };
 
+/**
+ * Replaces the store's look: its theme, and the headline font and corners it uses in place of the theme's.
+ */
 export type StoreThemeBody = {
     theme: StoreTheme;
+    /**
+     * Left out or null for the theme's own.
+     */
+    heading_font?: 'instrument-serif' | 'fraunces' | 'geist' | 'space-grotesk' | 'playfair' | 'archivo' | null;
+    /**
+     * Left out or null for the theme's own.
+     */
+    corners?: 'sharp' | 'soft' | 'round' | null;
 };
 
 /**
@@ -5036,7 +5055,7 @@ export type AdminSetStoreThemeData = {
 
 export type AdminSetStoreThemeErrors = {
     /**
-     * Unknown theme (VALIDATION_FAILED)
+     * Unknown theme, font or corner style (VALIDATION_FAILED)
      */
     400: ApiError;
     /**

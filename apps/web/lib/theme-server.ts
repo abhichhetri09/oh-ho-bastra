@@ -6,9 +6,14 @@ import type { StoreSettings } from "@repo/types";
 import { publicClient, SETTINGS_TAG } from "./api/public";
 import { site } from "./site";
 import {
+  DEFAULT_THEME,
+  isCornersId,
+  isHeadingFontId,
+  isThemeId,
   resolveTheme,
   THEME_COOKIE,
   themePickerEnabled,
+  type Appearance,
   type ThemeId,
 } from "./themes";
 
@@ -17,8 +22,8 @@ const SETTINGS_TTL = 300;
 const SETTINGS_TIMEOUT_MS = 2000;
 
 /**
- * What an admin saved in Admin → Settings (the theme and the top banner's
- * messages), through Next's data cache (expired on save). Null when the API
+ * What an admin saved in Admin → Settings (the theme, font and corners, and
+ * the top banner's messages), through Next's data cache (expired on save). Null when the API
  * can't answer, so callers fall back and pages still render.
  */
 export const storeSettings = cache(async (): Promise<StoreSettings | null> => {
@@ -70,6 +75,32 @@ export async function currentTheme(): Promise<ThemeId> {
     storeTheme,
     pickerEnabled: themePickerEnabled(),
   });
+}
+
+/** The store's font and corners; the theme's own when the API can't answer. */
+async function storeTweaks(): Promise<Omit<Appearance, "theme">> {
+  const settings = await storeSettings();
+  return {
+    font: isHeadingFontId(settings?.heading_font)
+      ? settings.heading_font
+      : null,
+    corners: isCornersId(settings?.corners) ? settings.corners : null,
+  };
+}
+
+/** The look an admin saved: what Admin → Settings starts from. */
+export async function savedAppearance(): Promise<Appearance> {
+  const [theme, tweaks] = await Promise.all([savedStoreTheme(), storeTweaks()]);
+  return { theme: isThemeId(theme) ? theme : DEFAULT_THEME, ...tweaks };
+}
+
+/**
+ * The look this request renders with: its theme (see currentTheme) and the
+ * store's font and corners, which the demo picker leaves alone.
+ */
+export async function currentAppearance(): Promise<Appearance> {
+  const [theme, tweaks] = await Promise.all([currentTheme(), storeTweaks()]);
+  return { theme, ...tweaks };
 }
 
 /** The seller's details as Admin → Settings holds them. */

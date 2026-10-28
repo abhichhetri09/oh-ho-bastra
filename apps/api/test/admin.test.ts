@@ -791,10 +791,12 @@ describe("PUT /admin/settings", () => {
     expect(res.body).toMatchObject({
       success: true,
       message: "Store theme updated",
-      data: { theme: "studio" },
+      data: { theme: "studio", heading_font: null, corners: null },
     });
     expect(Object.keys(res.body.data)).toEqual([
       "theme",
+      "heading_font",
+      "corners",
       "announcements",
       "announcements_enabled",
       "business_name",
@@ -804,6 +806,144 @@ describe("PUT /admin/settings", () => {
       "business_phone",
       "updated_at",
     ]);
+  });
+
+  it("saves the font and corners with the theme, and the storefront sees them", async () => {
+    const res = await http()
+      .put("/api/v1/admin/settings")
+      .set("Cookie", admin)
+      .send({ theme: "blaze", heading_font: "playfair", corners: "round" });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      theme: "blaze",
+      heading_font: "playfair",
+      corners: "round",
+    });
+    const settings = await http().get("/api/v1/settings");
+    expect(settings.body.data).toMatchObject({
+      theme: "blaze",
+      heading_font: "playfair",
+      corners: "round",
+    });
+  });
+
+  it("takes every font and corner style", async () => {
+    const fonts = [
+      "instrument-serif",
+      "fraunces",
+      "geist",
+      "space-grotesk",
+      "playfair",
+      "archivo",
+    ];
+    const corners = ["sharp", "soft", "round"];
+    for (const [i, font] of fonts.entries()) {
+      const res = await http()
+        .put("/api/v1/admin/settings")
+        .set("Cookie", admin)
+        .send({
+          theme: "studio",
+          heading_font: font,
+          corners: corners[i % corners.length],
+        });
+      expect(res.status, font).toBe(200);
+      expect(res.body.data).toMatchObject({
+        heading_font: font,
+        corners: corners[i % corners.length],
+      });
+    }
+  });
+
+  it("goes back to the theme's own with null, or when they're left out", async () => {
+    const put = (body: object) =>
+      http().put("/api/v1/admin/settings").set("Cookie", admin).send(body);
+    const look = { theme: "studio", heading_font: "archivo", corners: "sharp" };
+
+    await put(look);
+    const nulls = await put({
+      theme: "studio",
+      heading_font: null,
+      corners: null,
+    });
+    expect(nulls.status).toBe(200);
+    expect(nulls.body.data).toMatchObject({
+      heading_font: null,
+      corners: null,
+    });
+
+    await put(look);
+    const left = await put({ theme: "botanical" });
+    expect(left.status).toBe(200);
+    expect(left.body.data).toMatchObject({
+      theme: "botanical",
+      heading_font: null,
+      corners: null,
+    });
+
+    // an empty string is "not given" too
+    await put(look);
+    const empty = await put({ theme: "studio", heading_font: "", corners: "" });
+    expect(empty.status).toBe(200);
+    expect(empty.body.data).toMatchObject({
+      heading_font: null,
+      corners: null,
+    });
+  });
+
+  it("validates the font and corners", async () => {
+    const put = (body: object) =>
+      http().put("/api/v1/admin/settings").set("Cookie", admin).send(body);
+    await put({ theme: "studio", heading_font: "geist", corners: "soft" });
+    const cases: [object, object][] = [
+      [
+        { theme: "studio", heading_font: "comic-sans" },
+        {
+          code: "INVALID_VALUE",
+          field: "heading_font",
+          message:
+            "Heading font must be one of: instrument-serif, fraunces, geist, space-grotesk, playfair, archivo",
+        },
+      ],
+      [
+        { theme: "studio", corners: "bevelled" },
+        {
+          code: "INVALID_VALUE",
+          field: "corners",
+          message: "Corners must be one of: sharp, soft, round",
+        },
+      ],
+    ];
+    for (const [body, error] of cases) {
+      const res = await put(body);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(res.body.errors, JSON.stringify(body)).toEqual([error]);
+    }
+    const number = await put({ theme: "studio", corners: 5 });
+    expect(number.status).toBe(400);
+    expect(number.body.errors[0].field).toBe("corners");
+    // a refused save changes nothing
+    const settings = await http().get("/api/v1/settings");
+    expect(settings.body.data).toMatchObject({
+      theme: "studio",
+      heading_font: "geist",
+      corners: "soft",
+    });
+  });
+
+  it("is for admins only", async () => {
+    const body = { theme: "studio", heading_font: "geist" };
+    const { cookie } = await signIn(db, cfg);
+    expect(
+      (
+        await http()
+          .put("/api/v1/admin/settings")
+          .set("Cookie", cookie)
+          .send(body)
+      ).status,
+    ).toBe(403);
+    expect((await http().put("/api/v1/admin/settings").send(body)).status).toBe(
+      401,
+    );
   });
 
   it("validates the theme as Go did", async () => {
@@ -883,6 +1023,8 @@ describe("PUT /admin/settings/announcements", () => {
       message: "Announcements updated",
       data: {
         theme: "editorial",
+        heading_font: null,
+        corners: null,
         announcements: ["Autumn sale", "New tees in"],
         announcements_enabled: true,
         business_name: "",

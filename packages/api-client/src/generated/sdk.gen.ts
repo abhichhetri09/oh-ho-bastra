@@ -951,7 +951,7 @@ export const getMyReview = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * Store settings
  *
- * Store-wide settings the storefront needs: its theme, the top banner's messages and the seller's business details.
+ * Store-wide settings the storefront needs: its theme (with the headline font and corners the store uses in place of the theme's), the top banner's messages and the seller's business details.
  */
 export const getStoreSettings = <ThrowOnError extends boolean = false>(options?: Options<GetStoreSettingsData, ThrowOnError>): RequestResult<GetStoreSettingsResponses, GetStoreSettingsErrors, ThrowOnError> => (options?.client ?? client).get<GetStoreSettingsResponses, GetStoreSettingsErrors, ThrowOnError>({
     responseType: 'json',
@@ -1282,7 +1282,7 @@ export const adminSetReviewStatus = <ThrowOnError extends boolean = false>(optio
 /**
  * Change the store's theme
  *
- * The storefront switches to the theme on its next render.
+ * Sets the theme, and the headline font and corner style used in place of the theme's (left out or null: the theme's own). The storefront switches on its next render.
  */
 export const adminSetStoreTheme = <ThrowOnError extends boolean = false>(options: Options<AdminSetStoreThemeData, ThrowOnError>): RequestResult<AdminSetStoreThemeResponses, AdminSetStoreThemeErrors, ThrowOnError> => (options.client ?? client).put<AdminSetStoreThemeResponses, AdminSetStoreThemeErrors, ThrowOnError>({
     responseType: 'json',

@@ -7,6 +7,28 @@ export const StoreThemeSchema = z
   .meta({ id: "StoreTheme" });
 export type StoreTheme = z.infer<typeof StoreThemeSchema>;
 
+/**
+ * Headline faces a store can use instead of its theme's own
+ * (apps/web/lib/themes.ts holds their look).
+ */
+export const StoreHeadingFontSchema = z
+  .enum([
+    "instrument-serif",
+    "fraunces",
+    "geist",
+    "space-grotesk",
+    "playfair",
+    "archivo",
+  ])
+  .meta({ id: "StoreHeadingFont" });
+export type StoreHeadingFont = z.infer<typeof StoreHeadingFontSchema>;
+
+/** Corner styles a store can use instead of its theme's own. */
+export const StoreCornersSchema = z
+  .enum(["sharp", "soft", "round"])
+  .meta({ id: "StoreCorners" });
+export type StoreCorners = z.infer<typeof StoreCornersSchema>;
+
 /** Limits of the scrolling top banner. */
 export const MAX_ANNOUNCEMENTS = 6;
 export const MAX_ANNOUNCEMENT_LENGTH = 80;
@@ -23,6 +45,12 @@ export const BUSINESS_LIMITS = {
 export const StoreSettingsSchema = z
   .object({
     theme: StoreThemeSchema,
+    heading_font: StoreHeadingFontSchema.nullable().describe(
+      "The headline font in place of the theme's; null is the theme's own.",
+    ),
+    corners: StoreCornersSchema.nullable().describe(
+      "The corner style in place of the theme's; null is the theme's own.",
+    ),
     announcements: z
       .array(z.string())
       .describe(
@@ -50,8 +78,20 @@ export const StoreSettingsSchema = z
 export type StoreSettings = z.infer<typeof StoreSettingsSchema>;
 
 export const StoreThemeBodySchema = z
-  .object({ theme: StoreThemeSchema })
-  .meta({ id: "StoreThemeBody" });
+  .object({
+    theme: StoreThemeSchema,
+    heading_font: StoreHeadingFontSchema.nullish().describe(
+      "Left out or null for the theme's own.",
+    ),
+    corners: StoreCornersSchema.nullish().describe(
+      "Left out or null for the theme's own.",
+    ),
+  })
+  .meta({
+    id: "StoreThemeBody",
+    description:
+      "Replaces the store's look: its theme, and the headline font and corners it uses in place of the theme's.",
+  });
 export type StoreThemeBody = z.infer<typeof StoreThemeBodySchema>;
 
 export const AnnouncementsBodySchema = z

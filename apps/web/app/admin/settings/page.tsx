@@ -9,21 +9,21 @@ import {
   StoreStatus,
 } from "@/modules/admin/components/store-status";
 import {
-  savedStoreTheme,
+  savedAppearance,
   storeBanner,
   storeBusiness,
 } from "@/lib/theme-server";
-import { DEFAULT_THEME, isThemeId, themeById } from "@/lib/themes";
+import { themeById } from "@/lib/themes";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function AdminSettingsPage() {
-  const [saved, banner, business] = await Promise.all([
-    savedStoreTheme(),
+  const [appearance, banner, business] = await Promise.all([
+    savedAppearance(),
     storeBanner(),
     storeBusiness(),
   ]);
-  const theme = isThemeId(saved) ? saved : DEFAULT_THEME;
+  const customised = appearance.font !== null || appearance.corners !== null;
   const missing = [
     business.business_name,
     business.business_id,
@@ -44,8 +44,10 @@ export default async function AdminSettingsPage() {
         tiles={[
           {
             label: "Theme",
-            value: themeById(theme).name,
-            detail: "Live on the storefront",
+            value: themeById(appearance.theme).name,
+            detail: customised
+              ? "Customised, live on the storefront"
+              : "Live on the storefront",
             href: "#appearance",
             icon: STATUS_ICONS.theme,
             tone: "ok",
@@ -75,9 +77,9 @@ export default async function AdminSettingsPage() {
       <SettingsSection
         id="appearance"
         title="Appearance"
-        description="Colours, type and shapes for the whole storefront. Choosing a theme previews it on this page; save to show it to shoppers."
+        description="Colours, type and shapes for the whole storefront. Pick a theme, then change its headline font or corners if you like. Choosing previews it on this page; save to show it to shoppers."
       >
-        <AppearanceSettings initial={theme} />
+        <AppearanceSettings initial={appearance} />
       </SettingsSection>
 
       <SettingsSection
