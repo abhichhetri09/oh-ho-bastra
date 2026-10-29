@@ -37,6 +37,7 @@ import {
 } from "../lib/order-filters";
 import { adminKeys } from "../keys";
 import { useAdminInventory, useCategoryTree } from "../queries";
+import { FilterableHead } from "./filterable-head";
 import { PageNav } from "./page-nav";
 import { StockInput } from "./stock-input";
 
@@ -244,15 +245,21 @@ export function InventoryTable({
           inventory.isPlaceholderData && "opacity-60",
         )}
       >
-        <Table className="md:min-w-[40rem]">
+        <Table className="min-w-[40rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Variant</TableHead>
-              <TableHead className="hidden md:table-cell">SKU</TableHead>
-              <TableHead className="hidden text-right lg:table-cell">
-                Price
-              </TableHead>
-              <TableHead className="pr-8 text-right">Stock</TableHead>
+              <TableHead>SKU</TableHead>
+              <TableHead className="text-right">Price</TableHead>
+              <FilterableHead
+                label="Stock"
+                value={filters.stock}
+                options={tabs.map((t) => ({ value: t.stock, label: t.label }))}
+                onChange={(stock) =>
+                  setFilters((f) => ({ ...f, stock, page: 1 }))
+                }
+                className="pr-8 text-right"
+              />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -330,10 +337,10 @@ export function InventoryTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden font-mono text-[0.6875rem] text-muted-foreground md:table-cell">
+                    <TableCell className="font-mono text-[0.6875rem] text-muted-foreground">
                       {row.sku ?? "—"}
                     </TableCell>
-                    <TableCell className="hidden text-right tabular-nums lg:table-cell">
+                    <TableCell className="text-right tabular-nums">
                       {formatPrice(row.selling_price)}
                     </TableCell>
                     <TableCell className="pr-8 text-right">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import type { CustomerSort, SortDir } from "@repo/types";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import { SortableHead } from "./sortable-head";
 const PATH = "/admin/customers";
 
 export function CustomersTable({ initial }: { initial: AdminCustomerFilters }) {
+  const router = useRouter();
   const [filters, setFilters] = useState(initial);
   const [search, setSearch] = useState(initial.q);
   const debounced = useDebouncedValue(search.trim(), 300);
@@ -104,7 +106,7 @@ export function CustomersTable({ initial }: { initial: AdminCustomerFilters }) {
           customers.isPlaceholderData && "opacity-60",
         )}
       >
-        <Table className="md:min-w-[44rem]">
+        <Table className="min-w-[44rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Customer</TableHead>
@@ -120,13 +122,12 @@ export function CustomersTable({ initial }: { initial: AdminCustomerFilters }) {
                 {...sortProps}
                 className="text-right"
               />
-              <TableHead className="hidden md:table-cell">Last order</TableHead>
+              <TableHead>Last order</TableHead>
               <SortableHead
                 field="joined"
                 label="Joined"
                 isDefault
                 {...sortProps}
-                className="hidden lg:table-cell"
               />
             </TableRow>
           </TableHeader>
@@ -167,12 +168,19 @@ export function CustomersTable({ initial }: { initial: AdminCustomerFilters }) {
               rows.map((customer) => (
                 <TableRow
                   key={customer.id}
-                  className="group relative cursor-pointer"
+                  // Row clicks route here, not via a stretched link: mobile
+                  // Safari ignores position on <tr>, so the overlay of every
+                  // row would cover the whole table.
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("a")) return;
+                    router.push(`${PATH}/${customer.id}`);
+                  }}
+                  className="group cursor-pointer"
                 >
                   <TableCell className="max-w-[18rem]">
                     <Link
                       href={`${PATH}/${customer.id}`}
-                      className="block outline-none after:absolute after:inset-0 focus-visible:underline"
+                      className="block outline-none focus-visible:underline"
                     >
                       <span className="block truncate group-hover:underline">
                         {customer.name}
@@ -188,12 +196,12 @@ export function CustomersTable({ initial }: { initial: AdminCustomerFilters }) {
                   <TableCell className="text-right tabular-nums">
                     {formatPrice(customer.spend)}
                   </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                  <TableCell className="text-muted-foreground">
                     {customer.last_order_at
                       ? formatOrderDate(customer.last_order_at)
                       : "None yet"}
                   </TableCell>
-                  <TableCell className="hidden text-muted-foreground lg:table-cell">
+                  <TableCell className="text-muted-foreground">
                     {formatOrderDate(customer.created_at)}
                   </TableCell>
                 </TableRow>

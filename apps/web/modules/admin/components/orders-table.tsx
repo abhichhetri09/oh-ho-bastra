@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import {
   DownloadSimpleIcon,
@@ -34,6 +35,7 @@ import {
   type AdminOrderFilters,
 } from "../lib/order-filters";
 import { useAdminCounts, useAdminOrders } from "../queries";
+import { FilterableHead } from "./filterable-head";
 import { PageNav } from "./page-nav";
 import { SortableHead } from "./sortable-head";
 import { OrderStatusBadge } from "./status-badge";
@@ -54,6 +56,7 @@ const tabs: { label: string; status: OrderStatus | "" }[] = [
 ];
 
 export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
+  const router = useRouter();
   const [filters, setFilters] = useState(initial);
   const [search, setSearch] = useState(initial.q);
   const debounced = useDebouncedValue(search.trim(), 300);
@@ -254,18 +257,24 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
           orders.isPlaceholderData && "opacity-60",
         )}
       >
-        <Table className="md:min-w-[44rem]">
+        <Table className="min-w-[44rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Order</TableHead>
-              <TableHead className="hidden sm:table-cell">Customer</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Customer</TableHead>
+              <FilterableHead
+                label="Status"
+                value={filters.status}
+                options={tabs.map((t) => ({ value: t.status, label: t.label }))}
+                onChange={(status) =>
+                  setFilters((f) => ({ ...f, status, page: 1 }))
+                }
+              />
               <SortableHead
                 field="created"
                 label="Placed"
                 isDefault
                 {...sortProps}
-                className="hidden md:table-cell"
               />
               <SortableHead
                 field="total"
@@ -312,12 +321,19 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
               rows.map((order) => (
                 <TableRow
                   key={order.id}
-                  className="group relative cursor-pointer"
+                  // Row clicks route here, not via a stretched link: mobile
+                  // Safari ignores position on <tr>, so the overlay of every
+                  // row would cover the whole table.
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("a")) return;
+                    router.push(`${PATH}/${order.number}`);
+                  }}
+                  className="group cursor-pointer"
                 >
                   <TableCell>
                     <Link
                       href={`${PATH}/${order.number}`}
-                      className="block outline-none after:absolute after:inset-0 focus-visible:underline"
+                      className="block outline-none focus-visible:underline"
                     >
                       <span className="font-mono text-xs group-hover:underline">
                         {orderLabel(order.number)}
@@ -328,7 +344,7 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
                       </span>
                     </Link>
                   </TableCell>
-                  <TableCell className="hidden max-w-[16rem] sm:table-cell">
+                  <TableCell className="max-w-[16rem]">
                     {order.guest ? (
                       // No account: the order's email is all there is.
                       <span className="eyebrow inline-block rounded-control border border-border px-1.5 py-0.5 !text-[0.5625rem]">
@@ -346,7 +362,7 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
                   <TableCell>
                     <OrderStatusBadge status={order.status} />
                   </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                  <TableCell className="text-muted-foreground">
                     {formatOrderDate(order.created_at)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">

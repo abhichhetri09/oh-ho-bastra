@@ -57,6 +57,7 @@ import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { PageNav } from "./page-nav";
 import { SaleDialog, type SaleMode } from "./sale-dialog";
 import { SortableHead } from "./sortable-head";
+import { FilterableHead } from "./filterable-head";
 import { ActiveBadge } from "./status-badge";
 
 const ALL = "all";
@@ -312,7 +313,7 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
           products.isPlaceholderData && "opacity-60",
         )}
       >
-        <Table className="md:min-w-[48rem]">
+        <Table className="min-w-[48rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10">
@@ -331,13 +332,23 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
                 {...sortProps}
                 className="w-[45%]"
               />
-              <TableHead className="hidden md:table-cell">Category</TableHead>
+              <FilterableHead
+                label="Category"
+                value={filters.category}
+                options={categoryItems.map((c) => ({
+                  ...c,
+                  value: c.value === ALL ? "" : c.value,
+                }))}
+                onChange={(category) =>
+                  setFilters((f) => ({ ...f, category, page: 1 }))
+                }
+              />
               <SortableHead
                 field="price"
                 label="Price"
                 natural="asc"
                 {...sortProps}
-                className="hidden text-right sm:table-cell"
+                className="text-right"
               />
               <SortableHead
                 field="stock"
@@ -346,7 +357,18 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
                 {...sortProps}
                 className="text-right"
               />
-              <TableHead className="hidden sm:table-cell">Status</TableHead>
+              <FilterableHead
+                label="Status"
+                value={filters.status}
+                options={[
+                  { value: "", label: "Any status" },
+                  { value: "active", label: "Active" },
+                  { value: "inactive", label: "Hidden" },
+                ]}
+                onChange={(status) =>
+                  setFilters((f) => ({ ...f, status, page: 1 }))
+                }
+              />
               <TableHead className="w-12">
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -494,10 +516,10 @@ function ProductRow({
           </span>
         </Link>
       </TableCell>
-      <TableCell className="hidden text-muted-foreground md:table-cell">
+      <TableCell className="text-muted-foreground">
         {product.category_name ?? <span className="italic">None</span>}
       </TableCell>
-      <TableCell className="hidden text-right tabular-nums sm:table-cell">
+      <TableCell className="text-right tabular-nums">
         {product.default_price === null ? (
           <span className="text-muted-foreground">—</span>
         ) : (
@@ -514,7 +536,7 @@ function ProductRow({
             : `${product.variant_count} variants`}
         </span>
       </TableCell>
-      <TableCell className="hidden sm:table-cell">
+      <TableCell>
         <ActiveBadge active={product.is_active} />
       </TableCell>
       <TableCell>

@@ -141,15 +141,15 @@ export function CouponsManager({ initialPage }: { initialPage: number }) {
           coupons.isPlaceholderData && "opacity-60",
         )}
       >
-        <Table className="md:min-w-[56rem]">
+        <Table className="min-w-[56rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Code</TableHead>
               <TableHead>Discount</TableHead>
-              <TableHead className="hidden md:table-cell">Min. order</TableHead>
-              <TableHead className="hidden lg:table-cell">Valid</TableHead>
+              <TableHead>Min. order</TableHead>
+              <TableHead>Valid</TableHead>
               <TableHead className="text-right">Uses</TableHead>
-              <TableHead className="hidden md:table-cell">Once each</TableHead>
+              <TableHead>Once each</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-10">
                 <span className="sr-only">Actions</span>
@@ -276,16 +276,16 @@ function CouponRow({
         {coupon.code}
       </TableCell>
       <TableCell className="whitespace-nowrap">{couponValue(coupon)}</TableCell>
-      <TableCell className="hidden text-muted-foreground tabular-nums md:table-cell">
+      <TableCell className="text-muted-foreground tabular-nums">
         {coupon.min_subtotal > 0 ? formatPriceShort(coupon.min_subtotal) : "—"}
       </TableCell>
-      <TableCell className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">
+      <TableCell className="whitespace-nowrap text-muted-foreground">
         {couponWindow(coupon)}
       </TableCell>
       <TableCell className="text-right tabular-nums">
         {couponUses(coupon)}
       </TableCell>
-      <TableCell className="hidden text-muted-foreground md:table-cell">
+      <TableCell className="text-muted-foreground">
         {coupon.once_per_customer ? "Yes" : "—"}
       </TableCell>
       <TableCell>

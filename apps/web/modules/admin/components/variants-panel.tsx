@@ -143,14 +143,14 @@ export function VariantsPanel({
           </Button>
         </div>
       ) : (
-        <Table className="md:min-w-[44rem]">
+        <Table className="min-w-[44rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="pl-5">Variant</TableHead>
-              <TableHead className="hidden md:table-cell">SKU</TableHead>
+              <TableHead>SKU</TableHead>
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="pr-8 text-right">Stock</TableHead>
-              <TableHead className="hidden sm:table-cell">Status</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="w-12 pr-5">
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -200,7 +200,7 @@ export function VariantsPanel({
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="hidden font-mono text-[0.625rem] text-muted-foreground md:table-cell">
+                <TableCell className="font-mono text-[0.625rem] text-muted-foreground">
                   {variant.sku ?? "—"}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
@@ -214,7 +214,7 @@ export function VariantsPanel({
                     label={variantLabel(variant)}
                   />
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">
+                <TableCell>
                   <ActiveBadge active={variant.is_active} />
                 </TableCell>
                 <TableCell className="pr-5">
