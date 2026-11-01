@@ -30,6 +30,7 @@ import {
   isAvailable,
   optionGroups,
   pickOption,
+  quickAddPlan,
 } from "@/modules/catalog/lib/variants";
 
 describe("money", () => {
@@ -420,5 +421,57 @@ describe("active nav", () => {
     expect(activeNav("/categories/unknown", false, categories)).toBeNull();
     expect(activeNav("/products/tee", false, categories)).toBeNull();
     expect(activeNav("/", false, categories)).toBeNull();
+  });
+});
+
+describe("quick add", () => {
+  const sized = (id: string, size: string, stock = 1) => ({
+    ...variant(id, { size }),
+    stock,
+  });
+
+  test("the only variant in stock goes straight in", () => {
+    expect(quickAddPlan([variant("1", {})])).toMatchObject({
+      kind: "add",
+      variant: { id: "1" },
+    });
+    // Only M is left: no need to ask.
+    expect(
+      quickAddPlan([sized("1", "S", 0), sized("2", "M"), sized("3", "L", 0)]),
+    ).toMatchObject({ kind: "add", variant: { id: "2" } });
+  });
+
+  test("one varying option offers its values, sold out included", () => {
+    const plan = quickAddPlan([
+      sized("1", "L"),
+      sized("2", "S", 0),
+      sized("3", "M"),
+    ]);
+    expect(plan.kind).toBe("choose");
+    if (plan.kind !== "choose") return;
+    expect(plan.name).toBe("size");
+    expect(plan.choices.map((c) => [c.value, c.variant.stock])).toEqual([
+      ["S", 0],
+      ["M", 1],
+      ["L", 1],
+    ]);
+  });
+
+  test("a fixed colour beside the sizes is not ambiguous", () => {
+    const plan = quickAddPlan([
+      variant("1", { color: "Red", size: "M" }),
+      variant("2", { color: "Red", size: "L" }),
+    ]);
+    expect(plan).toMatchObject({ kind: "choose", name: "size" });
+  });
+
+  test("colour and size, or nothing in stock, needs the product page", () => {
+    expect(
+      quickAddPlan([
+        variant("1", { color: "Red", size: "M" }),
+        variant("2", { color: "Blue", size: "L" }),
+      ]),
+    ).toEqual({ kind: "page" });
+    expect(quickAddPlan([sized("1", "S", 0)])).toEqual({ kind: "page" });
   });
 });

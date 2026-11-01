@@ -15,7 +15,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { getProductBySlug } from "@/lib/api/client";
 import { EASE_OUT } from "@/lib/motion";
 import { shippingPerk } from "@/lib/shipping";
 import { site } from "@/lib/site";
@@ -27,6 +26,7 @@ import { Stars } from "@/modules/reviews/components/stars";
 import { WishlistButton } from "@/modules/wishlist/components/wishlist-button";
 import { useShippingRule } from "@/providers/shipping-provider";
 import { catalogKeys } from "../keys";
+import { fetchProductVariants } from "../queries";
 import { optionGroups, pickOption, selectionOf } from "../lib/variants";
 import { Price } from "./price";
 import { ProductGallery } from "./product-gallery";
@@ -64,14 +64,7 @@ export function ProductView({
   // takes the last one), so stock is re-read live; the server's seeds it.
   const live = useQuery({
     queryKey: catalogKeys.product(product.slug),
-    queryFn: async ({ signal }) => {
-      const { data } = await getProductBySlug({
-        path: { productSlug: product.slug },
-        signal,
-        throwOnError: true,
-      });
-      return data.data.variants;
-    },
+    queryFn: ({ signal }) => fetchProductVariants(product.slug, signal),
     initialData: initialVariants,
     initialDataUpdatedAt: 0,
     staleTime: 0,

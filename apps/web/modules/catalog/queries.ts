@@ -5,8 +5,12 @@ import {
   useInfiniteQuery,
   type InfiniteData,
 } from "@tanstack/react-query";
-import type { ProductListingResponse } from "@repo/types";
-import { listCategoryProducts, listProducts } from "@/lib/api/client";
+import type { ProductListingResponse, StorefrontVariant } from "@repo/types";
+import {
+  getProductBySlug,
+  listCategoryProducts,
+  listProducts,
+} from "@/lib/api/client";
 import { catalogKeys } from "./keys";
 import { listingQuery, type ListingFilters } from "./lib/filters";
 
@@ -48,4 +52,20 @@ export function useListing(category: string | null, filters: ListingFilters) {
     // Catalog data changes rarely; the server cache revalidates every 60 s.
     staleTime: 5 * 60_000,
   });
+}
+
+/**
+ * A product's live variants (with stock), by slug: the product page's and
+ * the bag's quick add share the cache entry.
+ */
+export async function fetchProductVariants(
+  slug: string,
+  signal: AbortSignal,
+): Promise<StorefrontVariant[]> {
+  const { data } = await getProductBySlug({
+    path: { productSlug: slug },
+    signal,
+    throwOnError: true,
+  });
+  return data.data.variants;
 }

@@ -84,3 +84,38 @@ export function isAvailable(
     );
   });
 }
+
+/** One value of the option a quick add asks for, and the variant it adds. */
+export type QuickChoice = { value: string; variant: StorefrontVariant };
+
+/**
+ * How a quick add (no product page) buys this product: the only variant in
+ * stock goes straight in; when the variants differ by just one option
+ * (size), its values are offered, sold-out ones included to show they're
+ * gone; anything more ambiguous (colour and size) needs the product page.
+ */
+export type QuickAddPlan =
+  | { kind: "add"; variant: StorefrontVariant }
+  | { kind: "choose"; name: string; choices: QuickChoice[] }
+  | { kind: "page" };
+
+export function quickAddPlan(variants: StorefrontVariant[]): QuickAddPlan {
+  const inStock = variants.filter((v) => v.stock > 0);
+  const [only] = inStock;
+  if (!only) return { kind: "page" };
+  if (inStock.length === 1) return { kind: "add", variant: only };
+  const varying = optionGroups(variants).filter((g) => g.values.length > 1);
+  const group = varying[0];
+  if (varying.length !== 1 || !group) return { kind: "page" };
+  const choices: QuickChoice[] = [];
+  for (const value of group.values) {
+    const matches = variants.filter((v) =>
+      v.options.some((o) => o.name === group.name && o.value === value),
+    );
+    // Two variants with the same value differ some other way: ambiguous.
+    const [match] = matches;
+    if (!match || matches.length !== 1) return { kind: "page" };
+    choices.push({ value, variant: match });
+  }
+  return { kind: "choose", name: group.name, choices };
+}
