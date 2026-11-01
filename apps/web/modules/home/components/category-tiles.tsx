@@ -3,27 +3,29 @@ import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import { Stagger, StaggerItem } from "@/components/motion/reveal";
 import { site } from "@/lib/site";
+import type { Collection } from "@/modules/catalog/api";
 
 /**
- * Three ways into the shop (site.tiles): a dark photo tile each, the title
- * and a line of copy over the photo's shaded left side, and an accent
- * arrow. Slanted where the theme sets --slant (Volt). Phones scroll them
+ * Up to three ways into the shop, from the store's own categories: a dark
+ * photo tile each (the newest product's photo), the name and its
+ * subcategories (or how many pieces) over the shaded left side, and an
+ * accent arrow. Slanted where the theme sets --slant (Volt). Phones scroll them
  * sideways, a card and a peek at a time.
  */
-export function CategoryTiles() {
+export function CategoryTiles({ collections }: { collections: Collection[] }) {
   return (
     <Stagger className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
-      {site.tiles.map((tile) => (
+      {collections.slice(0, 3).map((tile, i) => (
         <StaggerItem
-          key={tile.title}
+          key={tile.slug}
           className="w-[78%] shrink-0 snap-start sm:w-auto"
         >
           <Link
-            href={tile.href}
+            href={`/categories/${tile.slug}`}
             className="slant group relative block aspect-8/5 overflow-hidden rounded-media border border-border bg-surface outline-offset-[-6px] focus-visible:outline-2 focus-visible:outline-ring"
           >
             <Image
-              src={tile.image}
+              src={tile.image ?? site.tileImages[i]!}
               alt=""
               fill
               sizes="(min-width: 640px) 33vw, 80vw"
@@ -32,9 +34,11 @@ export function CategoryTiles() {
             <div className="absolute inset-0 bg-linear-to-r from-[oklch(0.12_0_0/0.9)] via-[oklch(0.12_0_0/0.45)] to-transparent" />
             {/* Fixed light text: the photo is always shaded dark here. */}
             <div className="absolute inset-y-0 left-0 flex flex-col justify-center gap-2 py-5 pr-4 pl-[calc(1.25rem+var(--slant,0px))] text-[oklch(0.98_0_0)]">
-              <h3 className="display text-3xl lg:text-4xl">{tile.title}</h3>
+              <h3 className="display text-3xl lg:text-4xl">{tile.name}</h3>
               <p className="max-w-[11rem] text-sm leading-snug opacity-85">
-                {tile.body}
+                {tile.children.length > 0
+                  ? tile.children.map((c) => c.name).join(" · ")
+                  : `${tile.total} ${tile.total === 1 ? "piece" : "pieces"}`}
               </p>
               <span className="mt-2 flex size-8 items-center justify-center rounded-control bg-primary text-primary-foreground transition-transform duration-300 group-hover:translate-x-1">
                 <ArrowRightIcon className="size-4" />

@@ -35,41 +35,18 @@ export const site = {
   hero: {
     title: ["Tees. And the", "ones we print", "for you."],
     body: "Heavyweight cotton tees, custom printing and streetwear essentials.",
-    primary: { label: "Shop tees", href: "/categories/tees" },
-    secondary: { label: "Design your own", href: "/categories/custom" },
+    cta: { label: "Shop all", href: "/shop" },
     image: `${IMG}/rack-colours.jpg`,
     imageAlt: "Tees in assorted colours hanging on a rail",
   },
-  tiles: [
-    {
-      title: "Tees",
-      body: "Heavyweight everyday staples.",
-      href: "/categories/tees",
-      image: `${IMG}/white-hanger.jpg`,
-    },
-    {
-      title: "Custom",
-      body: "Your design, on our tees.",
-      href: "/categories/custom",
-      image: `${IMG}/custom-text.jpg`,
-    },
-    {
-      // No category of its own yet: the newest pieces across the shop.
-      title: "Streetwear",
-      body: "Limited pieces and bold essentials.",
-      href: "/shop",
-      image: `${IMG}/black-mint-folded.jpg`,
-    },
+  // The category tiles come from the store's own categories (the three
+  // biggest with products); these photos stand in for one without any.
+  tileImages: [
+    `${IMG}/white-hanger.jpg`,
+    `${IMG}/custom-text.jpg`,
+    `${IMG}/black-mint-folded.jpg`,
   ],
   picks: { title: "Editor's picks", href: "/shop?featured=true" },
-  custom: {
-    title: "Custom printed tees.",
-    body: "Your design, logo or idea, printed on our heavyweight tees.",
-    cta: "Create your custom tee",
-    href: "/categories/custom",
-    image: `${IMG}/sage-rack.jpg`,
-    imageAlt: "A row of sage green tees on wooden hangers, ready to print",
-  },
   shippingCopy: (shipping: ShippingRule) =>
     `${shippingSentence(shipping)} Orders ship in two to four working days. Plain tees can be returned within 30 days of delivery (return postage is yours); custom prints are made for you and can't be returned unless faulty.`,
   authImage: `${IMG}/white-hanger.jpg`,

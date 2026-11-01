@@ -4,11 +4,10 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { site } from "@/lib/site";
 import { storeLd } from "@/lib/seo/structured-data";
 import { siteUrl } from "@/lib/site-url";
-import { getListing } from "@/modules/catalog/api";
+import { getCollections, getListing } from "@/modules/catalog/api";
 import { ProductGrid } from "@/modules/catalog/components/product-grid";
 import { DEFAULT_FILTERS } from "@/modules/catalog/lib/filters";
 import { CategoryTiles } from "@/modules/home/components/category-tiles";
-import { CustomBanner } from "@/modules/home/components/custom-banner";
 import { Hero } from "@/modules/home/components/hero";
 import { SectionHeading } from "@/modules/home/components/section-heading";
 
@@ -18,9 +17,10 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 const PICKS = 4;
 
 export default async function LandingPage() {
-  const [featured, newest] = await Promise.all([
+  const [featured, newest, collections] = await Promise.all([
     getListing(null, { ...DEFAULT_FILTERS, featured: true }),
     getListing(null, DEFAULT_FILTERS),
+    getCollections(),
   ]);
   // Topped up with the newest tees while fewer than four are featured.
   const picks = [
@@ -37,9 +37,11 @@ export default async function LandingPage() {
       <JsonLd data={storeLd(siteUrl())} />
       <Hero />
 
-      <section className="container-page" aria-label="Shop by category">
-        <CategoryTiles />
-      </section>
+      {collections.length > 0 && (
+        <section className="container-page" aria-label="Shop by category">
+          <CategoryTiles collections={collections} />
+        </section>
+      )}
 
       {picks.length > 0 && (
         <section className="container-page">
@@ -53,8 +55,6 @@ export default async function LandingPage() {
           </Reveal>
         </section>
       )}
-
-      <CustomBanner />
     </div>
   );
 }

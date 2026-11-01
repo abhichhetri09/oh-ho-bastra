@@ -52,21 +52,10 @@ export function Hero() {
           style={{ "--i": 5 } as React.CSSProperties}
         >
           <Link
-            href={hero.primary.href}
+            href={hero.cta.href}
             className={buttonVariants({ size: "lg", className: "group" })}
           >
-            {hero.primary.label}
-            <ArrowRightIcon className="transition-transform duration-300 group-hover:translate-x-1" />
-          </Link>
-          <Link
-            href={hero.secondary.href}
-            className={buttonVariants({
-              size: "lg",
-              variant: "outline",
-              className: "group bg-transparent",
-            })}
-          >
-            {hero.secondary.label}
+            {hero.cta.label}
             <ArrowRightIcon className="transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
         </div>
