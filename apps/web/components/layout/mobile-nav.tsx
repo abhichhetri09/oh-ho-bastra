@@ -56,7 +56,7 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
       </SheetTrigger>
       <SheetContent side="left" className="w-full gap-0 p-0 sm:max-w-sm">
         <div className="flex h-16 items-center border-b border-border px-5">
-          <SheetTitle className="font-serif text-2xl font-normal">
+          <SheetTitle className="font-serif text-xl font-normal">
             <Brand />
           </SheetTitle>
         </div>
@@ -67,7 +67,7 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
             onClick={close}
             aria-current={active === "shop" ? "page" : undefined}
             className={cn(
-              "animate-rise block py-3 font-serif text-4xl",
+              "animate-rise block py-2 font-serif text-2xl",
               mark("shop"),
             )}
           >
@@ -83,7 +83,7 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
               >
                 <AccordionTrigger
                   className={cn(
-                    "py-3 font-serif text-4xl font-normal hover:no-underline",
+                    "py-2 font-serif text-2xl font-normal hover:no-underline",
                     mark(category.slug),
                   )}
                 >
@@ -121,7 +121,7 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
             onClick={close}
             aria-current={active === "featured" ? "page" : undefined}
             className={cn(
-              "animate-rise block py-3 font-serif text-4xl",
+              "animate-rise block py-2 font-serif text-2xl",
               mark("featured"),
             )}
             style={{ "--i": categories.length + 1 } as React.CSSProperties}

@@ -188,7 +188,7 @@ export class StripePayments implements PaymentProvider {
       client_reference_id: req.orderId,
       metadata: { order_id: req.orderId, order_number: number },
       payment_intent_data: {
-        description: "Oh Ho Bastra order " + number,
+        description: "OH : HO !! Bastra order " + number,
         metadata: { order_id: req.orderId },
       },
       shipping_options: [

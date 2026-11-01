@@ -162,7 +162,7 @@ describe("StripePayments", () => {
       client_reference_id: "0f6ada99-b884-4c07-88d4-7843a41cdda8",
       "metadata[order_id]": "0f6ada99-b884-4c07-88d4-7843a41cdda8",
       "metadata[order_number]": "1042",
-      "payment_intent_data[description]": "Oh Ho Bastra order 1042",
+      "payment_intent_data[description]": "OH : HO !! Bastra order 1042",
       "payment_intent_data[metadata][order_id]":
         "0f6ada99-b884-4c07-88d4-7843a41cdda8",
       "shipping_options[0][shipping_rate_data][display_name]": "Free shipping",

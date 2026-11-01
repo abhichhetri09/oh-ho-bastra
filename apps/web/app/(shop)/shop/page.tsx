@@ -27,7 +27,7 @@ export async function generateMetadata({
     },
     description: filters.featured
       ? "The pieces we reach for most."
-      : "Every tee in the Oh Ho Bastra collection.",
+      : "Every tee in the OH : HO !! Bastra collection.",
   };
 }
 

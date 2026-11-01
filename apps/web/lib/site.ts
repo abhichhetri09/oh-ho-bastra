@@ -10,7 +10,7 @@ import { shippingSentence } from "./shipping";
 const IMG = "/editorial";
 
 export const site = {
-  name: "Oh Ho Bastra",
+  name: "OH : HO !! Bastra",
   // When the terms and privacy policy last changed (shown on both pages).
   // The seller's details live in Admin → Settings (storeBusiness).
   legalUpdated: "2026-11-01",

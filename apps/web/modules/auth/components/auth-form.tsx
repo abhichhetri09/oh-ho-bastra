@@ -155,7 +155,7 @@ export function AuthForm(props: AuthFormProps) {
     >
       <div className="mb-10 space-y-3">
         <p className="eyebrow animate-rise">
-          {isRegister ? "Join Oh Ho Bastra" : "Welcome back"}
+          {isRegister ? "Join OH : HO !! Bastra" : "Welcome back"}
         </p>
         <h1
           className="display animate-rise text-5xl sm:text-6xl"
@@ -257,7 +257,7 @@ export function AuthForm(props: AuthFormProps) {
       </FieldGroup>
 
       <p className="mt-8 border-t border-border pt-6 text-sm text-muted-foreground">
-        {isRegister ? "Already have an account?" : "New to Oh Ho Bastra?"}{" "}
+        {isRegister ? "Already have an account?" : "New to OH : HO !! Bastra?"}{" "}
         <Link
           className="font-medium text-foreground underline underline-offset-4"
           href={otherHref}

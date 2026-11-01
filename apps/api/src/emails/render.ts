@@ -12,7 +12,7 @@ import {
 } from "./templates";
 
 /** Signs the emails; it matches the storefront's wordmark. */
-export const STORE_NAME = "Oh Ho Bastra";
+export const STORE_NAME = "OH : HO !! Bastra";
 
 /** An email ready to send. */
 export interface Rendered {

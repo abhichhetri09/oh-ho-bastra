@@ -29,7 +29,8 @@ export function Brand({ className }: { className?: string }) {
     );
   }
   return (
-    <span className={className}>
+    // Lighter than the theme's headlines: the name reads as a wordmark.
+    <span className={cn("font-semibold", className)}>
       <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
       {site.name}
     </span>

@@ -206,7 +206,7 @@ London N1 9GU
 United Kingdom
 
 --
-Oh Ho Bastra
+OH : HO !! Bastra
 http://localhost:3000
 `);
     // The HTML as Go's html/template rendered it.
@@ -357,7 +357,7 @@ describe("renderPasswordReset", () => {
     expect(r.text).toContain(link);
     expect(r.html).toContain(link);
     expect(r.text).toContain("Hi Ada,");
-    expect(r.subject).toBe("Reset your Oh Ho Bastra password");
+    expect(r.subject).toBe("Reset your OH : HO !! Bastra password");
     // As the Go templates rendered it.
     expect(sha256(r.html)).toBe(
       "dbeb1a17fcc94eeabf3bef359034644504ac0b15b6ba706a42f3030a8a9d66e8",
