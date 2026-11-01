@@ -1,4 +1,9 @@
 import Link from "next/link";
+import {
+  FacebookLogoIcon,
+  InstagramLogoIcon,
+  TiktokLogoIcon,
+} from "@phosphor-icons/react/ssr";
 import { accountOf } from "@/lib/auth/redirect";
 import { getSessionUser } from "@/lib/auth/session";
 import { site } from "@/lib/site";
@@ -13,11 +18,17 @@ const signedOutLinks = [
 const helpLinks = [
   { label: "Contact", href: "/contact" },
   { label: "Track an order", href: "/orders/track" },
-  { label: "Shipping", href: "/terms#shipping" },
-  { label: "Returns", href: "/terms#returns" },
-  { label: "Terms of sale", href: "/terms" },
+  { label: "Shipping policy", href: "/shipping" },
+  { label: "Returns & exchanges", href: "/returns" },
+  { label: "Terms & conditions", href: "/terms" },
   { label: "Privacy policy", href: "/privacy" },
 ];
+
+const socialLinks = [
+  { label: "Instagram", href: site.social.instagram, Icon: InstagramLogoIcon },
+  { label: "Facebook", href: site.social.facebook, Icon: FacebookLogoIcon },
+  { label: "TikTok", href: site.social.tiktok, Icon: TiktokLogoIcon },
+].filter((link) => link.href);
 
 const signedInLinks = [
   { label: "Your account", href: "/account" },
@@ -54,6 +65,23 @@ export async function SiteFooter() {
         <div className="max-w-sm space-y-4">
           <p className="display text-3xl">{site.tagline}.</p>
           <p className="text-sm text-muted-foreground">{site.description}</p>
+          {socialLinks.length > 0 && (
+            <ul className="flex gap-2 pt-2">
+              {socialLinks.map(({ label, href, Icon }) => (
+                <li key={label}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                  >
+                    <Icon className="size-4" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         {columns.map((column) => (
           <div key={column.title}>

@@ -20,6 +20,7 @@ import { unitCount } from "../lib/cart-math";
 import { BAG_BUMP_EVENT, BAG_TARGET } from "../lib/fly-to-bag";
 import { useBagDrawer } from "../store";
 import { CartLine } from "./cart-line";
+import { YouMayAlsoLike } from "./bag-extras";
 import { CartTotals, FreeShippingProgress } from "./cart-summary";
 import { CouponForm } from "./coupon-form";
 
@@ -169,13 +170,25 @@ function BagContents({ close }: { close: () => void }) {
   return (
     <>
       {header}
-      <ul className="flex-1 divide-y divide-border overflow-y-auto overscroll-contain px-5">
-        {lines.map((line) => (
-          <CartLine key={line.variant_id} line={line} onNavigate={close} />
-        ))}
-      </ul>
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="px-5 pt-4">
+          <FreeShippingProgress
+            subtotal={cart!.subtotal - cart!.discount}
+            items={cart!.item_count}
+          />
+        </div>
+        <ul className="divide-y divide-border px-5">
+          {lines.map((line) => (
+            <CartLine key={line.variant_id} line={line} onNavigate={close} />
+          ))}
+        </ul>
+        <YouMayAlsoLike
+          inBag={lines.map((line) => line.product_id)}
+          onNavigate={close}
+          className="border-t border-border px-5 py-6"
+        />
+      </div>
       <SheetFooter className="gap-5 border-t border-border bg-background p-5">
-        <FreeShippingProgress subtotal={cart!.subtotal - cart!.discount} />
         <CouponForm cart={cart!} />
         <CartTotals cart={cart!} />
         {cart!.has_issues && (

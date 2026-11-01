@@ -3,11 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import {
-  ArrowCounterClockwiseIcon,
-  LockSimpleIcon,
-  PackageIcon,
-} from "@phosphor-icons/react";
+import { LockSimpleIcon } from "@phosphor-icons/react";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +14,7 @@ import { useCart } from "../queries";
 import { CartLine } from "./cart-line";
 import { CartTotals, FreeShippingProgress } from "./cart-summary";
 import { CouponForm } from "./coupon-form";
+import { YouMayAlsoLike } from "./bag-extras";
 
 /**
  * The /cart page: lines on the left, a sticky summary on the right. The
@@ -86,23 +83,29 @@ export function CartView({ seeded }: { seeded: boolean }) {
         </EmptyState>
       ) : (
         <div className="grid items-start gap-12 lg:grid-cols-[1fr_24rem] lg:gap-16">
-          <ul className="divide-y divide-border border-y border-border">
-            {cart.items.map((line, i) => (
-              <CartLine
-                key={line.variant_id}
-                line={line}
-                size="large"
-                eager={i === 0}
-              />
-            ))}
-          </ul>
+          <div className="space-y-12">
+            <ul className="divide-y divide-border border-y border-border">
+              {cart.items.map((line, i) => (
+                <CartLine
+                  key={line.variant_id}
+                  line={line}
+                  size="large"
+                  eager={i === 0}
+                />
+              ))}
+            </ul>
+            <YouMayAlsoLike inBag={cart.items.map((line) => line.product_id)} />
+          </div>
 
           <aside
             aria-label="Order summary"
             className="space-y-6 rounded-panel border border-border bg-surface/60 p-6 lg:sticky lg:top-24"
           >
             <p className="eyebrow">Summary</p>
-            <FreeShippingProgress subtotal={cart.subtotal - cart.discount} />
+            <FreeShippingProgress
+              subtotal={cart.subtotal - cart.discount}
+              items={cart.item_count}
+            />
             <CouponForm cart={cart} />
             <CartTotals cart={cart} />
             {cart.has_issues && (
@@ -125,16 +128,6 @@ export function CartView({ seeded }: { seeded: boolean }) {
                 Checkout
               </Link>
             )}
-            <ul className="space-y-2.5 border-t border-border pt-5 text-xs text-muted-foreground">
-              <li className="flex items-center gap-2.5">
-                <PackageIcon className="size-4" weight="light" />
-                Ships in 2–4 working days
-              </li>
-              <li className="flex items-center gap-2.5">
-                <ArrowCounterClockwiseIcon className="size-4" weight="light" />
-                Free 30-day returns
-              </li>
-            </ul>
           </aside>
         </div>
       )}

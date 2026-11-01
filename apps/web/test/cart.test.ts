@@ -28,7 +28,6 @@ import {
 import { formatDiscount, formatPriceShort } from "@/lib/money";
 import {
   DEFAULT_SHIPPING,
-  freeShippingFrom,
   freeShippingProgress,
   shippingExample,
   shippingFor,
@@ -128,8 +127,8 @@ describe("cart math", () => {
   });
 
   test("shipping is free from the threshold, and for an empty bag", () => {
-    expect(shippingFor(5_999, RULE)).toBe(490);
-    expect(shippingFor(6_000, RULE)).toBe(0);
+    expect(shippingFor(5_999, 1, RULE)).toBe(490);
+    expect(shippingFor(6_000, 1, RULE)).toBe(0);
     expect(
       withTotals([line({ quantity: 3, price: 2000 })], null, RULE),
     ).toMatchObject({
@@ -150,69 +149,126 @@ describe("cart math", () => {
 
   test("totals follow the store's rule", () => {
     const bag = [line({ quantity: 3, price: 2000 })];
-    expect(withTotals(bag, null, { flat: 700, free_from: 8000 })).toMatchObject(
-      { subtotal: 6000, shipping: 700, total: 6700 },
-    );
+    expect(
+      withTotals(bag, null, { flat: 700, free_from: 8000, free_items: null }),
+    ).toMatchObject({ subtotal: 6000, shipping: 700, total: 6700 });
     // never free
-    expect(withTotals(bag, null, { flat: 490, free_from: null })).toMatchObject(
-      { shipping: 490, total: 6490 },
-    );
+    expect(
+      withTotals(bag, null, { flat: 490, free_from: null, free_items: null }),
+    ).toMatchObject({ shipping: 490, total: 6490 });
     // a quantity change reprices shipping under the rule it's given
     const cart = withTotals(bag, null, RULE);
     expect(
-      setLineQuantity(cart, "v1", 1, { flat: 300, free_from: 1000 }),
+      setLineQuantity(cart, "v1", 1, {
+        flat: 300,
+        free_from: 1000,
+        free_items: null,
+      }),
     ).toMatchObject({ subtotal: 2000, shipping: 0, total: 2000 });
   });
 });
 
 describe("shipping rule", () => {
+  test("free from the item count too", () => {
+    const both = { flat: 600, free_from: 7_000, free_items: 3 };
+    expect(shippingFor(2_900, 2, both)).toBe(600);
+    expect(shippingFor(2_900, 3, both)).toBe(0);
+    expect(shippingFor(7_000, 1, both)).toBe(0);
+  });
+
   test("free from the threshold, never without one, always at 0", () => {
-    expect(shippingFor(0, RULE)).toBe(490);
-    expect(shippingFor(6_000, RULE)).toBe(0);
-    expect(shippingFor(1_000_000, { flat: 590, free_from: null })).toBe(590);
-    expect(shippingFor(100, { flat: 0, free_from: null })).toBe(0);
+    expect(shippingFor(0, 1, RULE)).toBe(490);
+    expect(shippingFor(6_000, 1, RULE)).toBe(0);
+    expect(
+      shippingFor(1_000_000, 1, {
+        flat: 590,
+        free_from: null,
+        free_items: null,
+      }),
+    ).toBe(590);
+    expect(
+      shippingFor(100, 1, { flat: 0, free_from: null, free_items: null }),
+    ).toBe(0);
   });
 
   test("the free-shipping bar, hidden when there's nothing to count", () => {
-    expect(freeShippingProgress(4_500, RULE)).toEqual({
+    expect(freeShippingProgress(4_500, 1, RULE)).toEqual({
+      free: false,
       remaining: 1_500,
+      itemsLeft: null,
       share: 0.75,
     });
-    expect(freeShippingProgress(7_000, RULE)).toEqual({
+    expect(freeShippingProgress(7_000, 1, RULE)).toEqual({
+      free: true,
       remaining: 0,
+      itemsLeft: null,
       share: 1,
     });
-    expect(freeShippingProgress(0, RULE)).toEqual({
-      remaining: 6_000,
-      share: 0,
+    // either rule: the nearer one fills the bar
+    const both = { flat: 600, free_from: 7_000, free_items: 3 };
+    expect(freeShippingProgress(2_900, 1, both)).toEqual({
+      free: false,
+      remaining: 4_100,
+      itemsLeft: 2,
+      share: 2_900 / 7_000,
     });
-    expect(freeShippingFrom({ flat: 490, free_from: null })).toBeNull();
+    expect(freeShippingProgress(2_900, 3, both)).toMatchObject({
+      free: true,
+      itemsLeft: 0,
+      share: 1,
+    });
     expect(
-      freeShippingProgress(100, { flat: 490, free_from: null }),
+      freeShippingProgress(100, 1, {
+        flat: 490,
+        free_from: null,
+        free_items: null,
+      }),
     ).toBeNull();
     // free for everyone: no bar either
-    expect(freeShippingProgress(100, { flat: 0, free_from: 6_000 })).toBeNull();
+    expect(
+      freeShippingProgress(100, 1, {
+        flat: 0,
+        free_from: 6_000,
+        free_items: null,
+      }),
+    ).toBeNull();
   });
 
   test("words the rule for the shop", () => {
     expect(shippingPerk(RULE)).toBe("Free shipping over €60");
-    expect(shippingPerk({ flat: 490, free_from: null })).toBe(
+    expect(shippingPerk({ flat: 490, free_from: null, free_items: null })).toBe(
       "Flat €4.90 shipping",
     );
-    expect(shippingPerk({ flat: 0, free_from: null })).toBe(
+    expect(shippingPerk({ flat: 0, free_from: null, free_items: null })).toBe(
       "Free shipping on every order",
     );
     expect(shippingSentence(RULE)).toBe(
       "Standard shipping is free on orders over €60; otherwise it is a flat €4.90.",
     );
-    expect(shippingSentence({ flat: 590, free_from: 7_550 })).toBe(
+    expect(
+      shippingSentence({ flat: 590, free_from: 7_550, free_items: null }),
+    ).toBe(
       "Standard shipping is free on orders over €75.50; otherwise it is a flat €5.90.",
     );
-    expect(shippingSentence({ flat: 490, free_from: null })).toBe(
-      "Standard shipping is a flat €4.90.",
+    expect(
+      shippingSentence({ flat: 490, free_from: null, free_items: null }),
+    ).toBe("Standard shipping is a flat €4.90.");
+    expect(
+      shippingSentence({ flat: 0, free_from: 6_000, free_items: null }),
+    ).toBe("Standard shipping is free on every order.");
+  });
+
+  test("words both rules", () => {
+    const both = { flat: 600, free_from: 7_000, free_items: 3 };
+    expect(shippingPerk(both)).toBe("Free shipping over €70 or on 3+ items");
+    expect(shippingSentence(both)).toBe(
+      "Standard shipping is free on orders over €70 or of 3 or more items; otherwise it is a flat €6.",
     );
-    expect(shippingSentence({ flat: 0, free_from: 6_000 })).toBe(
-      "Standard shipping is free on every order.",
+    expect(shippingExample(both)).toBe(
+      "Orders under €70.00 and of fewer than 3 items pay €6.00; the rest ship free.",
+    );
+    expect(shippingPerk({ ...both, free_from: null })).toBe(
+      "Free shipping on 3+ items",
     );
   });
 
@@ -220,12 +276,12 @@ describe("shipping rule", () => {
     expect(shippingExample(RULE)).toBe(
       "Orders under €60.00 pay €4.90; €60.00 and over ship free.",
     );
-    expect(shippingExample({ flat: 500, free_from: null })).toBe(
-      "Every order pays €5.00 for delivery.",
-    );
-    expect(shippingExample({ flat: 0, free_from: null })).toBe(
-      "Every order ships free.",
-    );
+    expect(
+      shippingExample({ flat: 500, free_from: null, free_items: null }),
+    ).toBe("Every order pays €5.00 for delivery.");
+    expect(
+      shippingExample({ flat: 0, free_from: null, free_items: null }),
+    ).toBe("Every order ships free.");
   });
 });
 

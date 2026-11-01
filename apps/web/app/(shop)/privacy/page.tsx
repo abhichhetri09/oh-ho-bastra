@@ -1,140 +1,193 @@
 import type { Metadata } from "next";
 import { site } from "@/lib/site";
 import {
-  LegalPage,
-  LegalSection,
+  PolicyPage,
   SellerDetails,
 } from "@/modules/legal/components/legal-page";
 
 export const metadata: Metadata = {
   title: "Privacy policy",
-  description: `How ${site.name} collects, uses and protects your personal data.`,
+  description: `How ${site.name} collects, uses and protects your personal information.`,
   alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage eyebrow="Legal" title="Privacy policy">
-      <LegalSection title="Who is responsible">
-        <p>
-          The controller of your personal data under the EU General Data
-          Protection Regulation (GDPR) is:
-        </p>
-        <SellerDetails />
-      </LegalSection>
-
-      <LegalSection title="What we collect">
-        <ul>
-          <li>
-            <strong>Account details:</strong> your name, email address, a hashed
-            password (we can&apos;t read it) or your Google account ID if you
-            sign in with Google, and a profile photo if you add one.
-          </li>
-          <li>
-            <strong>Order details:</strong> what you bought, your shipping
-            address and phone number, and the order&apos;s payment status. Card
-            details go straight to Stripe; we never receive them.
-          </li>
-          <li>
-            <strong>What you choose to send:</strong> reviews, saved addresses,
-            wishlist items, and the artwork or text for custom prints.
-          </li>
-          <li>
-            <strong>Technical data:</strong> server logs with IP addresses and
-            request details, kept briefly to keep the shop secure and working.
-          </li>
-        </ul>
-      </LegalSection>
-
-      <LegalSection title="Why we use it">
-        <ul>
-          <li>
-            To take, ship and support your orders, and to send order emails
-            (performing our contract with you).
-          </li>
-          <li>To run your account, if you create one (contract).</li>
-          <li>
-            To keep bookkeeping records, which Finnish accounting law requires
-            (legal obligation).
-          </li>
-          <li>
-            To prevent fraud and keep the shop secure (our legitimate interest).
-          </li>
-        </ul>
-        <p>
-          We don&apos;t sell your data, and we don&apos;t send marketing emails
-          unless you&apos;ve asked for them.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="Who processes it for us">
-        <p>
-          We use these service providers, each bound by a data processing
-          agreement:
-        </p>
-        <ul>
-          <li>
-            <strong>Stripe</strong>: payments.
-          </li>
-          <li>
-            <strong>Amazon Web Services</strong> (Stockholm, Sweden): hosting.
-          </li>
-          <li>
-            <strong>Neon</strong> (Frankfurt, Germany): our database.
-          </li>
-          <li>
-            <strong>Resend</strong>: sending order and account emails.
-          </li>
-          <li>
-            <strong>Cloudinary</strong>: storing and serving images.
-          </li>
-          <li>
-            <strong>Google</strong>: &quot;Continue with Google&quot; sign-in,
-            if you use it.
-          </li>
-        </ul>
-        <p>
-          Some of these companies are based in the United States. Transfers
-          outside the EU rely on the EU–US Data Privacy Framework or the
-          European Commission&apos;s standard contractual clauses.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="How long we keep it">
-        <ul>
-          <li>Account data: until you ask us to delete your account.</li>
-          <li>
-            Order records: six years after the end of the financial year, as the
-            Finnish Accounting Act requires.
-          </li>
-          <li>Server logs: a few weeks.</li>
-        </ul>
-      </LegalSection>
-
-      <LegalSection title="Cookies">
-        <p>
-          We only use the cookies the shop needs to work: two sign-in cookies
-          that keep you logged in. Your recent searches are saved in your own
-          browser. We don&apos;t use advertising or analytics cookies, so
-          there&apos;s nothing to consent to.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="Your rights">
-        <p>
-          You can ask to see the data we hold about you, correct it, delete it,
-          get a copy in a portable format, or object to or restrict how we use
-          it. Email us using the address above. We reply within a month.
-        </p>
-        <p>
-          If you think we have mishandled your data, you can complain to the
-          Finnish Data Protection Ombudsman (
-          <a href="https://tietosuoja.fi/en" rel="noreferrer">
-            tietosuoja.fi
-          </a>
-          ) or the data protection authority in your own country.
-        </p>
-      </LegalSection>
-    </LegalPage>
+    <PolicyPage
+      current="/privacy"
+      title="Privacy policy"
+      intro="What personal information we collect, why we collect it and how we keep it safe."
+      sections={[
+        {
+          id: "controller",
+          title: "Who is responsible",
+          body: (
+            <>
+              <p>
+                The controller of your personal data under the EU General Data
+                Protection Regulation (GDPR) is:
+              </p>
+              <SellerDetails />
+            </>
+          ),
+        },
+        {
+          id: "collect",
+          title: "Information we collect",
+          body: (
+            <ul>
+              <li>
+                <strong>Personal information:</strong> your name, email address,
+                phone number and shipping and billing address.
+              </li>
+              <li>
+                <strong>Account information:</strong> if you create an account,
+                a securely hashed password (or your Google account ID if you
+                sign in with Google), your saved addresses, wishlist and
+                reviews.
+              </li>
+              <li>
+                <strong>Payment information:</strong> processed securely by our
+                payment provider, Stripe. We never see or store your card
+                details.
+              </li>
+              <li>
+                <strong>Custom orders:</strong> the artwork or text you send us
+                for printing.
+              </li>
+              <li>
+                <strong>Device information:</strong> your IP address, browser
+                type and the pages you request, recorded in our server logs.
+              </li>
+            </ul>
+          ),
+        },
+        {
+          id: "use",
+          title: "How we use your information",
+          body: (
+            <>
+              <p>We use your information to:</p>
+              <ul>
+                <li>Process, fulfil and deliver your orders</li>
+                <li>Communicate with you about your orders and account</li>
+                <li>Improve our website and your shopping experience</li>
+                <li>Prevent fraud and keep our customers and shop secure</li>
+                <li>
+                  Keep the bookkeeping records Finnish accounting law requires
+                </li>
+              </ul>
+              <p>
+                We only send promotional emails if you&apos;ve asked to receive
+                them, and you can opt out at any time.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: "sharing",
+          title: "Sharing your information",
+          body: (
+            <>
+              <p>
+                <strong>We will never sell your personal information.</strong>{" "}
+                We share it only with the service providers who help us run the
+                shop:
+              </p>
+              <ul>
+                <li>
+                  <strong>Shipping carriers</strong>, to deliver your orders
+                </li>
+                <li>
+                  <strong>Stripe</strong>, to handle payments securely
+                </li>
+                <li>
+                  <strong>Amazon Web Services</strong> and <strong>Neon</strong>
+                  , for hosting and our database in the EU
+                </li>
+                <li>
+                  <strong>Resend</strong>, to send order and account emails
+                </li>
+                <li>
+                  <strong>Cloudinary</strong>, to store and serve images
+                </li>
+                <li>
+                  <strong>Google</strong>, for &quot;Continue with Google&quot;
+                  sign-in, if you use it
+                </li>
+              </ul>
+              <p>
+                Where a provider is based outside the EU, transfers rely on the
+                EU–US Data Privacy Framework or the European Commission&apos;s
+                standard contractual clauses.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: "retention",
+          title: "How long we keep it",
+          body: (
+            <ul>
+              <li>Account data: until you ask us to delete your account.</li>
+              <li>
+                Order records: six years after the end of the financial year, as
+                the Finnish Accounting Act requires.
+              </li>
+              <li>Server logs: a few weeks.</li>
+            </ul>
+          ),
+        },
+        {
+          id: "security",
+          title: "Data security",
+          body: (
+            <p>
+              We use secure technologies, including encrypted connections and
+              hashed passwords, to protect your data. However, no system can
+              guarantee 100% security.
+            </p>
+          ),
+        },
+        {
+          id: "cookies",
+          title: "Cookies",
+          body: (
+            <p>
+              Our website uses only the cookies it needs to work, such as
+              keeping you signed in. We don&apos;t use advertising or tracking
+              cookies. You can disable cookies in your browser settings, but
+              some features, like signing in, may then stop working.
+            </p>
+          ),
+        },
+        {
+          id: "rights",
+          title: "Your rights",
+          body: (
+            <>
+              <p>You have the right to:</p>
+              <ul>
+                <li>Access the personal data we hold about you</li>
+                <li>Request corrections to it</li>
+                <li>Ask us to delete your personal data</li>
+                <li>Receive a copy of your data in a portable format</li>
+                <li>Object to or restrict how we use it</li>
+                <li>Opt out of marketing emails at any time</li>
+              </ul>
+              <p>
+                Email us to make a request and we&apos;ll reply within a month.
+                If you think we&apos;ve mishandled your data, you can complain
+                to the Finnish Data Protection Ombudsman (
+                <a href="https://tietosuoja.fi/en" rel="noreferrer">
+                  tietosuoja.fi
+                </a>
+                ) or the data protection authority in your country.
+              </p>
+            </>
+          ),
+        },
+      ]}
+    />
   );
 }

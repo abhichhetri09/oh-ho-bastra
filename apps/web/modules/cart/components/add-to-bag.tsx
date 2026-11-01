@@ -27,10 +27,13 @@ const ADDED_FOR = 1800;
 export function AddToBag({
   preview,
   stock,
+  inBag = 0,
 }: {
   /** The selected variant, shown in the bag before the API answers. */
   preview: LinePreview;
   stock: number;
+  /** How many of this variant the bag already holds. */
+  inBag?: number;
 }) {
   const pathname = usePathname();
   const user = useAuth((s) => s.user);
@@ -48,7 +51,15 @@ export function AddToBag({
   }, [addedAt]);
 
   const soldOut = stock === 0;
-  const label = soldOut ? "Sold out" : added ? "Added" : "Add to bag";
+  // Everything left is already in the bag: another can't be bought.
+  const allBagged = !soldOut && inBag >= stock;
+  const label = soldOut
+    ? "Sold out"
+    : allBagged
+      ? "All in your bag"
+      : added
+        ? "Added"
+        : "Add to bag";
 
   function onClick(event: React.MouseEvent<HTMLButtonElement>) {
     setAddedAt(Date.now());
@@ -76,7 +87,7 @@ export function AddToBag({
       size="lg"
       className="relative w-full min-w-0 shrink overflow-hidden"
       // Never blocked while saving: each click adds one more.
-      disabled={soldOut}
+      disabled={soldOut || allBagged}
       onClick={onClick}
       aria-live="polite"
     >

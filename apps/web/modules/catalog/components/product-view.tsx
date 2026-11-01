@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, m } from "motion/react";
 import {
   ArrowCounterClockwiseIcon,
@@ -14,18 +15,22 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { getProductBySlug } from "@/lib/api/client";
 import { EASE_OUT } from "@/lib/motion";
 import { shippingPerk } from "@/lib/shipping";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { AddToBag } from "@/modules/cart/components/add-to-bag";
 import { productPreview } from "@/modules/cart/lib/cart-math";
+import { useCart } from "@/modules/cart/queries";
 import { Stars } from "@/modules/reviews/components/stars";
 import { WishlistButton } from "@/modules/wishlist/components/wishlist-button";
 import { useShippingRule } from "@/providers/shipping-provider";
+import { catalogKeys } from "../keys";
 import { optionGroups, pickOption, selectionOf } from "../lib/variants";
 import { Price } from "./price";
 import { ProductGallery } from "./product-gallery";
+import { SizeChart } from "./size-chart";
 import { StickyBuyBar } from "./sticky-buy-bar";
 import { VariantSelector } from "./variant-selector";
 
@@ -43,7 +48,7 @@ const offerDate = new Intl.DateTimeFormat("en-US", {
  */
 export function ProductView({
   product,
-  variants,
+  variants: initialVariants,
   initialVariantId,
   categoryName,
   breadcrumbs,
@@ -55,6 +60,23 @@ export function ProductView({
   breadcrumbs?: React.ReactNode;
 }) {
   const [variantId, setVariantId] = useState(initialVariantId);
+  // The server's copy can be a minute old (and isn't refreshed when an order
+  // takes the last one), so stock is re-read live; the server's seeds it.
+  const live = useQuery({
+    queryKey: catalogKeys.product(product.slug),
+    queryFn: async ({ signal }) => {
+      const { data } = await getProductBySlug({
+        path: { productSlug: product.slug },
+        signal,
+        throwOnError: true,
+      });
+      return data.data.variants;
+    },
+    initialData: initialVariants,
+    initialDataUpdatedAt: 0,
+    staleTime: 0,
+  });
+  const variants = live.data;
   const variant = variants.find((v) => v.id === variantId);
   const shipping = useShippingRule();
 
@@ -68,7 +90,15 @@ export function ProductView({
   const selling = variant?.selling_price ?? product.selling_price;
   const offer = variant ? variant.offer_price : product.offer_price;
   const stock = variant?.stock ?? product.stock;
+  // Stock is only taken at checkout, so what's already in the bag counts
+  // against it here: with all of it bagged, there's nothing left to add.
+  const bag = useCart().data;
+  const inBag =
+    bag?.items.find((l) => l.variant_id === (variant?.id ?? product.variant_id))
+      ?.quantity ?? 0;
   const groups = optionGroups(variants);
+  // The size guide shows wherever there's a size to pick.
+  const hasSizes = groups.some((g) => g.name.toLowerCase() === "size");
   const preview = productPreview(product, variant);
   // The page's own buy button; the phone bar shows once it scrolls away.
   const buyRow = useRef<HTMLDivElement>(null);
@@ -141,25 +171,30 @@ export function ProductView({
           </div>
         </div>
 
-        {groups.length > 0 && (
-          <VariantSelector
-            groups={groups}
-            variants={variants}
-            selection={selection}
-            onChoose={choose}
-          />
+        {(groups.length > 0 || hasSizes) && (
+          <div className="space-y-4">
+            {groups.length > 0 && (
+              <VariantSelector
+                groups={groups}
+                variants={variants}
+                selection={selection}
+                onChoose={choose}
+              />
+            )}
+            {hasSizes && <SizeChart />}
+          </div>
         )}
 
         <div className="space-y-4">
           <div ref={buyRow} className="flex gap-2">
-            <AddToBag preview={preview} stock={stock} />
+            <AddToBag preview={preview} stock={stock} inBag={inBag} />
             <WishlistButton
               productId={product.id}
               name={product.name}
               variant="outline"
             />
           </div>
-          <StockLine stock={stock} />
+          <StockLine stock={stock} inBag={inBag} />
         </div>
 
         <ul className="grid gap-3 border-y border-border py-6 text-[0.8125rem] sm:grid-cols-2">
@@ -236,6 +271,7 @@ export function ProductView({
         anchor={buyRow}
         preview={preview}
         stock={stock}
+        inBag={inBag}
         price={price}
         selling={selling}
         offer={offer}
@@ -244,8 +280,11 @@ export function ProductView({
   );
 }
 
-function StockLine({ stock }: { stock: number }) {
-  const low = stock > 0 && stock <= 5;
+function StockLine({ stock, inBag }: { stock: number; inBag: number }) {
+  // What's left once the bag's are set aside (taken only at checkout).
+  const left = Math.max(stock - inBag, 0);
+  const low = left > 0 && left <= 5;
+  const allBagged = stock > 0 && left === 0;
   return (
     <p
       className="flex items-center gap-2.5 text-[0.8125rem]"
@@ -258,7 +297,7 @@ function StockLine({ stock }: { stock: number }) {
         <span
           className={cn(
             "relative inline-flex size-2 rounded-full",
-            stock === 0
+            left === 0
               ? "bg-muted-foreground"
               : low
                 ? "bg-clay"
@@ -268,9 +307,13 @@ function StockLine({ stock }: { stock: number }) {
       </span>
       {stock === 0
         ? "Sold out"
-        : low
-          ? `Only ${stock} left`
-          : "In stock, ready to ship"}
+        : allBagged
+          ? stock === 1
+            ? "The last one is in your bag"
+            : `All ${stock} left are in your bag`
+          : low
+            ? `Only ${left} left${inBag > 0 ? ` · ${inBag} in your bag` : ""}`
+            : "In stock, ready to ship"}
     </p>
   );
 }

@@ -49,6 +49,7 @@ export const BUSINESS_LIMITS = {
 export const SHIPPING_LIMITS = {
   flat: 100_000,
   free_from: 10_000_000,
+  free_items: 100,
 } as const;
 
 export const ShippingRuleSchema = z
@@ -61,7 +62,14 @@ export const ShippingRuleSchema = z
       .positive()
       .nullable()
       .describe(
-        "Orders from this subtotal, in cents and counted after any discount code, ship free; null: never free.",
+        "Orders from this subtotal, in cents and counted after any discount code, ship free; null: no amount rule.",
+      ),
+    free_items: z
+      .int()
+      .positive()
+      .nullable()
+      .describe(
+        "Orders of this many items or more ship free too (either rule is enough); null: no item rule.",
       ),
   })
   .meta({
@@ -194,12 +202,18 @@ export const ShippingBodySchema = z
         "Keep the free delivery threshold to €100,000 or less",
       )
       .nullish()
-      .describe("Cents, 1 to 10000000; left out or null: never free."),
+      .describe("Cents, 1 to 10000000; left out or null: no amount rule."),
+    free_items: z
+      .int()
+      .min(1, "Free delivery needs at least 1 item")
+      .max(SHIPPING_LIMITS.free_items, "Keep the item count to 100 or less")
+      .nullish()
+      .describe("Items, 1 to 100; left out or null: no item rule."),
   })
   .meta({
     id: "ShippingBody",
     description:
-      "Replaces what delivery costs: the flat price, and the subtotal (after any discount code) from which orders ship free.",
+      "Replaces what delivery costs: the flat price, and the subtotal (after any discount code) or item count from which orders ship free.",
   });
 export type ShippingBody = z.infer<typeof ShippingBodySchema>;
 

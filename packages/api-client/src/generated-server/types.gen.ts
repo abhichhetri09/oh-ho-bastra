@@ -1198,9 +1198,13 @@ export type ShippingRule = {
      */
     flat: number;
     /**
-     * Orders from this subtotal, in cents and counted after any discount code, ship free; null: never free.
+     * Orders from this subtotal, in cents and counted after any discount code, ship free; null: no amount rule.
      */
     free_from: number | null;
+    /**
+     * Orders of this many items or more ship free too (either rule is enough); null: no item rule.
+     */
+    free_items: number | null;
 };
 
 export type AdminStatsResponse = {
@@ -1790,7 +1794,7 @@ export type BusinessDetailsBody = {
 };
 
 /**
- * Replaces what delivery costs: the flat price, and the subtotal (after any discount code) from which orders ship free.
+ * Replaces what delivery costs: the flat price, and the subtotal (after any discount code) or item count from which orders ship free.
  */
 export type ShippingBody = {
     /**
@@ -1798,9 +1802,13 @@ export type ShippingBody = {
      */
     flat: number;
     /**
-     * Cents, 1 to 10000000; left out or null: never free.
+     * Cents, 1 to 10000000; left out or null: no amount rule.
      */
     free_from?: number | null;
+    /**
+     * Items, 1 to 100; left out or null: no item rule.
+     */
+    free_items?: number | null;
 };
 
 export type AdminCouponListResponse = {

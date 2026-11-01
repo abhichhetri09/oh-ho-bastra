@@ -253,7 +253,7 @@ export function priceCart(
 ) {
   const discount = applied?.result.discount ?? 0;
   const shipping =
-    cart.item_count === 0 ? 0 : shippingFor(cart.subtotal - discount, rule);
+    cart.item_count === 0 ? 0 : shippingFor(cart.subtotal - discount, cart.item_count, rule);
   return {
     items: cart.items,
     item_count: cart.item_count,

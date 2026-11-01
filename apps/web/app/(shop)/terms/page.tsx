@@ -1,147 +1,170 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { shippingSentence } from "@/lib/shipping";
 import { site } from "@/lib/site";
-import { storeShipping } from "@/lib/theme-server";
 import {
-  LegalPage,
-  LegalSection,
+  PolicyPage,
   SellerDetails,
 } from "@/modules/legal/components/legal-page";
 
 export const metadata: Metadata = {
-  title: "Terms of sale",
-  description: `The terms for buying from ${site.name}: prices, payment, delivery, returns and complaints.`,
+  title: "Terms & conditions",
+  description: `The terms for using ${site.name}'s website and buying from us.`,
   alternates: { canonical: "/terms" },
 };
 
-export default async function TermsPage() {
-  const shipping = await storeShipping();
+export default function TermsPage() {
   return (
-    <LegalPage eyebrow="Legal" title="Terms of sale">
-      <LegalSection title="1. Who you're buying from">
-        <p>
-          These terms apply to orders placed on ohhobastra.fi. The seller is:
-        </p>
-        <SellerDetails />
-        <p>
-          By placing an order you accept these terms. Please also read our{" "}
-          <Link href="/privacy">privacy policy</Link>.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="2. Products and prices">
-        <p>
-          Prices are in euros and include Finnish VAT. Shipping is shown in your
-          bag and at checkout before you pay. We do our best to show colours
-          accurately, but screens vary.
-        </p>
-        <p>
-          <strong>Custom products</strong> are printed with the artwork or text
-          you send us. You confirm you have the right to use that artwork. We
-          may decline a design that is unlawful, infringes someone else&apos;s
-          rights or is offensive; if we do, we refund you in full.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="3. Ordering and payment">
-        <p>
-          Payment is taken at checkout through Stripe, by card or the other
-          methods shown there. We never see or store your card details. Your
-          order is confirmed when payment succeeds, and we send a confirmation
-          email.
-        </p>
-        <p>
-          If a product turns out to be unavailable, or a price was clearly shown
-          in error, we will contact you and refund anything you paid.
-        </p>
-      </LegalSection>
-
-      <LegalSection id="shipping" title="4. Delivery">
-        <p>
-          {shippingSentence(shipping)} Orders are dispatched within two to four
-          working days.
-        </p>
-        <p>
-          We ship to the countries listed at checkout. Delivery times after
-          dispatch depend on the destination and the carrier, and we send a
-          tracking number when there is one.
-        </p>
-        <p>
-          <strong>Outside the EU</strong>, your country may charge customs
-          duties, import VAT or handling fees on delivery. These are not part of
-          our price and are paid by the recipient.
-        </p>
-      </LegalSection>
-
-      <LegalSection id="returns" title="5. Returns and right of withdrawal">
-        <p>
-          You can return <strong>plain (non-custom) products</strong> within{" "}
-          <strong>30 days</strong> of receiving them, for any reason. That is
-          longer than the 14 days EU law requires.
-        </p>
-        <ul>
-          <li>
-            Email us with your order number before sending anything, so we can
-            give you the return address.
-          </li>
-          <li>
-            Items must be unworn, unwashed and in their original condition. We
-            may deduct the value lost if an item has been used beyond what is
-            needed to try it on.
-          </li>
-          <li>
-            <strong>You pay the return postage</strong>, unless the item is
-            faulty or we sent the wrong one.
-          </li>
-          <li>
-            We refund the product price, and the original standard shipping cost
-            if you return the whole order, within 14 days of receiving the
-            return, to your original payment method.
-          </li>
-        </ul>
-        <p>
-          <strong>Custom products can&apos;t be returned</strong> or cancelled
-          once printing has started, because they are made to your specification
-          (Finnish Consumer Protection Act, chapter 6, section 16). This does
-          not affect your rights if a custom product is faulty.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="6. Faulty or wrong items">
-        <p>
-          If something arrives damaged, faulty or isn&apos;t what you ordered,
-          email us within a reasonable time of noticing, ideally with a photo.
-          We will repair, replace or refund it and cover the return postage.
-          This applies to custom products too, and your statutory rights under
-          consumer law are not affected.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="7. Complaints and disputes">
-        <p>
-          Please contact us first and we will try to sort things out. If we
-          can&apos;t agree, a consumer living in Finland can contact the
-          consumer advisory service (Kuluttajaneuvonta) and take the matter to
-          the Consumer Disputes Board (Kuluttajariitalautakunta,{" "}
-          <a href="https://www.kuluttajariita.fi" rel="noreferrer">
-            kuluttajariita.fi
-          </a>
-          ). Consumers in other EU countries can get help from their national
-          European Consumer Centre.
-        </p>
-        <p>
-          Finnish law applies to these terms, without taking away the protection
-          your own country&apos;s consumer law gives you.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="8. Changes">
-        <p>
-          We may update these terms. The version shown when you placed your
-          order applies to that order.
-        </p>
-      </LegalSection>
-    </LegalPage>
+    <PolicyPage
+      current="/terms"
+      title="Terms & conditions"
+      intro={`Welcome to ${site.name}. By accessing or using our website, you agree to the following terms.`}
+      sections={[
+        {
+          id: "seller",
+          title: "Who you're buying from",
+          body: (
+            <>
+              <p>
+                These terms apply to orders placed on our website. The seller
+                is:
+              </p>
+              <SellerDetails />
+              <p>
+                Please also read our{" "}
+                <Link href="/shipping">shipping policy</Link>,{" "}
+                <Link href="/returns">returns &amp; exchanges policy</Link> and{" "}
+                <Link href="/privacy">privacy policy</Link>, which form part of
+                these terms.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: "use",
+          title: "Use of our website",
+          body: (
+            <p>
+              You agree not to use our website for any illegal, harmful or
+              unauthorised purpose.
+            </p>
+          ),
+        },
+        {
+          id: "products",
+          title: "Product information",
+          body: (
+            <>
+              <p>
+                We strive to display product descriptions, sizing and colours as
+                accurately as possible. However, slight variations may occur
+                depending on your device&apos;s display.
+              </p>
+              <p>
+                <strong>Custom products</strong> are printed with the artwork or
+                text you send us, and you confirm you have the right to use it.
+                We may decline a design that is unlawful, infringes someone
+                else&apos;s rights or is offensive; if we do, we refund you in
+                full.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: "orders",
+          title: "Orders",
+          body: (
+            <>
+              <p>
+                Your order is confirmed when payment succeeds, and we send you a
+                confirmation email. We reserve the right to refuse or cancel an
+                order in cases of:
+              </p>
+              <ul>
+                <li>Suspected fraudulent activity</li>
+                <li>Incorrect pricing</li>
+                <li>Stock unavailability</li>
+              </ul>
+              <p>
+                If your order is cancelled, we&apos;ll notify you and issue a
+                full refund.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: "pricing",
+          title: "Pricing and payment",
+          body: (
+            <p>
+              All prices are in euros (€) and include Finnish VAT. Prices may
+              change without notice, but the price shown when you place your
+              order is the one you pay. Payment is taken securely at checkout
+              through Stripe.
+            </p>
+          ),
+        },
+        {
+          id: "ip",
+          title: "Intellectual property",
+          body: (
+            <p>
+              All images, logos and content on this website are the property of{" "}
+              {site.name} and may not be used without our permission.
+            </p>
+          ),
+        },
+        {
+          id: "liability",
+          title: "Limitation of liability",
+          body: (
+            <>
+              <p>To the extent permitted by law, we are not responsible for:</p>
+              <ul>
+                <li>Delays caused by shipping carriers</li>
+                <li>Losses resulting from misuse of our products</li>
+                <li>The content of third-party websites we link to</li>
+              </ul>
+              <p>
+                Nothing in these terms limits your statutory rights as a
+                consumer.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: "disputes",
+          title: "Complaints and disputes",
+          body: (
+            <>
+              <p>
+                Please contact us first and we&apos;ll do our best to sort
+                things out. If we can&apos;t agree, consumers in Finland can
+                contact the Consumer Disputes Board (
+                <a href="https://www.kuluttajariita.fi" rel="noreferrer">
+                  kuluttajariita.fi
+                </a>
+                ). Consumers in other EU countries can get help from their
+                national European Consumer Centre.
+              </p>
+              <p>
+                Finnish law applies to these terms, without removing the
+                protection your own country&apos;s consumer law gives you.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: "changes",
+          title: "Changes to these terms",
+          body: (
+            <p>
+              We may update these terms at any time. Changes take effect as soon
+              as they are posted; the version shown when you placed your order
+              applies to that order.
+            </p>
+          ),
+        },
+      ]}
+    />
   );
 }

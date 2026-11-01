@@ -21,9 +21,9 @@ export const metadata: Metadata = {
 
 const QUICK_LINKS = [
   { label: "Track an order", href: "/orders/track" },
-  { label: "Returns and exchanges", href: "/terms#returns" },
-  { label: "Shipping costs and times", href: "/terms#shipping" },
-  { label: "Terms of sale", href: "/terms" },
+  { label: "Returns and exchanges", href: "/returns" },
+  { label: "Shipping costs and times", href: "/shipping" },
+  { label: "Terms & conditions", href: "/terms" },
 ];
 
 export default async function ContactPage() {

@@ -6,6 +6,8 @@ export const catalogKeys = {
   all: ["catalog"] as const,
   listing: (category: string | null, filters: ListingFilters) =>
     [...catalogKeys.all, "listing", category, filters] as const,
+  /** A product page's live variants (stock), by slug. */
+  product: (slug: string) => [...catalogKeys.all, "product", slug] as const,
   /** Live search results; `q` is normalised and lowercased. */
   search: (q: string) => [...catalogKeys.all, "search", q] as const,
 };

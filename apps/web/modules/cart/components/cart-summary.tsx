@@ -1,3 +1,4 @@
+import { TruckIcon } from "@phosphor-icons/react";
 import type { Cart } from "@repo/types";
 import { formatDiscount, formatPrice } from "@/lib/money";
 import { freeShippingProgress } from "@/lib/shipping";
@@ -6,36 +7,75 @@ import { useShippingRule } from "@/providers/shipping-provider";
 
 /**
  * How far the bag is from free shipping under the store's rule, as a
- * sentence and a bar; nothing when shipping is never free (or always is).
- * Pass the subtotal after any discount code: that's what the threshold
- * counts.
+ * nudge and a bar: "Add 2 more items or €41.00 more for free shipping".
+ * Nothing when shipping is never free (or always is). Pass the subtotal
+ * after any discount code: that's what the threshold counts.
  */
-export function FreeShippingProgress({ subtotal }: { subtotal: number }) {
-  const progress = freeShippingProgress(subtotal, useShippingRule());
+export function FreeShippingProgress({
+  subtotal,
+  items,
+}: {
+  subtotal: number;
+  items: number;
+}) {
+  const progress = freeShippingProgress(subtotal, items, useShippingRule());
   if (!progress) return null;
-  const { remaining, share } = progress;
+  const { free, remaining, itemsLeft, share } = progress;
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground" aria-live="polite">
-        {remaining === 0 ? (
-          <span className="text-foreground">Your order ships free.</span>
+    <div
+      className={cn(
+        "space-y-3 rounded-panel border px-4 py-3.5 transition-colors",
+        free
+          ? "border-success/30 bg-success/5"
+          : "border-border bg-secondary/50",
+      )}
+    >
+      <p
+        className="flex items-start gap-3 text-[0.8125rem] leading-snug"
+        aria-live="polite"
+      >
+        <TruckIcon
+          weight={free ? "fill" : "regular"}
+          className={cn(
+            "mt-0.5 size-4 shrink-0",
+            free ? "text-success" : "text-foreground",
+          )}
+        />
+        {free ? (
+          <span>
+            <strong className="font-medium">
+              You&apos;ve unlocked free shipping.
+            </strong>{" "}
+            <span className="text-muted-foreground">Nice one.</span>
+          </span>
         ) : (
-          <>
-            Add{" "}
-            <span className="text-foreground tabular-nums">
-              {formatPrice(remaining)}
-            </span>{" "}
-            for free shipping
-          </>
+          <span>
+            {itemsLeft !== null && (
+              <>
+                Add{" "}
+                <strong className="font-medium tabular-nums">
+                  {itemsLeft} more {itemsLeft === 1 ? "item" : "items"}
+                </strong>
+              </>
+            )}
+            {itemsLeft !== null && remaining !== null && " or spend "}
+            {itemsLeft === null && remaining !== null && "Spend "}
+            {remaining !== null && (
+              <strong className="font-medium tabular-nums">
+                {formatPrice(remaining)} more
+              </strong>
+            )}{" "}
+            for <strong className="font-medium">free shipping</strong>.
+          </span>
         )}
       </p>
-      <div className="h-px bg-border" aria-hidden>
+      <div className="h-1 overflow-hidden rounded-full bg-border" aria-hidden>
         <div
           className={cn(
-            "h-px transition-[width] duration-700 ease-out-expo",
-            remaining === 0 ? "bg-success" : "bg-foreground",
+            "h-full rounded-full transition-[width] duration-700 ease-out-expo",
+            free ? "bg-success" : "bg-foreground",
           )}
-          style={{ width: `${share * 100}%` }}
+          style={{ width: `${Math.max(share, 0.04) * 100}%` }}
         />
       </div>
     </div>

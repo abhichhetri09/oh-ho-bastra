@@ -832,7 +832,7 @@ describe("GET /settings", () => {
         business_email: "",
         business_phone: "",
         // the rule the code hard-coded before it was editable
-        shipping: { flat: 490, free_from: 6000 },
+        shipping: { flat: 490, free_from: 6000, free_items: null },
         updated_at: expect.any(String),
       },
     });
@@ -843,7 +843,11 @@ describe("GET /settings", () => {
       "UPDATE store_settings SET shipping_flat = 0, free_shipping_from = NULL",
     );
     const res = await http().get("/api/v1/settings");
-    expect(res.body.data.shipping).toEqual({ flat: 0, free_from: null });
+    expect(res.body.data.shipping).toEqual({
+      flat: 0,
+      free_from: null,
+      free_items: null,
+    });
     expect(res.body.data).not.toHaveProperty("shipping_flat");
     expect(res.body.data).not.toHaveProperty("free_shipping_from");
   });

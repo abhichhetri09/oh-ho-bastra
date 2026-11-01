@@ -13,7 +13,13 @@ export const site = {
   name: "Oh Ho Bastra",
   // When the terms and privacy policy last changed (shown on both pages).
   // The seller's details live in Admin → Settings (storeBusiness).
-  legalUpdated: "2026-10-25",
+  legalUpdated: "2026-11-01",
+  // The footer's social links; one left "" is not shown.
+  social: {
+    instagram: "https://www.instagram.com/ohhobastra/",
+    facebook: "https://www.facebook.com/ohhobastra",
+    tiktok: "https://www.tiktok.com/@ohhobastra",
+  },
   tagline: "Tees, and the ones we print for you",
   description:
     "Heavyweight cotton t-shirts in a few good colours, plus custom prints and text when you want something that isn't on the rack.",

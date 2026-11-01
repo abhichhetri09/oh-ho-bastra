@@ -179,9 +179,10 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
 
       // The store's rule as of now, which the order keeps (orders.shipping)
       // whatever the admin sets later. Free shipping counts what is paid
-      // for the items, after the code.
+      // for the items, after the code, or how many there are.
       const rule = await loadShippingRule(tx);
-      const shipping = shippingFor(subtotal - discount, rule);
+      const items = lines.reduce((sum, line) => sum + line.quantity, 0);
+      const shipping = shippingFor(subtotal - discount, items, rule);
       const order = await createOrder(tx, {
         user_id: userId,
         subtotal,

@@ -25,13 +25,20 @@ import { shippingExample, shippingPerk } from "@/lib/shipping";
 import { cn } from "@/lib/utils";
 import { revalidateStoreSettings } from "../actions";
 
-type Values = { flat: string; freeFrom: string; neverFree: boolean };
+type Values = {
+  flat: string;
+  freeFrom: string;
+  neverFree: boolean;
+  /** Whole items, or "" for no item rule. */
+  freeItems: string;
+};
 
 /** The form's euro strings for a rule (no threshold when it's never free). */
 const toValues = (rule: ShippingRule): Values => ({
   flat: fromCents(rule.flat),
   freeFrom: rule.free_from === null ? "" : fromCents(rule.free_from),
   neverFree: rule.free_from === null,
+  freeItems: rule.free_items === null ? "" : String(rule.free_items),
 });
 
 /**
@@ -50,7 +57,12 @@ function toBody(values: Values): {
     errors.free_from = "Enter an amount, like 60, or switch on Never free";
   if (flat === null || (!values.neverFree && freeFrom === null))
     return { body: null, errors };
-  const parsed = ShippingBodySchema.safeParse({ flat, free_from: freeFrom });
+  const freeItems = values.freeItems === "" ? null : Number(values.freeItems);
+  const parsed = ShippingBodySchema.safeParse({
+    flat,
+    free_from: freeFrom,
+    free_items: freeItems,
+  });
   if (parsed.success) return { body: parsed.data, errors };
   for (const issue of parsed.error.issues) {
     const key = String(issue.path[0]);
@@ -98,10 +110,15 @@ export function DeliverySettings({ initial }: { initial: ShippingRule }) {
   const dirty =
     body === null ||
     body.flat !== saved.flat ||
-    (body.free_from ?? null) !== saved.free_from;
+    (body.free_from ?? null) !== saved.free_from ||
+    (body.free_items ?? null) !== saved.free_items;
   // The example follows the form while it reads as a rule.
   const shown: ShippingRule = body
-    ? { flat: body.flat, free_from: body.free_from ?? null }
+    ? {
+        flat: body.flat,
+        free_from: body.free_from ?? null,
+        free_items: body.free_items ?? null,
+      }
     : saved;
 
   const change = (next: Partial<Values>, field: string) => {
@@ -183,6 +200,41 @@ export function DeliverySettings({ initial }: { initial: ShippingRule }) {
                 />
                 Never free
               </label>
+            </Field>
+
+            <Field data-invalid={Boolean(errors.free_items)}>
+              <FieldLabel
+                htmlFor="delivery-free-items"
+                className="text-[0.8125rem]"
+              >
+                Or free delivery from (items)
+              </FieldLabel>
+              <Input
+                id="delivery-free-items"
+                inputMode="numeric"
+                value={values.freeItems}
+                placeholder="e.g. 3, or empty for no item rule"
+                onChange={(e) =>
+                  change(
+                    {
+                      freeItems: e.target.value.replace(/\D/g, "").slice(0, 3),
+                    },
+                    "free_items",
+                  )
+                }
+                disabled={busy}
+                aria-invalid={Boolean(errors.free_items)}
+                className="h-10"
+              />
+              {errors.free_items ? (
+                <FieldError className="animate-rise">
+                  {errors.free_items}
+                </FieldError>
+              ) : (
+                <FieldDescription className="text-xs">
+                  Orders with this many items ship free too, whatever they cost.
+                </FieldDescription>
+              )}
             </Field>
           </div>
           <p

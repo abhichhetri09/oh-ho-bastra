@@ -254,6 +254,7 @@ export interface StoreSetting {
   corners: string | null;
   shipping_flat: number;
   free_shipping_from: number | null;
+  free_shipping_items: number | null;
 }
 
 export interface EmailOutbox {

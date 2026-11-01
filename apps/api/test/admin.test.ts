@@ -1032,7 +1032,7 @@ describe("PUT /admin/settings/announcements", () => {
         business_address: "",
         business_email: "",
         business_phone: "",
-        shipping: { flat: 490, free_from: 6000 },
+        shipping: { flat: 490, free_from: 6000, free_items: null },
         updated_at: expect.any(String),
       },
     });

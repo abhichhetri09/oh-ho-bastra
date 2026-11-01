@@ -555,7 +555,7 @@ function CheckoutForm({
         <p className="text-center text-xs text-muted-foreground">
           By paying you agree to our{" "}
           <Link href="/terms" className="link-underline text-foreground">
-            terms of sale
+            terms &amp; conditions
           </Link>{" "}
           and{" "}
           <Link href="/privacy" className="link-underline text-foreground">

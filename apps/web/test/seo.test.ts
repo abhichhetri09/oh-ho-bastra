@@ -176,8 +176,12 @@ describe("productLd", () => {
       ).offers!.shippingDetails.shippingRate.value;
     expect(rate(5_999)).toBe(4.9);
     expect(rate(6_000)).toBe(0);
-    expect(rate(6_000, { flat: 590, free_from: 8_000 })).toBe(5.9);
-    expect(rate(100_000, { flat: 490, free_from: null })).toBe(4.9);
+    expect(rate(6_000, { flat: 590, free_from: 8_000, free_items: null })).toBe(
+      5.9,
+    );
+    expect(
+      rate(100_000, { flat: 490, free_from: null, free_items: null }),
+    ).toBe(4.9);
   });
 
   test("an offer with an end date sets priceValidUntil", () => {

@@ -14,20 +14,30 @@ export const CURRENCY = "eur";
 export type { ShippingRule };
 
 /**
- * What an order with this subtotal pays for shipping under rule. Pass the
- * subtotal after any discount code: free shipping counts what the items
- * cost. A rule without a threshold never ships free.
+ * What an order with this subtotal and item count pays for shipping under
+ * rule. Pass the subtotal after any discount code: free shipping counts
+ * what the items cost. Reaching either threshold ships free; a rule
+ * without one never does.
  */
-export const shippingFor = (subtotal: number, rule: ShippingRule) =>
-  rule.free_from !== null && subtotal >= rule.free_from ? 0 : rule.flat;
+export const shippingFor = (
+  subtotal: number,
+  items: number,
+  rule: ShippingRule,
+) =>
+  (rule.free_from !== null && subtotal >= rule.free_from) ||
+  (rule.free_items !== null && items >= rule.free_items)
+    ? 0
+    : rule.flat;
 
 /** The rule as store_settings holds it. */
 export const shippingRuleOf = (row: {
   shipping_flat: number;
   free_shipping_from: number | null;
+  free_shipping_items: number | null;
 }): ShippingRule => ({
   flat: row.shipping_flat,
   free_from: row.free_shipping_from,
+  free_items: row.free_shipping_items,
 });
 
 /**

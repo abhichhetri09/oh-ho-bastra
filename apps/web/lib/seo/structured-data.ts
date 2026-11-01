@@ -72,7 +72,7 @@ function shippingDetails(price: number, shipping: ShippingRule) {
     "@type": "OfferShippingDetails",
     shippingRate: {
       "@type": "MonetaryAmount",
-      value: shippingFor(price, shipping) / 100,
+      value: shippingFor(price, 1, shipping) / 100,
       currency: CURRENCY,
     },
     shippingDestination: SHIPPING_COUNTRIES.map((country) => ({

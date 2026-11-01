@@ -20,6 +20,7 @@ export function StickyBuyBar({
   anchor,
   preview,
   stock,
+  inBag,
   price,
   selling,
   offer,
@@ -27,6 +28,7 @@ export function StickyBuyBar({
   anchor: React.RefObject<HTMLElement | null>;
   preview: LinePreview;
   stock: number;
+  inBag: number;
   price: number;
   selling: number;
   offer: number | null;
@@ -84,7 +86,7 @@ export function StickyBuyBar({
           />
         </div>
         <div className="w-40 shrink-0">
-          <AddToBag preview={preview} stock={stock} />
+          <AddToBag preview={preview} stock={stock} inBag={inBag} />
         </div>
       </div>
     </div>

@@ -44,7 +44,8 @@ export function withTotals(
   const repriced = repriceCoupon(coupon, subtotal);
   const discount = repriced?.discount ?? 0;
   // Nothing to check out ships for nothing.
-  const shipping = itemCount === 0 ? 0 : shippingFor(subtotal - discount, rule);
+  const shipping =
+    itemCount === 0 ? 0 : shippingFor(subtotal - discount, itemCount, rule);
   return {
     items,
     item_count: itemCount,

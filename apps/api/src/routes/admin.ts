@@ -632,6 +632,7 @@ export function adminRoutes(api: Group, deps: Deps) {
           await updateShippingRule(db, {
             shipping_flat: body.flat,
             free_shipping_from: body.free_from ?? null,
+            free_shipping_items: body.free_items ?? null,
           }),
         ),
       ),

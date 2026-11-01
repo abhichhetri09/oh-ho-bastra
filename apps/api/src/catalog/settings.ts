@@ -8,12 +8,17 @@ import { shippingRuleOf } from "../checkout/shipping";
 export function storeSettings({
   shipping_flat,
   free_shipping_from,
+  free_shipping_items,
   updated_at,
   ...row
 }: GetStoreSettingsRow) {
   return {
     ...row,
-    shipping: shippingRuleOf({ shipping_flat, free_shipping_from }),
+    shipping: shippingRuleOf({
+      shipping_flat,
+      free_shipping_from,
+      free_shipping_items,
+    }),
     updated_at,
   };
 }

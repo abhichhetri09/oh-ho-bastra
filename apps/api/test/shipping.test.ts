@@ -46,22 +46,35 @@ async function fillBag(price: number, quantity = 1) {
 
 describe("shippingFor", () => {
   it("charges the flat price below the threshold, nothing from it", () => {
-    const rule = { flat: 490, free_from: 6000 };
-    expect(shippingFor(0, rule)).toBe(490);
-    expect(shippingFor(5999, rule)).toBe(490);
-    expect(shippingFor(6000, rule)).toBe(0);
+    const rule = { flat: 490, free_from: 6000, free_items: null };
+    expect(shippingFor(0, 1, rule)).toBe(490);
+    expect(shippingFor(5999, 1, rule)).toBe(490);
+    expect(shippingFor(6000, 1, rule)).toBe(0);
+  });
+
+  it("ships free from the item count too, whatever the subtotal", () => {
+    const rule = { flat: 490, free_from: 7000, free_items: 3 };
+    expect(shippingFor(2900, 2, rule)).toBe(490);
+    expect(shippingFor(2900, 3, rule)).toBe(0);
+    expect(shippingFor(7000, 1, rule)).toBe(0);
+    expect(shippingFor(100, 3, { ...rule, free_from: null })).toBe(0);
   });
 
   it("never ships free without a threshold, and 0 is always free", () => {
-    expect(shippingFor(10_000_000, { flat: 700, free_from: null })).toBe(700);
-    expect(shippingFor(1, { flat: 0, free_from: null })).toBe(0);
+    const never = { flat: 700, free_from: null, free_items: null };
+    expect(shippingFor(10_000_000, 99, never)).toBe(700);
+    expect(shippingFor(1, 1, { ...never, flat: 0 })).toBe(0);
   });
 });
 
 describe("PUT /admin/settings/shipping", () => {
   it("starts at €4.90, free from €60", async () => {
     const res = await http().get("/api/v1/settings");
-    expect(res.body.data.shipping).toEqual({ flat: 490, free_from: 6000 });
+    expect(res.body.data.shipping).toEqual({
+      flat: 490,
+      free_from: 6000,
+      free_items: null,
+    });
   });
 
   it("saves the rule, and the storefront sees it", async () => {
@@ -70,23 +83,32 @@ describe("PUT /admin/settings/shipping", () => {
     expect(res.body).toMatchObject({
       success: true,
       message: "Delivery price updated",
-      data: { shipping: { flat: 590, free_from: 8000 } },
+      data: { shipping: { flat: 590, free_from: 8000, free_items: null } },
     });
     // the rest of the settings come along, as the other saves send them
     expect(res.body.data).toMatchObject({ theme: "editorial" });
     expect(res.body.data).not.toHaveProperty("shipping_flat");
     const settings = await http().get("/api/v1/settings");
-    expect(settings.body.data.shipping).toEqual({ flat: 590, free_from: 8000 });
+    expect(settings.body.data.shipping).toEqual({
+      flat: 590,
+      free_from: 8000,
+      free_items: null,
+    });
   });
 
   it("never ships free with free_from null or left out", async () => {
     expect(
       (await put({ flat: 490, free_from: null })).body.data.shipping,
-    ).toEqual({ flat: 490, free_from: null });
+    ).toEqual({
+      flat: 490,
+      free_from: null,
+      free_items: null,
+    });
     await put({ flat: 490, free_from: 6000 });
     expect((await put({ flat: 390 })).body.data.shipping).toEqual({
       flat: 390,
       free_from: null,
+      free_items: null,
     });
   });
 
@@ -94,7 +116,11 @@ describe("PUT /admin/settings/shipping", () => {
     expect((await put({ flat: 0, free_from: 1 })).status).toBe(200);
     expect(
       (await put({ flat: 100_000, free_from: 10_000_000 })).body.data.shipping,
-    ).toEqual({ flat: 100_000, free_from: 10_000_000 });
+    ).toEqual({
+      flat: 100_000,
+      free_from: 10_000_000,
+      free_items: null,
+    });
   });
 
   const cases: [string, unknown, string, string][] = [
@@ -121,6 +147,12 @@ describe("PUT /admin/settings/shipping", () => {
       "OUT_OF_RANGE",
     ],
     [
+      "an item count of 0",
+      { flat: 490, free_items: 0 },
+      "free_items",
+      "OUT_OF_RANGE",
+    ],
+    [
       "a threshold as text",
       { flat: 490, free_from: "60" },
       "free_from",
@@ -134,7 +166,11 @@ describe("PUT /admin/settings/shipping", () => {
     expect(res.body.errors[0]).toMatchObject({ field, code });
     // nothing changed
     const settings = await http().get("/api/v1/settings");
-    expect(settings.body.data.shipping).toEqual({ flat: 490, free_from: 6000 });
+    expect(settings.body.data.shipping).toEqual({
+      flat: 490,
+      free_from: 6000,
+      free_items: null,
+    });
   });
 
   it("says what's wrong in words the admin can act on", async () => {
@@ -153,7 +189,11 @@ describe("PUT /admin/settings/shipping", () => {
       (await http().put("/api/v1/admin/settings/shipping").send(body)).status,
     ).toBe(401);
     const settings = await http().get("/api/v1/settings");
-    expect(settings.body.data.shipping).toEqual({ flat: 490, free_from: 6000 });
+    expect(settings.body.data.shipping).toEqual({
+      flat: 490,
+      free_from: 6000,
+      free_items: null,
+    });
   });
 });
 
@@ -204,6 +244,18 @@ describe("the cart prices with the saved rule", () => {
     });
   });
 
+  it("ships free from the saved item count", async () => {
+    await put({ flat: 700, free_from: 100_000, free_items: 3 });
+    await fillBag(1000, 2);
+    expect((await getCart()).body.data.shipping).toBe(700);
+    await fillBag(1000);
+    expect((await getCart()).body.data).toMatchObject({
+      item_count: 3,
+      shipping: 0,
+      total: 3000,
+    });
+  });
+
   it("ships an empty bag for nothing whatever the price", async () => {
     await put({ flat: 990, free_from: null });
     expect((await getCart()).body.data).toMatchObject({
@@ -229,6 +281,13 @@ describe("checkout charges the saved rule", () => {
     // Stripe charges exactly the order's total
     const charged = await payments.getSession("cs_test_1");
     expect(charged.amountTotal).toBe(6650);
+  });
+
+  it("ships free from the saved item count", async () => {
+    await put({ flat: 650, free_from: null, free_items: 3 });
+    await fillBag(1000, 3);
+    expect((await checkout()).status).toBe(201);
+    expect(await orderRow(1001)).toMatchObject({ shipping: 0, total: 3000 });
   });
 
   it("ships free from the saved threshold, counted after the code", async () => {

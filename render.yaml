@@ -1,0 +1,98 @@
+# Render Blueprint: Postgres, the API and the storefront.
+#
+# No custom domain needed: the browser only talks to the storefront
+# (ohhobastra-web.onrender.com), which forwards /api/v1/* to the API over
+# Render's private network. So the auth cookies stay on one site.
+#
+# After the first deploy, set FRONTEND_URL on both services to the
+# storefront's actual URL, then redeploy both.
+
+databases:
+  - name: ohhobastra-db
+    plan: basic-256mb
+    region: frankfurt
+    postgresMajorVersion: "17"
+
+services:
+  - type: web
+    name: ohhobastra-api
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm i -g bun@1.3.9 && bun install --frozen-lockfile && cd apps/api && bun run build
+    # Migrations run before every start; they're idempotent and locked.
+    startCommand: cd apps/api && node dist/migrate.js up && NODE_ENV=production node dist/index.js
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ohhobastra-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      # One hop: Render's proxy (the storefront's rewrite keeps X-Forwarded-For).
+      - key: TRUSTED_PROXIES
+        value: "1"
+      - key: FRONTEND_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_TLS
+        value: starttls
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # https://ohhobastra-web.onrender.com/api/v1/auth/google/callback
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_CUSTOMER_PASSWORD
+        generateValue: true
+
+  - type: web
+    name: ohhobastra-web
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm i -g bun@1.3.9 && bun install --frozen-lockfile && bunx turbo run build --filter=@repo/web
+    startCommand: cd apps/web && npx next start -p $PORT
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # The API's private address (host:port); /api/v1/* is proxied there.
+      # Read at build time, so redeploy the storefront if the API moves.
+      - key: INTERNAL_API_URL
+        fromService:
+          name: ohhobastra-api
+          type: web
+          property: hostport
+      - key: FRONTEND_URL
+        sync: false
+      - key: STORE_THEME
+        value: editorial
