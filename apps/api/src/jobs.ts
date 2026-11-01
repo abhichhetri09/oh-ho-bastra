@@ -8,10 +8,12 @@ import type { Queryable } from "./db/queryable";
 import type { Deps } from "./deps";
 import type { EmailWorker } from "./emails/worker";
 import { log } from "./log";
+import { settleCredit } from "./referrals/credit";
 
 const SESSION_CLEANUP_INTERVAL = 60 * 60_000;
 const ORDER_EXPIRY_INTERVAL = 5 * 60_000;
 const EMAIL_INTERVAL = 10_000;
+const CREDIT_INTERVAL = 60 * 60_000;
 
 /**
  * Runs `task` now and then every `interval` ms, never two at once. Resolves
@@ -55,7 +57,8 @@ export async function cleanUp(db: Queryable, now = new Date()) {
 
 /**
  * The loops inside the API process: expired sessions, stale reset links
- * and unused guests (hourly), checkouts whose reservation ran out without word from Stripe
+ * and unused guests (hourly), referral payouts and lapsed store credit
+ * (hourly), checkouts whose reservation ran out without word from Stripe
  * (every 5 minutes), and the order email outbox (every 10 seconds).
  * Resolves the returned function once they've stopped.
  */
@@ -69,6 +72,13 @@ export function startBackgroundJobs(
         await cleanUp(deps.db);
       } catch (err) {
         log.error("session cleanup failed", err);
+      }
+    }),
+    every(CREDIT_INTERVAL, async () => {
+      try {
+        await settleCredit(deps.db);
+      } catch (err) {
+        log.error("store credit job failed", err);
       }
     }),
   ];

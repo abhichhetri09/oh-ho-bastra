@@ -523,4 +523,24 @@ export function registerAdminPaths() {
       400: "A price or threshold out of range, or not whole cents (VALIDATION_FAILED)",
     },
   });
+
+  operation({
+    method: "put",
+    path: "/api/v1/admin/settings/referrals",
+    operationId: "adminSetReferrals",
+    tag: "Admin",
+    summary: "Change the referral programme",
+    description:
+      "Replaces the referral programme: whether it runs, a referred friend's discount (cents or a percent, from an optional minimum), the referrer's credit and how many days after the friend's order it's paid, a monthly cap, and how much of an order credit can pay and when it lapses. Referrals already made keep the rule they were made under.",
+    auth: "admin",
+    request: body(schemas.ReferralBodySchema),
+    success: {
+      status: 200,
+      description: "Referral programme updated",
+      schema: schemas.StoreSettingsResponseSchema,
+    },
+    errors: {
+      400: "An amount, percent or limit out of range, or not whole cents (VALIDATION_FAILED)",
+    },
+  });
 }

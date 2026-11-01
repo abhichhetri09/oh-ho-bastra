@@ -11,3 +11,8 @@ export const orderKeys = {
 export const addressKeys = {
   mine: (userId: string) => ["addresses", userId] as const,
 };
+
+export const creditKeys = {
+  mine: (userId: string) => ["credit", userId] as const,
+  referrals: (userId: string) => ["referrals", userId] as const,
+};

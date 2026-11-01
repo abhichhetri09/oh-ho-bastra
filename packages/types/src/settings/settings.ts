@@ -79,6 +79,84 @@ export const ShippingRuleSchema = z
   });
 export type ShippingRule = z.infer<typeof ShippingRuleSchema>;
 
+/**
+ * The most the admin can set the referral programme to: amounts in cents
+ * (€1,000), a friend's percent off, and days, referrals a month and months.
+ */
+export const REFERRAL_LIMITS = {
+  amount: 100_000,
+  percent: 50,
+  pay_after_days: 365,
+  monthly_cap: 100,
+  expiry_months: 60,
+} as const;
+
+/** How a referred friend's discount counts: cents off, or a percent. */
+export const ReferralFriendKindSchema = z
+  .enum(["amount", "percent"])
+  .meta({ id: "ReferralFriendKind" });
+export type ReferralFriendKind = z.infer<typeof ReferralFriendKindSchema>;
+
+export const ReferralRuleSchema = z
+  .object({
+    enabled: z
+      .boolean()
+      .describe("Whether the programme runs; off keeps its rule."),
+    friend_kind: ReferralFriendKindSchema.describe(
+      "Whether friend_value is cents off or a percent off.",
+    ),
+    friend_value: z
+      .int()
+      .positive()
+      .describe(
+        "What a referred friend's first order gets off: cents, or a percent (1 to 50).",
+      ),
+    friend_min: z
+      .int()
+      .positive()
+      .nullable()
+      .describe(
+        "The subtotal, in cents, the friend's order needs for the discount; null: no minimum.",
+      ),
+    reward: Cents.describe(
+      "The store credit, in cents, the referrer earns for each friend.",
+    ),
+    pay_after_days: z
+      .int()
+      .min(0)
+      .describe(
+        "Days after the friend's order before the referrer's credit is paid (returns settle first).",
+      ),
+    custom_prints: z
+      .boolean()
+      .describe("Whether the friend's discount also applies to custom prints."),
+    monthly_cap: z
+      .int()
+      .positive()
+      .nullable()
+      .describe(
+        "The most referrals a referrer is rewarded for a month; null: no limit.",
+      ),
+    credit_max_percent: z
+      .int()
+      .min(1)
+      .max(100)
+      .describe(
+        "The most of an order's total store credit can pay, in percent.",
+      ),
+    credit_expiry_months: z
+      .int()
+      .positive()
+      .nullable()
+      .describe("Months before unused credit lapses; null: it never does."),
+  })
+  .meta({
+    id: "ReferralRule",
+    description:
+      "The referral programme. Each referral keeps the rule it was made under.",
+  });
+export type ReferralRule = z.infer<typeof ReferralRuleSchema>;
+
 export const StoreSettingsSchema = z
   .object({
     theme: StoreThemeSchema,
@@ -110,6 +188,7 @@ export const StoreSettingsSchema = z
       .describe("Where customers can reach the seller."),
     business_phone: z.string().describe("The seller's phone number; optional."),
     shipping: ShippingRuleSchema,
+    referrals: ReferralRuleSchema,
     logo_url: z
       .url()
       .nullable()
@@ -236,6 +315,76 @@ export const ShippingBodySchema = z
       "Replaces what delivery costs: the flat price, and the subtotal (after any discount code) or item count from which orders ship free.",
   });
 export type ShippingBody = z.infer<typeof ShippingBodySchema>;
+
+export const ReferralBodySchema = z
+  .object({
+    enabled: z
+      .boolean()
+      .describe("Run the programme, or pause it and keep its rule."),
+    friend_kind: ReferralFriendKindSchema,
+    friend_value: z
+      .int()
+      .min(1, "The friend's discount needs to be above 0")
+      .max(
+        REFERRAL_LIMITS.amount,
+        "Keep the friend's discount to €1,000 or less",
+      )
+      .describe("Cents, 1 to 100000, or a percent, 1 to 50."),
+    friend_min: z
+      .int()
+      .min(1, "The minimum order needs to be above €0")
+      .max(REFERRAL_LIMITS.amount, "Keep the minimum order to €1,000 or less")
+      .nullish()
+      .describe("Cents, 1 to 100000; left out or null: no minimum."),
+    reward: z
+      .int()
+      .min(1, "The referrer's credit needs to be above €0")
+      .max(
+        REFERRAL_LIMITS.amount,
+        "Keep the referrer's credit to €1,000 or less",
+      )
+      .describe("Cents, 1 to 100000."),
+    pay_after_days: z
+      .int()
+      .min(0, "The wait can't be negative")
+      .max(REFERRAL_LIMITS.pay_after_days, "Keep the wait to 365 days or less")
+      .describe("Days, 0 to 365; 0 pays as soon as the order is paid."),
+    custom_prints: z.boolean(),
+    monthly_cap: z
+      .int()
+      .min(1, "The monthly cap needs at least 1 referral")
+      .max(REFERRAL_LIMITS.monthly_cap, "Keep the monthly cap to 100 or less")
+      .nullish()
+      .describe("Referrals, 1 to 100; left out or null: no limit."),
+    credit_max_percent: z
+      .int()
+      .min(1, "Credit needs to pay at least 1% of an order")
+      .max(100, "Credit can pay at most 100% of an order")
+      .describe("Percent, 1 to 100."),
+    credit_expiry_months: z
+      .int()
+      .min(1, "Credit needs at least 1 month before it lapses")
+      .max(
+        REFERRAL_LIMITS.expiry_months,
+        "Keep the expiry to 60 months or less",
+      )
+      .nullish()
+      .describe("Months, 1 to 60; left out or null: credit never lapses."),
+  })
+  .refine(
+    (b) =>
+      b.friend_kind !== "percent" || b.friend_value <= REFERRAL_LIMITS.percent,
+    {
+      message: "Keep the friend's discount to 50% or less",
+      path: ["friend_value"],
+    },
+  )
+  .meta({
+    id: "ReferralBody",
+    description:
+      "Replaces the referral programme: whether it runs, the friend's discount, the referrer's credit and when it's paid, and the limits on credit. Referrals already made keep their rule.",
+  });
+export type ReferralBody = z.infer<typeof ReferralBodySchema>;
 
 export const StoreSettingsResponseSchema = successResponse(
   StoreSettingsSchema,

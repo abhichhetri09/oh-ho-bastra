@@ -27,6 +27,7 @@ async function placeOrder(): Promise<Order> {
     email: "ada@example.com",
     shipping_address: JSON.stringify({ full_name: "Ada" }),
     expires_at: new Date(Date.now() + 60_000),
+    credit: 0,
   });
   return order!;
 }

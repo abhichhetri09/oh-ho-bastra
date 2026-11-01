@@ -93,6 +93,7 @@ export interface Cart {
   created_at: Date;
   updated_at: Date;
   coupon_code: string | null;
+  referral_code: string | null;
 }
 
 export interface CartItem {
@@ -149,6 +150,7 @@ export interface Order {
   tracking_number: string | null;
   discount: number;
   coupon_code: string | null;
+  credit: number;
 }
 
 export interface OrderItem {
@@ -256,6 +258,16 @@ export interface StoreSetting {
   free_shipping_from: number | null;
   free_shipping_items: number | null;
   logo_url: string | null;
+  referrals_enabled: boolean;
+  referral_friend_kind: string;
+  referral_friend_value: number;
+  referral_friend_min: number | null;
+  referral_reward: number;
+  referral_pay_after_days: number;
+  referral_custom_prints: boolean;
+  referral_monthly_cap: number | null;
+  credit_max_percent: number;
+  credit_expiry_months: number | null;
 }
 
 export interface EmailOutbox {
@@ -300,5 +312,56 @@ export interface CouponRedemption {
   coupon_id: string;
   order_id: string;
   email: string;
+  created_at: Date;
+}
+
+export interface ReferralCode {
+  user_id: string;
+  code: string;
+  created_at: Date;
+}
+
+export interface Referral {
+  id: string;
+  referrer_id: string;
+  order_id: string;
+  friend_email: string;
+  status: string;
+  friend_kind: string;
+  friend_value: number;
+  friend_min: number | null;
+  reward: number;
+  pay_after_days: number;
+  custom_prints: boolean;
+  discount: number;
+  settled_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CreditLedger {
+  id: string;
+  user_id: string;
+  amount: number;
+  kind: string;
+  order_id: string | null;
+  referral_id: string | null;
+  lot_id: string | null;
+  expires_at: Date | null;
+  note: string;
+  created_by: string | null;
+  created_at: Date;
+}
+
+export interface CreditRedemption {
+  id: string;
+  user_id: string;
+  amount: number;
+  bill: number;
+  code_hash: string;
+  attempts: number;
+  expires_at: Date;
+  confirmed_at: Date | null;
+  created_by: string | null;
   created_at: Date;
 }

@@ -7,6 +7,7 @@ import {
   OrderTrackingBodySchema,
   RefundOrderBodySchema,
   ShipOrderBodySchema,
+  ReferralBodySchema,
   ShippingBodySchema,
   StoreCornersSchema,
   StoreHeadingFontSchema,
@@ -58,6 +59,7 @@ import {
   setOrderTracking,
   updateAnnouncements,
   updateBusinessDetails,
+  updateReferralRule,
   updateShippingRule,
   updateStoreLogo,
   updateStoreAppearance,
@@ -650,6 +652,38 @@ export function adminRoutes(api: Group, deps: Deps) {
             shipping_flat: body.flat,
             free_shipping_from: body.free_from ?? null,
             free_shipping_items: body.free_items ?? null,
+          }),
+        ),
+      ),
+    );
+  });
+
+  /**
+   * SetReferrals replaces the referral programme: whether it runs, what a
+   * referred friend gets off, the credit the referrer earns and when, and
+   * the limits on credit. Referrals already made keep the rule they were
+   * made under.
+   */
+  admin.put("/settings/referrals", async (req, res) => {
+    const body = parseBody(ReferralBodySchema, req, res);
+    if (body === null) return;
+    ok(
+      res,
+      200,
+      "Referral programme updated",
+      storeSettings(
+        must(
+          await updateReferralRule(db, {
+            referrals_enabled: body.enabled,
+            referral_friend_kind: body.friend_kind,
+            referral_friend_value: body.friend_value,
+            referral_friend_min: body.friend_min ?? null,
+            referral_reward: body.reward,
+            referral_pay_after_days: body.pay_after_days,
+            referral_custom_prints: body.custom_prints,
+            referral_monthly_cap: body.monthly_cap ?? null,
+            credit_max_percent: body.credit_max_percent,
+            credit_expiry_months: body.credit_expiry_months ?? null,
           }),
         ),
       ),

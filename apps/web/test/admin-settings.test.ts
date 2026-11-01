@@ -12,6 +12,7 @@ describe("settings pages", () => {
       "/admin/settings/appearance",
       "/admin/settings/announcements",
       "/admin/settings/delivery",
+      "/admin/settings/referrals",
     ]);
     expect(new Set(SETTINGS_PAGES.map((p) => p.id)).size).toBe(
       SETTINGS_PAGES.length,

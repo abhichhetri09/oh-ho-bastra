@@ -53,6 +53,7 @@ const line = (over: Partial<CartLine>): CartLine => ({
   price: 2000,
   available: true,
   options: [],
+  custom_print: false,
   line_total: 2000,
   max_quantity: 10,
   ...over,
@@ -85,6 +86,7 @@ describe("cart math", () => {
       shipping: 0,
       total: 0,
       coupon: null,
+      referral: null,
       has_issues: false,
     });
   });

@@ -2,6 +2,8 @@ import type { Order, OrderItem } from "../db/gen";
 import { queryEscape } from "./escape";
 import { EMAIL_KINDS, type EmailKind } from "./outbox";
 import {
+  creditCodeHtml,
+  creditCodeText,
   orderHtml,
   orderText,
   resetHtml,
@@ -61,6 +63,7 @@ export type EmailOrder = Pick<
   | "subtotal"
   | "discount"
   | "coupon_code"
+  | "credit"
   | "shipping"
   | "total"
   | "currency"
@@ -142,6 +145,8 @@ export function render(
             amount: "−" + formatMoney(order.discount, order.currency),
           }
         : null,
+    credit:
+      order.credit > 0 ? "−" + formatMoney(order.credit, order.currency) : null,
     shipping:
       order.shipping === 0
         ? "Free"
@@ -180,6 +185,33 @@ export function renderPasswordReset(
     subject: `Reset your ${STORE_NAME} password`,
     html: resetHtml(view),
     text: resetText(view),
+  };
+}
+
+/**
+ * The code a customer reads out at the counter to spend store credit. The
+ * code is in the email only; just its hash is stored.
+ */
+export function renderCreditCode(
+  name: string,
+  code: string,
+  amount: number,
+  bill: number,
+  currency: string,
+  frontendUrl: string,
+): Rendered {
+  const view = {
+    storeName: STORE_NAME,
+    greeting: greeting(name),
+    code,
+    amount: formatMoney(amount, currency),
+    bill: formatMoney(bill, currency),
+    shopUrl: frontendUrl.replace(/\/+$/, ""),
+  };
+  return {
+    subject: `${code} is your ${STORE_NAME} store credit code`,
+    html: creditCodeHtml(view),
+    text: creditCodeText(view),
   };
 }
 

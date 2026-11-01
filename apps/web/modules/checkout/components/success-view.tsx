@@ -285,6 +285,14 @@ export function OrderTotals({
           {order.shipping === 0 ? "Free" : formatPrice(order.shipping)}
         </dd>
       </div>
+      {order.credit > 0 && (
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">Store credit</dt>
+          <dd className="text-success tabular-nums">
+            {formatDiscount(order.credit)}
+          </dd>
+        </div>
+      )}
       <div className="flex justify-between pt-1 text-base">
         <dt>Total paid</dt>
         <dd className="tabular-nums">{formatPrice(order.total)}</dd>

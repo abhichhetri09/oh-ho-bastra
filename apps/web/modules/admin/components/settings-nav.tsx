@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  GiftIcon,
   MegaphoneIcon,
   PaletteIcon,
   StorefrontIcon,
@@ -22,6 +23,7 @@ export const SETTINGS_ICONS: Record<SettingsPageId, Icon> = {
   appearance: PaletteIcon,
   announcements: MegaphoneIcon,
   delivery: TruckIcon,
+  referrals: GiftIcon,
 };
 
 /**

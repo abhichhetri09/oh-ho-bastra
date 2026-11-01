@@ -9,6 +9,7 @@ import {
   LockSimpleIcon,
   PlusIcon,
   TruckIcon,
+  WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
@@ -31,11 +32,12 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFocusFirstError } from "@/hooks/use-focus-first-error";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { startCheckout } from "@/lib/api/client";
+import { removeCartReferral, startCheckout } from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
 import { loginPath } from "@/lib/auth/redirect";
 import { friendlyFieldErrors } from "@/lib/forms";
-import { formatPrice } from "@/lib/money";
+import { formatDiscount, formatPrice } from "@/lib/money";
+import { creditFor } from "@/lib/referrals";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { CartTotals } from "@/modules/cart/components/cart-summary";
@@ -44,7 +46,7 @@ import { optionSummary } from "@/modules/cart/lib/cart-math";
 import { couponRefusalMessage, isCouponIssue } from "@/modules/cart/lib/coupon";
 import { useCart } from "@/modules/cart/queries";
 import { countryName } from "../lib/countries";
-import { useAddresses } from "../queries";
+import { useAddresses, useMyCredit } from "../queries";
 import { AddressForm, EMPTY_ADDRESS, type AddressValues } from "./address-form";
 import { DefaultTag } from "./default-tag";
 
@@ -205,12 +207,31 @@ function CheckoutForm({
   const bookFull = (saved?.length ?? 0) >= MAX_ADDRESSES;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [redirecting, setRedirecting] = useState(false);
+  // Why a friend's referral was taken off at checkout (it stopped applying
+  // since the bag was read); the summary's total is the new one.
+  const [dropped, setDropped] = useState<string | null>(null);
+  // Store credit, for an account that has some: what checkout would use.
+  const myCredit = useMyCredit();
+  const [useCredit, setUseCredit] = useState(true);
+  const credit =
+    guest || !myCredit.data
+      ? 0
+      : creditFor(myCredit.data.available, myCredit.data.max_percent, cart);
+  const creditUsed = useCredit ? credit : 0;
   const { ref: formRef, focusFirstError } = useFocusFirstError();
   const queryClient = useQueryClient();
 
   const checkout = useMutation({
     mutationFn: async (body: CheckoutBody) => {
-      const { data } = await startCheckout({ body, throwOnError: true });
+      setDropped(null);
+      // A referral the summary already says doesn't apply is taken off
+      // first, so checkout goes ahead at the total shown.
+      if (cart.referral?.issue)
+        await removeCartReferral({ throwOnError: true });
+      const { data } = await startCheckout({
+        body: { ...body, use_credit: creditUsed > 0 || undefined },
+        throwOnError: true,
+      });
       return data.data;
     },
     onSuccess: ({ checkout_url }) => {
@@ -228,6 +249,13 @@ function CheckoutForm({
         isCouponIssue(apiError?.code)
       ) {
         void queryClient.invalidateQueries({ queryKey: cartKeys.all });
+      }
+      if (apiError?.code.startsWith("REFERRAL_")) {
+        // Taken off the bag by the API: the fresh cart has the new total.
+        void queryClient.invalidateQueries({ queryKey: cartKeys.all });
+        setDropped(apiError.message);
+        toast.error(apiError.message);
+        return;
       }
       if (apiError && isCouponIssue(apiError.code)) {
         toast.error(
@@ -532,6 +560,34 @@ function CheckoutForm({
           ))}
         </ul>
         <CartTotals cart={cart} />
+        {credit > 0 && (
+          <label className="flex items-center justify-between gap-3 border-t border-border pt-4 text-sm">
+            <span className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={useCredit}
+                onChange={(e) => setUseCredit(e.target.checked)}
+                className="size-4 accent-[var(--primary)]"
+              />
+              Use store credit
+            </span>
+            <span className="text-success tabular-nums">
+              {formatDiscount(credit)}
+            </span>
+          </label>
+        )}
+        {dropped && (
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-control border border-clay/40 px-3 py-2 text-xs text-clay"
+          >
+            <WarningCircleIcon
+              className="mt-px size-3.5 shrink-0"
+              weight="bold"
+            />
+            {dropped}
+          </p>
+        )}
         {cart.coupon?.issue && (
           <p className="text-xs text-clay" role="status">
             {couponRefusalMessage(cart.coupon.code, cart.coupon.issue.message)}{" "}
@@ -546,7 +602,7 @@ function CheckoutForm({
             ? "Opening secure payment…"
             : checkout.isPending
               ? "Reserving your items…"
-              : `Pay ${formatPrice(cart.total)}`}
+              : `Pay ${formatPrice(cart.total - creditUsed)}`}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
           You&apos;ll pay on Stripe&apos;s secure page. Items are held for you

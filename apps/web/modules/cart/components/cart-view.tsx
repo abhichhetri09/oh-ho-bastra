@@ -10,6 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
+import { useReferralLink } from "../hooks/use-referral-link";
 import { unitCount } from "../lib/cart-math";
 import { useCart } from "../queries";
 import { CartLine } from "./cart-line";
@@ -31,6 +32,7 @@ export function CartView({ seeded }: { seeded: boolean }) {
   const isPending = !cart && (!ready || query.isPending);
   const isError = ready && query.isError;
   const { refetch } = query;
+  useReferralLink(cart);
 
   return (
     <div className="container-page pt-8 pb-24 sm:pt-14">

@@ -663,6 +663,12 @@ function Items({
             {o.shipping === 0 ? "Free" : formatPrice(o.shipping)}
           </dd>
         </div>
+        {o.credit > 0 && (
+          <div className="flex justify-between">
+            <dt className="text-muted-foreground">Store credit</dt>
+            <dd className="tabular-nums">{formatDiscount(o.credit)}</dd>
+          </div>
+        )}
         <div className="flex items-baseline justify-between border-t border-border pt-3">
           <dt className="font-medium">Total</dt>
           <dd className="text-lg font-medium tabular-nums">

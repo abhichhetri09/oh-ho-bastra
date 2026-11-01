@@ -3,8 +3,9 @@
 import type { Queryable } from "../queryable";
 
 // The user's cart, oldest line first, priced live. available is false once
-// the variant or its product is no longer on sale.
-export const getCartLinesSql = "SELECT\n    ci.variant_id,\n    ci.quantity,\n    ci.created_at AS added_at,\n    p.id AS product_id,\n    p.name AS product_name,\n    p.slug AS product_slug,\n    pv.sku,\n    pv.stock,\n    COALESCE(pv.images[1], p.images[1], '')::text AS image,\n    vp.selling_price,\n    vp.offer_price,\n    vp.price,\n    (sv.id IS NOT NULL)::bool AS available,\n    (\n        SELECT COALESCE(\n            json_agg(\n                jsonb_build_object('name', po.name, 'value', pov.value, 'type', po.type)\n                ORDER BY po.name\n            ),\n            '[]'::json\n        )\n        FROM variant_option_values vov\n        JOIN product_option_values pov ON pov.id = vov.option_value_id\n        JOIN product_options po ON po.id = pov.option_id\n        WHERE vov.variant_id = pv.id\n    ) AS options\nFROM carts c\nJOIN cart_items ci ON ci.cart_id = c.id\nJOIN product_variants pv ON pv.id = ci.variant_id\nJOIN products p ON p.id = pv.product_id\nJOIN variant_prices vp ON vp.id = pv.id\nLEFT JOIN storefront_variants sv ON sv.id = pv.id\nWHERE c.user_id = $1\nORDER BY ci.created_at, ci.variant_id";
+// the variant or its product is no longer on sale. custom_print: the
+// product is in the "custom" category or one under it (made to order).
+export const getCartLinesSql = "SELECT\n    ci.variant_id,\n    ci.quantity,\n    ci.created_at AS added_at,\n    p.id AS product_id,\n    p.name AS product_name,\n    p.slug AS product_slug,\n    pv.sku,\n    pv.stock,\n    COALESCE(pv.images[1], p.images[1], '')::text AS image,\n    vp.selling_price,\n    vp.offer_price,\n    vp.price,\n    (sv.id IS NOT NULL)::bool AS available,\n    EXISTS (\n        SELECT 1 FROM categories cat\n        LEFT JOIN categories parent ON parent.id = cat.parent_id\n        WHERE cat.id = p.category_id AND 'custom' IN (cat.slug, parent.slug)\n    )::bool AS custom_print,\n    (\n        SELECT COALESCE(\n            json_agg(\n                jsonb_build_object('name', po.name, 'value', pov.value, 'type', po.type)\n                ORDER BY po.name\n            ),\n            '[]'::json\n        )\n        FROM variant_option_values vov\n        JOIN product_option_values pov ON pov.id = vov.option_value_id\n        JOIN product_options po ON po.id = pov.option_id\n        WHERE vov.variant_id = pv.id\n    ) AS options\nFROM carts c\nJOIN cart_items ci ON ci.cart_id = c.id\nJOIN product_variants pv ON pv.id = ci.variant_id\nJOIN products p ON p.id = pv.product_id\nJOIN variant_prices vp ON vp.id = pv.id\nLEFT JOIN storefront_variants sv ON sv.id = pv.id\nWHERE c.user_id = $1\nORDER BY ci.created_at, ci.variant_id";
 
 export interface GetCartLinesRow {
   variant_id: string;
@@ -20,6 +21,7 @@ export interface GetCartLinesRow {
   offer_price: number | null;
   price: number;
   available: boolean;
+  custom_print: boolean;
   options: unknown;
 }
 

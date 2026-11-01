@@ -53,9 +53,9 @@ WHERE oi.order_id = $1 AND pv.id = oi.variant_id;
 -- name: CreateOrder :one
 INSERT INTO orders (
     user_id, subtotal, discount, coupon_code, shipping, total, currency,
-    email, shipping_address, expires_at
+    email, shipping_address, expires_at, credit
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: CreateOrderItem :exec

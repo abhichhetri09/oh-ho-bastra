@@ -11,10 +11,12 @@ const links = [
   { label: "Orders", href: "/account/orders" },
   { label: "Wishlist", href: "/account/wishlist" },
   { label: "Addresses", href: "/account/addresses" },
+  { label: "Referrals", href: "/account/referrals" },
   { label: "Settings", href: "/account/settings" },
 ];
 
-export function AccountNav() {
+/** The account's pages; Referrals only while the programme runs. */
+export function AccountNav({ referrals }: { referrals: boolean }) {
   const pathname = usePathname();
   const logout = useLogout();
 
@@ -23,24 +25,26 @@ export function AccountNav() {
       aria-label="Account"
       className="flex gap-1 overflow-x-auto lg:flex-col"
     >
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          aria-current={
-            pathname === link.href ||
-            (link.href !== "/account" && pathname.startsWith(`${link.href}/`))
-              ? "page"
-              : undefined
-          }
-          className={cn(
-            "flex h-10 shrink-0 items-center border-l-2 border-transparent px-4 text-[0.8125rem] text-muted-foreground transition-colors hover:text-foreground",
-            "aria-[current=page]:border-foreground aria-[current=page]:text-foreground",
-          )}
-        >
-          {link.label}
-        </Link>
-      ))}
+      {links
+        .filter((link) => referrals || link.href !== "/account/referrals")
+        .map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            aria-current={
+              pathname === link.href ||
+              (link.href !== "/account" && pathname.startsWith(`${link.href}/`))
+                ? "page"
+                : undefined
+            }
+            className={cn(
+              "flex h-10 shrink-0 items-center border-l-2 border-transparent px-4 text-[0.8125rem] text-muted-foreground transition-colors hover:text-foreground",
+              "aria-[current=page]:border-foreground aria-[current=page]:text-foreground",
+            )}
+          >
+            {link.label}
+          </Link>
+        ))}
       <button
         type="button"
         onClick={() => logout.mutate()}

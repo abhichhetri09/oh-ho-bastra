@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CountBadge } from "@/components/layout/count-badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+import { useReferralLink } from "../hooks/use-referral-link";
 import { useCart } from "../queries";
 import { unitCount } from "../lib/cart-math";
 import { BAG_BUMP_EVENT, BAG_TARGET } from "../lib/fly-to-bag";
@@ -84,6 +85,7 @@ export function BagDrawer() {
 function BagContents({ close }: { close: () => void }) {
   const user = useAuth((s) => s.user);
   const { data: cart, isPending, isError, refetch } = useCart();
+  useReferralLink(cart);
   const lines = cart?.items ?? [];
 
   const header = (

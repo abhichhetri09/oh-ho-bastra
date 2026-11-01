@@ -21,6 +21,8 @@ export interface OrderView {
   subtotal: string;
   /** The code's line ("Discount (SUMMER10)", "−€5.00"); null without one. */
   discount: { label: string; amount: string } | null;
+  /** The store credit it paid with ("−€5.00"); null without any. */
+  credit: string | null;
   shipping: string;
   total: string;
   tracking: string;
@@ -152,7 +154,12 @@ export function orderHtml(v: OrderView): string {
 <tr><td style="padding:3px 0;color:#4a423a;">${h(v.discount.label)}</td><td align="right" style="padding:3px 0;">${h(v.discount.amount)}</td></tr>`
         : ""
     }
-<tr><td style="padding:3px 0;color:#4a423a;">Shipping</td><td align="right" style="padding:3px 0;">${h(v.shipping)}</td></tr>
+<tr><td style="padding:3px 0;color:#4a423a;">Shipping</td><td align="right" style="padding:3px 0;">${h(v.shipping)}</td></tr>${
+      v.credit
+        ? `
+<tr><td style="padding:3px 0;color:#4a423a;">Store credit</td><td align="right" style="padding:3px 0;">${h(v.credit)}</td></tr>`
+        : ""
+    }
 <tr><td style="padding:10px 0 0;font-size:15px;color:#24201c;"><strong>Total</strong></td><td align="right" style="padding:10px 0 0;font-size:15px;"><strong>${h(v.total)}</strong></td></tr>
 </table>${address}
 </td></tr>
@@ -179,7 +186,7 @@ ${v.cta}: ${v.url}
 ${v.items.map((it) => `${it.quantity} × ${it.name}${it.options ? ` (${it.options})` : ""}  ${it.lineTotal}\n`).join("")}
 Subtotal  ${v.subtotal}
 ${v.discount ? `${v.discount.label}  ${v.discount.amount}\n` : ""}Shipping  ${v.shipping}
-Total     ${v.total}
+${v.credit ? `Store credit  ${v.credit}\n` : ""}Total     ${v.total}
 ${v.address?.length ? `\nShipping to:\n${v.address.map((line) => line + "\n").join("")}` : ""}
 --
 ${v.storeName}
@@ -273,5 +280,57 @@ ${v.orderNumber ? `Order: ${v.orderNumber}\n` : ""}
 ${v.message}
 
 Reply to this email to answer ${v.name} directly.
+`;
+}
+
+export interface CreditCodeView {
+  storeName: string;
+  greeting: string;
+  code: string;
+  amount: string; // "€5.00"
+  bill: string;
+  shopUrl: string;
+}
+
+/** The code a customer reads out to confirm spending credit in store. */
+export function creditCodeHtml(v: CreditCodeView): string {
+  return (
+    HEAD("Your store credit code") +
+    LAYOUT_TOP(
+      `Your code to use ${h(v.amount)} of store credit: ${h(v.code)}`,
+      v.shopUrl,
+      v.storeName,
+    ) +
+    `
+<tr><td style="background:#ffffff;border:1px solid #e6e1d8;padding:32px 28px;">
+<h1 style="margin:0 0 20px;font-family:Georgia,'Times New Roman',serif;font-weight:normal;font-size:28px;line-height:1.2;color:#24201c;">Your store credit code</h1>
+<p style="margin:0 0 12px;">${h(v.greeting)}</p>
+<p style="margin:0 0 24px;color:#4a423a;">To use ${h(v.amount)} of your store credit on a bill of ${h(v.bill)}, tell the shop this code. It works once, for the next 10 minutes.</p>
+<p style="margin:0 0 24px;font-family:Menlo,Consolas,monospace;font-size:32px;letter-spacing:6px;color:#24201c;">${h(v.code)}</p>
+<p style="margin:0;font-size:13px;color:#7a6f63;">If you're not at the shop, don't share it: your credit stays as it is.</p>
+</td></tr>
+
+<tr><td style="padding:24px 4px 0;font-size:12px;color:#7a6f63;">
+<a href="${u(v.shopUrl)}" style="color:#7a6f63;">${h(v.storeName)}</a>
+</td></tr>
+` +
+    LAYOUT_BOTTOM
+  );
+}
+
+export function creditCodeText(v: CreditCodeView): string {
+  return `Your store credit code
+
+${v.greeting}
+
+To use ${v.amount} of your store credit on a bill of ${v.bill}, tell the shop this code. It works once, for the next 10 minutes:
+
+${v.code}
+
+If you're not at the shop, don't share it: your credit stays as it is.
+
+--
+${v.storeName}
+${v.shopUrl}
 `;
 }

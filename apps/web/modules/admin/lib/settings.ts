@@ -5,7 +5,8 @@ export type SettingsPageId =
   | "store"
   | "appearance"
   | "announcements"
-  | "delivery";
+  | "delivery"
+  | "referrals";
 
 export type SettingsPage = {
   id: SettingsPageId;
@@ -49,6 +50,14 @@ export const SETTINGS_PAGES: SettingsPage[] = [
     hint: "Price and free threshold",
     description:
       "One price for every order, free from a total you choose. The threshold counts the bag after any discount code.",
+  },
+  {
+    id: "referrals",
+    href: "/admin/settings/referrals",
+    label: "Referrals",
+    hint: "Friend discount and credit",
+    description:
+      "What a referred friend gets off their first order, and the store credit the referrer earns. Referrals keep the rule they were made under.",
   },
 ];
 

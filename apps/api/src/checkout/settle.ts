@@ -1,5 +1,7 @@
 import {
+  cancelOrderReferral,
   cancelPendingOrder,
+  clearCartReferral,
   clearPaidCartCoupon,
   createPayment,
   deleteOrderRedemption,
@@ -7,6 +9,7 @@ import {
   markOrderPaid,
   removeOrderedCartLines,
   restoreCouponRedemption,
+  restoreOrderReferral,
   restoreStock,
   retakeStock,
   setItemShortfall,
@@ -15,6 +18,7 @@ import type { Queryable } from "../db/queryable";
 import { enqueue } from "../emails/outbox";
 import { isUuid } from "../http/params";
 import { log } from "../log";
+import { spendOrderCredit } from "../referrals/credit";
 import type { Session } from "../services/payments";
 
 // Settling orders inside a caller's transaction: shared by checkout and
@@ -25,8 +29,9 @@ export const sessionOrderId = (session: Session) =>
   isUuid(session.orderId) ? session.orderId.toLowerCase() : null;
 
 /**
- * Cancels the order if it is still pending and then returns its stock and
- * its discount code's use; resolves to whether it did.
+ * Cancels the order if it is still pending and then returns its stock,
+ * its discount code's use and its referral (the friend can be referred
+ * again); resolves to whether it did. Its store credit was never spent.
  */
 export async function release(
   tx: Queryable,
@@ -35,16 +40,23 @@ export async function release(
   if ((await cancelPendingOrder(tx, orderId)) === 0) return false;
   await restoreStock(tx, orderId);
   await deleteOrderRedemption(tx, orderId);
+  await cancelOrderReferral(tx, orderId);
   return true;
 }
 
 /**
- * Marks the session's order paid, once. An order cancelled before the money
- * arrived (its page was replaced or ran out) takes its stock back, as far
- * as there is any (a shortfall is logged as oversold), and its code's use,
- * even past the code's limits: the discount was given.
+ * Marks the session's order paid, once, and spends its store credit. An
+ * order cancelled before the money arrived (its page was replaced or ran
+ * out) takes its stock back, as far as there is any (a shortfall is
+ * logged as oversold), its code's use, even past the code's limits (the
+ * discount was given), and its referral unless the friend was referred
+ * again since.
  */
-export async function fulfil(tx: Queryable, session: Session): Promise<void> {
+export async function fulfil(
+  tx: Queryable,
+  session: Session,
+  now = new Date(),
+): Promise<void> {
   const orderId = sessionOrderId(session);
   if (orderId === null) {
     log.warn("checkout: paid session without an order", {
@@ -82,6 +94,7 @@ export async function fulfil(tx: Queryable, session: Session): Promise<void> {
       }
       if (order.coupon_code !== null)
         await restoreCouponRedemption(tx, order.id);
+      await restoreOrderReferral(tx, order.id);
       break;
     }
     default:
@@ -103,6 +116,7 @@ export async function fulfil(tx: Queryable, session: Session): Promise<void> {
     amount: session.amountTotal,
     currency: session.currency,
   });
+  await spendOrderCredit(tx, order, now);
   await removeOrderedCartLines(tx, {
     user_id: order.user_id,
     order_id: order.id,
@@ -114,6 +128,8 @@ export async function fulfil(tx: Queryable, session: Session): Promise<void> {
       coupon_code: order.coupon_code,
     });
   }
+  // A first order is placed: no friend's discount for this buyer any more.
+  await clearCartReferral(tx, order.user_id);
   await enqueue(tx, "order_confirmed", order.id);
   log.info("checkout: order paid", { order: order.number });
 }

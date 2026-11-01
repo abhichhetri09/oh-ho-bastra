@@ -218,6 +218,7 @@ describe("GET /cart", () => {
         shipping: 0,
         total: 0,
         coupon: null,
+        referral: null,
         has_issues: false,
       },
     });
@@ -252,6 +253,7 @@ describe("GET /cart", () => {
           price: 1500,
           available: true,
           options: [{ name: "Size", value: "M", type: "text" }],
+          custom_print: false,
           line_total: 3000,
           max_quantity: 1,
         },
@@ -262,6 +264,7 @@ describe("GET /cart", () => {
       shipping: 0,
       total: 0,
       coupon: null,
+      referral: null,
       has_issues: true,
     });
   });
@@ -540,6 +543,7 @@ describe("DELETE /cart/items/:variantID and /cart", () => {
         shipping: 0,
         total: 0,
         coupon: null,
+        referral: null,
         has_issues: false,
       },
     });

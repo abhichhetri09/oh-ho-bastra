@@ -18,6 +18,7 @@ import { catalogRoutes } from "./routes/catalog";
 import { categoryRoutes } from "./routes/categories";
 import { checkoutRoutes } from "./routes/checkout";
 import { contactRoutes } from "./routes/contact";
+import { referralRoutes } from "./routes/referrals";
 import { shoppingRoutes } from "./routes/shopping";
 import { systemRoutes } from "./routes/system";
 
@@ -70,6 +71,7 @@ export function buildApp(deps: Deps): App {
   adminEmailRoutes(api, deps);
   adminCouponRoutes(api, deps);
   adminRoutes(api, deps);
+  referralRoutes(api, deps);
 
   // JSON for unknown paths and wrong methods too.
   app.use(fallback(routes));

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Cents, successResponse, Timestamp, Uuid } from "../api/response";
 import { CartCouponSchema } from "../coupon/coupon";
+import { CartReferralSchema } from "../referral/referral";
 import { VariantOptionSchema } from "../product/product";
 
 /** The most of one variant a cart line can hold. */
@@ -26,6 +27,11 @@ export const CartLineSchema = z
       .boolean()
       .describe("False once the variant or its product is off sale"),
     options: z.array(VariantOptionSchema),
+    custom_print: z
+      .boolean()
+      .describe(
+        "Made to order (a product under the custom category); a friend's discount may leave it out",
+      ),
     line_total: z.int().nonnegative().describe("price × quantity"),
     max_quantity: z
       .int()
@@ -50,7 +56,9 @@ export const CartSchema = z
       .describe(
         "Cents, over the lines that can be checked out (sale prices, before any code)",
       ),
-    discount: Cents.describe("What the code takes off the subtotal"),
+    discount: Cents.describe(
+      "What the code, or a friend's referral, takes off the subtotal (one of them)",
+    ),
     shipping: Cents.describe(
       "On the subtotal after the discount; 0 when nothing can be checked out",
     ),
@@ -58,6 +66,9 @@ export const CartSchema = z
       "subtotal − discount + shipping, as checkout charges",
     ),
     coupon: CartCouponSchema.nullable().describe("null without a code"),
+    referral: CartReferralSchema.nullable().describe(
+      "null without one, or while the programme is off",
+    ),
     has_issues: z
       .boolean()
       .describe(

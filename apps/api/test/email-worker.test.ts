@@ -58,6 +58,7 @@ async function placeOrder(): Promise<Order> {
       country: "GB",
     }),
     expires_at: new Date(Date.now() + 30 * 60_000),
+    credit: 0,
   });
   await createOrderItem(db, {
     order_id: order!.id,

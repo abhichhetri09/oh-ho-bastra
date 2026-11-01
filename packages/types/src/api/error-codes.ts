@@ -83,6 +83,18 @@ export const ErrorCodeSchema = z
     "NOT_VERIFIED_BUYER",
     "REVIEW_NOT_FOUND",
     "INVALID_REVIEW_ID",
+    // referrals and store credit
+    "REFERRALS_DISABLED",
+    "REFERRAL_NOT_FOUND",
+    "REFERRAL_OWN_CODE",
+    "REFERRAL_NOT_FIRST_ORDER",
+    "REFERRAL_MIN_SUBTOTAL",
+    "CREDIT_NOT_ENOUGH",
+    "CREDIT_OVER_LIMIT",
+    "CREDIT_CODE_INVALID",
+    "CREDIT_CODE_EXPIRED",
+    "INVALID_REDEMPTION_ID",
+    "REDEMPTION_NOT_FOUND",
   ])
   .meta({ id: "ErrorCode", description: "Machine-readable failure code." });
 

@@ -2,12 +2,16 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import {
   ApplyCouponBodySchema,
+  ApplyReferralBodySchema,
   MAX_LINE_QUANTITY,
   normalizeCouponCode,
+  normalizeReferralCode,
   type CartCoupon,
+  type CartReferral,
   type CouponIssueCode,
   type CouponKind,
   type ErrorCode,
+  type ReferralIssueCode,
 } from "@repo/types";
 import { Refusal } from "../checkout/refusal";
 import {
@@ -24,10 +28,12 @@ import {
   getCartCoupon,
   getCartItemQuantity,
   getCartLines,
+  getCartReferral,
   getUserByID,
   getVariantAvailability,
   setCartCoupon,
   setCartItemQuantity,
+  setCartReferral,
   type GetCartLinesRow,
 } from "../db/gen";
 import { withTx, type Tx } from "../db/pool";
@@ -39,12 +45,15 @@ import { couponLimit } from "../http/rate-limit";
 import { fail, internal, ok } from "../http/response";
 import type { Group } from "../http/router";
 import { parseBody } from "../http/validate";
+import { evaluateReferral, type ReferralResult } from "../referrals/referrals";
 import { goInt, goRequired } from "./validation";
 
 // The signed-in user's cart: one per user, created on first use. Prices are
 // live (variant_prices); the cart never reserves stock, checkout does. A
-// discount code on the cart is checked again on every read, so the bag
-// shows what checkout would charge.
+// discount code, and a friend's referral code, on the cart are checked
+// again on every read, so the bag shows what checkout would charge. One
+// discount per order: the referral counts only when it takes off more
+// than the code.
 
 /** Caps one line (the body's quantity max). */
 export const MAX_LINE = MAX_LINE_QUANTITY;
@@ -187,9 +196,16 @@ export async function mergeCarts(
   const toCode = (await getCartCoupon(tx, toUserId))?.coupon_code ?? null;
   if (toCode === null && fromCode !== null)
     await setCartCoupon(tx, { id: to.id, coupon_code: fromCode });
+  // The same for a referral code, which a shared link put on the bag.
+  const fromRef =
+    (await getCartReferral(tx, fromUserId))?.referral_code ?? null;
+  const toRef = (await getCartReferral(tx, toUserId))?.referral_code ?? null;
+  if (toRef === null && fromRef !== null)
+    await setCartReferral(tx, { id: to.id, referral_code: fromRef });
 
   await clearCart(tx, from.id);
   await setCartCoupon(tx, { id: from.id, coupon_code: null });
+  await setCartReferral(tx, { id: from.id, referral_code: null });
 }
 
 /** The lines priced, and totals over what can be checked out. */
@@ -241,19 +257,51 @@ export function cartCoupon({ code, result }: AppliedCoupon): CartCoupon {
   };
 }
 
+/** A referral code on the cart, checked against it. */
+export interface AppliedReferral {
+  code: string;
+  result: ReferralResult;
+}
+
+/** The referral as the bag shows it: what it takes off, or why it doesn't. */
+export function cartReferral(
+  { code, result }: AppliedReferral,
+  applied: boolean,
+): CartReferral {
+  return {
+    code,
+    discount: result.discount,
+    applied,
+    issue: result.refusal
+      ? {
+          code: result.refusal.code as ReferralIssueCode,
+          message: result.refusal.message,
+        }
+      : null,
+  };
+}
+
 /**
- * The cart with its code's discount, shipping under the store's rule (on
- * the subtotal after the discount, as checkout charges it) and total.
- * Nothing to check out ships for nothing.
+ * The cart with its discount (the code's, or the friend's when it takes
+ * off more), shipping under the store's rule (on the subtotal after the
+ * discount, as checkout charges it) and total. Nothing to check out ships
+ * for nothing. A referral on the bag always shows, with why it doesn't
+ * apply (the programme being off included).
  */
 export function priceCart(
   cart: ReturnType<typeof buildCart>,
   applied: AppliedCoupon | null,
   rule: ShippingRule,
+  referral: AppliedReferral | null = null,
 ) {
-  const discount = applied?.result.discount ?? 0;
+  const couponOff = applied?.result.discount ?? 0;
+  const friendOff = referral?.result.discount ?? 0;
+  const useReferral = friendOff > couponOff;
+  const discount = useReferral ? friendOff : couponOff;
   const shipping =
-    cart.item_count === 0 ? 0 : shippingFor(cart.subtotal - discount, cart.item_count, rule);
+    cart.item_count === 0
+      ? 0
+      : shippingFor(cart.subtotal - discount, cart.item_count, rule);
   return {
     items: cart.items,
     item_count: cart.item_count,
@@ -262,9 +310,14 @@ export function priceCart(
     shipping,
     total: cart.subtotal - discount + shipping,
     coupon: applied ? cartCoupon(applied) : null,
+    referral: referral ? cartReferral(referral, useReferral) : null,
     has_issues: cart.has_issues,
   };
 }
+
+/** The lines checkout would take (on sale, within their stock). */
+const checkoutLines = (cart: ReturnType<typeof buildCart>) =>
+  cart.items.filter((line) => line.available && line.quantity <= line.stock);
 
 /**
  * The user's whole cart, priced, with its code and the shipping rule as of
@@ -274,14 +327,34 @@ export async function loadCart(db: Queryable, uid: string) {
   const cart = buildCart(await getCartLines(db, uid));
   const rule = await loadShippingRule(db);
   const code = (await getCartCoupon(db, uid))?.coupon_code ?? null;
-  if (code === null) return priceCart(cart, null, rule);
+  const refCode = (await getCartReferral(db, uid))?.referral_code ?? null;
+  if (code === null && refCode === null) return priceCart(cart, null, rule);
   const user = await getUserByID(db, uid);
-  const result = await evaluateCoupon(db, code, {
-    subtotal: cart.subtotal,
-    email: user?.email ?? null,
-    now: new Date(),
-  });
-  return priceCart(cart, { code, result }, rule);
+  const email = user?.email ?? null;
+  const coupon =
+    code === null
+      ? null
+      : {
+          code,
+          result: await evaluateCoupon(db, code, {
+            subtotal: cart.subtotal,
+            email,
+            now: new Date(),
+          }),
+        };
+  const referral =
+    refCode === null
+      ? null
+      : {
+          code: refCode,
+          result: await evaluateReferral(db, refCode, {
+            userId: uid,
+            email,
+            subtotal: cart.subtotal,
+            lines: checkoutLines(cart),
+          }),
+        };
+  return priceCart(cart, coupon, rule, referral);
 }
 
 // Mirrors types.AddCartItemRequest / UpdateCartItemRequest. Go's uuid
@@ -476,6 +549,40 @@ export function cartRoutes(api: Group, deps: Deps) {
       await setCartCoupon(tx, { id: cartId, coupon_code: code });
     });
   });
+
+  /**
+   * Puts a friend's referral code on the cart (replacing any other), once
+   * it checks out against the cart and the buyer: the storefront does this
+   * for a shopper who came through a shared link. Failed codes are rate
+   * limited, as discount codes are.
+   */
+  carts.put("/referral", limitCoupons, async (req, res) => {
+    const body = parseBody(ApplyReferralBodySchema, req, res);
+    if (!body) return;
+    const uid = userId(req);
+    const code = normalizeReferralCode(body.code);
+
+    await mutate(req, res, "Friend's discount added", async (tx, cartId) => {
+      const cart = buildCart(await getCartLines(tx, uid));
+      const user = await getUserByID(tx, uid);
+      const { refusal } = await evaluateReferral(tx, code, {
+        userId: uid,
+        email: user?.email ?? null,
+        subtotal: cart.subtotal,
+        lines: checkoutLines(cart),
+      });
+      // A bag below the minimum keeps the code: adding to it applies it.
+      if (refusal && refusal.code !== "REFERRAL_MIN_SUBTOTAL") return refusal;
+      await setCartReferral(tx, { id: cartId, referral_code: code });
+    });
+  });
+
+  /** Takes the referral code off the cart; succeeds without one. */
+  carts.delete("/referral", (req, res) =>
+    mutate(req, res, "Friend's discount removed", async (tx, cartId) => {
+      await setCartReferral(tx, { id: cartId, referral_code: null });
+    }),
+  );
 
   /** Takes the code off the cart; succeeds without one. */
   carts.delete("/coupon", (req, res) =>

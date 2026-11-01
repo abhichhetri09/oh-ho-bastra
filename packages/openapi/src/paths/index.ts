@@ -7,6 +7,7 @@ import { registerContactPaths } from "./contact.ts";
 import { registerCouponPaths } from "./coupons.ts";
 import { registerHealthPaths } from "./health.ts";
 import { registerProductPaths } from "./products.ts";
+import { registerReferralPaths } from "./referrals.ts";
 import { registerReviewPaths } from "./reviews.ts";
 import { registerSettingsPaths } from "./settings.ts";
 import { registerVariantPaths } from "./variants.ts";
@@ -26,4 +27,5 @@ export function registerPaths() {
   registerSettingsPaths();
   registerAdminPaths();
   registerCouponPaths();
+  registerReferralPaths();
 }

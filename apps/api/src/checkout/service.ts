@@ -4,10 +4,13 @@ import {
   createAddress,
   createOrder,
   createOrderItem,
+  clearCartReferral,
+  createReferral,
   ensureCart,
   getAddress,
   getCartCoupon,
   getCartLines,
+  getCartReferral,
   getUserByID,
   listExpiredPendingOrders,
   listPendingOrdersForUser,
@@ -27,6 +30,8 @@ import {
 import type { Queryable } from "../db/queryable";
 import { withTx, type Pool } from "../db/pool";
 import { log } from "../log";
+import { availableCredit, creditCap, lockCredit } from "../referrals/credit";
+import { evaluateReferral, loadReferralRule } from "../referrals/referrals";
 import type {
   PaymentEvent,
   PaymentProvider,
@@ -48,6 +53,7 @@ import {
   errCartHasIssues,
   errGuestEmail,
   errProvider,
+  Refusal,
 } from "./refusal";
 import { CURRENCY, loadShippingRule, shippingFor } from "./shipping";
 import { fulfil, release, sessionOrderId } from "./settle";
@@ -86,6 +92,8 @@ export interface CheckoutRequest {
   save_address?: boolean;
   /** With save_address, makes the new address the default. */
   make_default?: boolean;
+  /** Pays part of the order with store credit (an account's only). */
+  use_credit?: boolean;
 }
 
 export interface CheckoutResult {
@@ -140,79 +148,24 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
     }
 
     const staleSlots: string[] = []; // Stripe sessions of the user's replaced checkouts
-    const { order, lines } = await withTx(this.db, async (tx) => {
-      // Lock the cart first, as cart writes do, so it can't change under us.
-      await ensureCart(tx, userId);
-      const lines = await getCartLines(tx, userId);
-      if (lines.length === 0) throw errCartEmpty;
-
-      // A new checkout replaces the user's unpaid ones and their holds.
-      for (const p of await listPendingOrdersForUser(tx, userId)) {
-        await release(tx, p.id);
-        if (p.stripe_session_id !== null) staleSlots.push(p.stripe_session_id);
+    const { order, lines } = await this.placeOrder(userId, req, {
+      guest,
+      email,
+      staleSlots,
+    }).catch(async (err: unknown) => {
+      // A friend's referral that stopped applying since the bag was read
+      // is a refusal with its reason, so the shopper sees it and a new
+      // total before paying; it leaves the bag, so trying again goes on
+      // without it.
+      if (err instanceof Refusal && err.code.startsWith("REFERRAL_")) {
+        await clearCartReferral(this.db, userId);
+        throw new Refusal(
+          409,
+          err.code,
+          `${err.message}, so your friend's discount was removed. Check the new total and pay again.`,
+        );
       }
-
-      const subtotal = lines.reduce(
-        (sum, line) => sum + line.price * line.quantity,
-        0,
-      );
-      // The bag's code, checked again now that the replaced checkouts gave
-      // their uses back, and locked until this order holds its own use.
-      const code = (await getCartCoupon(tx, userId))?.coupon_code ?? null;
-      const applied =
-        code === null
-          ? null
-          : await checkoutCoupon(tx, code, {
-              subtotal,
-              email,
-              now: this.now(),
-            });
-      const discount = applied?.discount ?? 0;
-
-      await reserve(tx, lines);
-      // A guest has no address book: only the new address counts.
-      const address = await this.address(
-        tx,
-        userId,
-        guest ? { address: req.address } : req,
-      );
-
-      // The store's rule as of now, which the order keeps (orders.shipping)
-      // whatever the admin sets later. Free shipping counts what is paid
-      // for the items, after the code, or how many there are.
-      const rule = await loadShippingRule(tx);
-      const items = lines.reduce((sum, line) => sum + line.quantity, 0);
-      const shipping = shippingFor(subtotal - discount, items, rule);
-      const order = await createOrder(tx, {
-        user_id: userId,
-        subtotal,
-        discount,
-        coupon_code: applied?.coupon.code ?? null,
-        shipping,
-        total: subtotal - discount + shipping,
-        currency: CURRENCY,
-        email,
-        shipping_address: address,
-        expires_at: new Date(this.now().getTime() + RESERVATION_TTL_MS),
-      });
-      if (!order) throw new Error("create order: no rows in result set");
-      if (applied) await recordRedemption(tx, applied.coupon, order);
-      for (const line of lines) {
-        await createOrderItem(tx, {
-          order_id: order.id,
-          variant_id: line.variant_id,
-          product_id: line.product_id,
-          product_name: line.product_name,
-          product_slug: line.product_slug,
-          sku: line.sku,
-          options: JSON.stringify(line.options),
-          image: line.image,
-          unit_price: line.price,
-          quantity: line.quantity,
-          line_total: line.price * line.quantity,
-        });
-      }
-      return { order, lines };
+      throw err;
     });
 
     // The replaced pages can't be paid any more (best effort: their orders
@@ -255,6 +208,147 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
       log.error("checkout: save session id", err, { order: order.number });
     }
     return { order_number: order.number, checkout_url: session.url };
+  }
+
+  /**
+   * The order itself, in one transaction: the cart locked and checked, the
+   * user's replaced checkouts released (their Stripe sessions go in
+   * staleSlots), stock reserved, the discount and store credit worked out.
+   */
+  private placeOrder(
+    userId: string,
+    req: CheckoutRequest,
+    {
+      guest,
+      email,
+      staleSlots,
+    }: { guest: boolean; email: string; staleSlots: string[] },
+  ) {
+    return withTx(this.db, async (tx) => {
+      // Lock the cart first, as cart writes do, so it can't change under us.
+      await ensureCart(tx, userId);
+      const lines = await getCartLines(tx, userId);
+      if (lines.length === 0) throw errCartEmpty;
+
+      // A new checkout replaces the user's unpaid ones and their holds.
+      for (const p of await listPendingOrdersForUser(tx, userId)) {
+        await release(tx, p.id);
+        if (p.stripe_session_id !== null) staleSlots.push(p.stripe_session_id);
+      }
+
+      const subtotal = lines.reduce(
+        (sum, line) => sum + line.price * line.quantity,
+        0,
+      );
+      // The bag's code, checked again now that the replaced checkouts gave
+      // their uses back, and locked until this order holds its own use.
+      const code = (await getCartCoupon(tx, userId))?.coupon_code ?? null;
+      const applied =
+        code === null
+          ? null
+          : await checkoutCoupon(tx, code, {
+              subtotal,
+              email,
+              now: this.now(),
+            });
+      // A friend's referral on the bag, checked again: one discount per
+      // order, so it counts only when it takes off more than the code (and
+      // the code's use isn't recorded then). One that no longer applies is
+      // refused (start takes it off the bag).
+      const refCode =
+        (await getCartReferral(tx, userId))?.referral_code ?? null;
+      const referral =
+        refCode === null
+          ? null
+          : await evaluateReferral(tx, refCode, {
+              userId,
+              email,
+              subtotal,
+              lines,
+            });
+      if (referral?.refusal) throw referral.refusal;
+      const friendOff = referral?.discount ?? 0;
+      const useReferral = friendOff > (applied?.discount ?? 0);
+      const coupon = useReferral ? null : applied;
+      const discount = useReferral ? friendOff : (applied?.discount ?? 0);
+
+      await reserve(tx, lines);
+      // A guest has no address book: only the new address counts.
+      const address = await this.address(
+        tx,
+        userId,
+        guest ? { address: req.address } : req,
+      );
+
+      // The store's rule as of now, which the order keeps (orders.shipping)
+      // whatever the admin sets later. Free shipping counts what is paid
+      // for the items, after the code, or how many there are.
+      const rule = await loadShippingRule(tx);
+      const items = lines.reduce((sum, line) => sum + line.quantity, 0);
+      const shipping = shippingFor(subtotal - discount, items, rule);
+      // Store credit, when asked: what the customer has, up to the store's
+      // share of the bill and never past the items (Stripe takes it off
+      // them, with the discount). It is spent once the order is paid; until
+      // then the order holds it.
+      const bill = subtotal - discount + shipping;
+      let credit = 0;
+      if (req.use_credit && !guest) {
+        await lockCredit(tx, userId);
+        const { available } = await availableCredit(tx, userId, this.now());
+        const share = (await loadReferralRule(tx)).credit_max_percent;
+        credit = Math.max(
+          Math.min(available, creditCap(bill, share), subtotal - discount),
+          0,
+        );
+      }
+      const order = await createOrder(tx, {
+        user_id: userId,
+        subtotal,
+        discount,
+        coupon_code: coupon?.coupon.code ?? null,
+        shipping,
+        total: bill - credit,
+        currency: CURRENCY,
+        email,
+        shipping_address: address,
+        expires_at: new Date(this.now().getTime() + RESERVATION_TTL_MS),
+        credit,
+      });
+      if (!order) throw new Error("create order: no rows in result set");
+      if (coupon) await recordRedemption(tx, coupon.coupon, order);
+      if (useReferral && referral?.referrer) {
+        // The referral keeps the rule it was made under.
+        const r = referral.rule;
+        await createReferral(tx, {
+          referrer_id: referral.referrer.id,
+          order_id: order.id,
+          friend_email: email,
+          friend_kind: r.friend_kind,
+          friend_value: r.friend_value,
+          friend_min: r.friend_min,
+          reward: r.reward,
+          pay_after_days: r.pay_after_days,
+          custom_prints: r.custom_prints,
+          discount,
+        });
+      }
+      for (const line of lines) {
+        await createOrderItem(tx, {
+          order_id: order.id,
+          variant_id: line.variant_id,
+          product_id: line.product_id,
+          product_name: line.product_name,
+          product_slug: line.product_slug,
+          sku: line.sku,
+          options: JSON.stringify(line.options),
+          image: line.image,
+          unit_price: line.price,
+          quantity: line.quantity,
+          line_total: line.price * line.quantity,
+        });
+      }
+      return { order, lines };
+    });
   }
 
   /**
@@ -311,9 +405,14 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
         unitAmount: line.price,
         quantity: line.quantity,
       })),
+      // Stripe takes one discount off the items: the code's or the
+      // friend's, and the store credit, together.
       discount:
-        order.discount > 0
-          ? { amount: order.discount, name: order.coupon_code ?? "Discount" }
+        order.discount + order.credit > 0
+          ? {
+              amount: order.discount + order.credit,
+              name: discountName(order),
+            }
           : null,
       shipping: order.shipping,
       successUrl:
@@ -360,9 +459,9 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
         case "completed":
           // Delayed payment methods complete unpaid and pay later ("paid").
           if (!event.session.paid) return;
-          return fulfil(tx, event.session);
+          return fulfil(tx, event.session, this.now());
         case "paid":
-          return fulfil(tx, event.session);
+          return fulfil(tx, event.session, this.now());
         case "expired":
         case "failed": {
           const orderId = sessionOrderId(event.session);
@@ -386,7 +485,7 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
   async reconcile(sessionId: string): Promise<void> {
     const session = await this.stripe.getSession(sessionId);
     if (session.paid) {
-      await withTx(this.db, (tx) => fulfil(tx, session));
+      await withTx(this.db, (tx) => fulfil(tx, session, this.now()));
     } else if (session.expired) {
       const orderId = sessionOrderId(session);
       if (orderId !== null) await this.release(orderId);
@@ -415,6 +514,14 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
   refundPaid(number: number, restock: boolean): Promise<Order> {
     return fulfilment.refundPaid(this, number, restock);
   }
+}
+
+/** What the Stripe page calls an order's discount and credit. */
+function discountName(order: Order): string {
+  const off =
+    order.discount === 0 ? null : (order.coupon_code ?? "Friend's discount");
+  if (order.credit === 0) return off ?? "Discount";
+  return off === null ? "Store credit" : `${off} + store credit`;
 }
 
 /** Checks every line against the locked variants and takes the stock. */

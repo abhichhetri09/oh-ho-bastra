@@ -4,7 +4,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { StatsRange } from "@repo/types";
 import {
   adminGetCounts,
+  adminGetCreditAccount,
   adminSearch,
+  adminSearchCreditCustomers,
   adminGetCustomer,
   adminGetOrder,
   adminGetProduct,
@@ -15,6 +17,7 @@ import {
   adminListInventory,
   adminListOrders,
   adminListProducts,
+  adminListReferrals,
   adminListReviews,
   adminListVariants,
   listCategories,
@@ -266,5 +269,54 @@ export function useAdminSearch(q: string) {
     enabled: q.length > 0,
     staleTime: 30_000,
     placeholderData: keepPreviousData,
+  });
+}
+
+/** One page of referrals; the last page stays up while the next loads. */
+export function useAdminReferrals(page: number) {
+  return useQuery({
+    queryKey: adminKeys.referralList(page),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListReferrals({
+        query: { page },
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Customers matching q, with their store credit; idle below 2 characters. */
+export function useCreditSearch(q: string) {
+  return useQuery({
+    queryKey: adminKeys.creditSearch(q),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminSearchCreditCustomers({
+        query: { q },
+        signal,
+        throwOnError: true,
+      });
+      return data.data;
+    },
+    enabled: q.trim().length >= 2,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** A customer's store credit and ledger; idle without one picked. */
+export function useCreditAccount(id: string | null) {
+  return useQuery({
+    queryKey: adminKeys.creditAccount(id ?? ""),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminGetCreditAccount({
+        path: { userID: id ?? "" },
+        signal,
+        throwOnError: true,
+      });
+      return data.data;
+    },
+    enabled: id !== null,
   });
 }

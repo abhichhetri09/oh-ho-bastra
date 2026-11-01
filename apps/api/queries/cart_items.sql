@@ -1,6 +1,7 @@
 -- name: GetCartLines :many
 -- The user's cart, oldest line first, priced live. available is false once
--- the variant or its product is no longer on sale.
+-- the variant or its product is no longer on sale. custom_print: the
+-- product is in the "custom" category or one under it (made to order).
 SELECT
     ci.variant_id,
     ci.quantity,
@@ -15,6 +16,11 @@ SELECT
     vp.offer_price,
     vp.price,
     (sv.id IS NOT NULL)::bool AS available,
+    EXISTS (
+        SELECT 1 FROM categories cat
+        LEFT JOIN categories parent ON parent.id = cat.parent_id
+        WHERE cat.id = p.category_id AND 'custom' IN (cat.slug, parent.slug)
+    )::bool AS custom_print,
     (
         SELECT COALESCE(
             json_agg(

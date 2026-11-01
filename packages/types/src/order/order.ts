@@ -96,6 +96,12 @@ export const CheckoutBodySchema = z
       .boolean()
       .optional()
       .describe("With save_address: make the new address the default"),
+    use_credit: z
+      .boolean()
+      .optional()
+      .describe(
+        "Pay part of the order with store credit, up to the store's share of the total (not for a guest)",
+      ),
   })
   .meta({
     id: "CheckoutBody",
@@ -145,7 +151,7 @@ export const OrderSchema = z
     status: OrderStatusSchema,
     subtotal: Cents,
     shipping: Cents,
-    total: Cents.describe("subtotal − discount + shipping"),
+    total: Cents.describe("subtotal − discount + shipping − credit"),
     currency: z.string(),
     email: z.string(),
     shipping_address: AddressSnapshotSchema,
@@ -169,6 +175,7 @@ export const OrderSchema = z
       .string()
       .nullable()
       .describe("The discount code used, as it was then"),
+    credit: Cents.describe("Store credit the order paid with"),
   })
   .meta({ id: "Order" });
 export type Order = z.infer<typeof OrderSchema>;

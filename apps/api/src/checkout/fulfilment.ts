@@ -1,5 +1,6 @@
 import {
   adminGetOrder,
+  cancelOrderReferral,
   adminGetOrderForUpdate,
   deliverOrder,
   getOrderPayment,
@@ -12,6 +13,7 @@ import {
 import { withTx, type Pool, type Tx } from "../db/pool";
 import { enqueue } from "../emails/outbox";
 import { log } from "../log";
+import { reverseOrderCredit } from "../referrals/credit";
 import { RefusedError, type PaymentProvider } from "../services/payments";
 import { Refusal } from "./refusal";
 import { fulfil, release } from "./settle";
@@ -189,7 +191,7 @@ export async function cancelPending(
         throw errStripe;
       }
       if (session.paid) {
-        await withTx(ctx.db, (tx) => fulfil(tx, session));
+        await withTx(ctx.db, (tx) => fulfil(tx, session, ctx.now()));
         throw errAlreadyPaid;
       }
       if (!session.expired) {
@@ -210,8 +212,9 @@ export async function cancelPending(
 }
 
 /**
- * Refunds a paid order in full through Stripe, and returns its stock when
- * restock is set (an order that never shipped, or came back). The order
+ * Refunds a paid order in full through Stripe (cancelling its referral if
+ * it hasn't paid out, and giving its store credit back), and returns its
+ * stock when restock is set (an order that never shipped, or came back). The order
  * stays locked across the Stripe call, and the refund is keyed by the
  * order, so a retry after a failure here can't refund twice. Once Stripe
  * is asked, the answer is recorded even if the admin's request goes away
@@ -250,6 +253,10 @@ export function refundPaid(
     }
     await recordRefund(tx, { id: payment.id, stripe_refund_id: refundId });
     if (restock) await restoreStock(tx, order.id);
+    // Before its payout, a referral goes with the order; the order's store
+    // credit goes back to the customer.
+    await cancelOrderReferral(tx, order.id);
+    await reverseOrderCredit(tx, order, ctx.now());
     log.info("checkout: order refunded", { order: number, restock });
     const refunded = must(await refundOrder(tx, order.id), "refund order");
     await enqueue(tx, "order_refunded", order.id);

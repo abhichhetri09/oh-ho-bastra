@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'REFERRALS_DISABLED' | 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL' | 'CREDIT_NOT_ENOUGH' | 'CREDIT_OVER_LIMIT' | 'CREDIT_CODE_INVALID' | 'CREDIT_CODE_EXPIRED' | 'INVALID_REDEMPTION_ID' | 'REDEMPTION_NOT_FOUND';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -655,7 +655,7 @@ export type Cart = {
      */
     subtotal: number;
     /**
-     * What the code takes off the subtotal
+     * What the code, or a friend's referral, takes off the subtotal (one of them)
      */
     discount: number;
     /**
@@ -688,6 +688,27 @@ export type Cart = {
          */
         issue: {
             code: CouponIssueCode;
+            message: string;
+        } | null;
+    } | null;
+    /**
+     * null without one, or while the programme is off
+     */
+    referral: {
+        code: string;
+        /**
+         * What the friend's discount takes off this bag; 0 with an issue
+         */
+        discount: number;
+        /**
+         * Whether it is the bag's discount: one discount per order, so a code that takes off more wins
+         */
+        applied: boolean;
+        /**
+         * Why it doesn't apply (it stays on the bag; checkout goes ahead without it)
+         */
+        issue: {
+            code: ReferralIssueCode;
             message: string;
         } | null;
     } | null;
@@ -728,6 +749,10 @@ export type CartLine = {
     available: boolean;
     options: Array<VariantOption>;
     /**
+     * Made to order (a product under the custom category); a friend's discount may leave it out
+     */
+    custom_print: boolean;
+    /**
      * price × quantity
      */
     line_total: number;
@@ -741,6 +766,11 @@ export type CartLine = {
  * COUPON_NOT_FOUND also covers a code that is switched off or not started yet
  */
 export type CouponIssueCode = 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED';
+
+/**
+ * REFERRAL_NOT_FOUND also covers the programme being switched off
+ */
+export type ReferralIssueCode = 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL';
 
 /**
  * Adds to the quantity already in the cart.
@@ -758,6 +788,13 @@ export type UpdateCartItemBody = {
  * Any case; spaces around it are ignored.
  */
 export type ApplyCouponBody = {
+    code: string;
+};
+
+/**
+ * Any case; spaces around it are ignored.
+ */
+export type ApplyReferralBody = {
     code: string;
 };
 
@@ -808,6 +845,10 @@ export type CheckoutBody = {
      * With save_address: make the new address the default
      */
     make_default?: boolean;
+    /**
+     * Pay part of the order with store credit, up to the store's share of the total (not for a guest)
+     */
+    use_credit?: boolean;
 };
 
 /**
@@ -829,7 +870,7 @@ export type OrderDetail = {
     subtotal: number;
     shipping: number;
     /**
-     * subtotal − discount + shipping
+     * subtotal − discount + shipping − credit
      */
     total: number;
     currency: string;
@@ -859,6 +900,10 @@ export type OrderDetail = {
      * The discount code used, as it was then
      */
     coupon_code: string | null;
+    /**
+     * Store credit the order paid with
+     */
+    credit: number;
     items: Array<OrderItem>;
     /**
      * Products of this order you've reviewed
@@ -1184,6 +1229,7 @@ export type StoreSettings = {
      */
     business_phone: string;
     shipping: ShippingRule;
+    referrals: ReferralRule;
     /**
      * The store's uploaded logo; null shows the built-in mark.
      */
@@ -1209,6 +1255,52 @@ export type ShippingRule = {
      * Orders of this many items or more ship free too (either rule is enough); null: no item rule.
      */
     free_items: number | null;
+};
+
+/**
+ * The referral programme. Each referral keeps the rule it was made under.
+ */
+export type ReferralRule = {
+    /**
+     * Whether the programme runs; off keeps its rule.
+     */
+    enabled: boolean;
+    /**
+     * Whether friend_value is cents off or a percent off.
+     */
+    friend_kind: 'amount' | 'percent';
+    /**
+     * What a referred friend's first order gets off: cents, or a percent (1 to 50).
+     */
+    friend_value: number;
+    /**
+     * The subtotal, in cents, the friend's order needs for the discount; null: no minimum.
+     */
+    friend_min: number | null;
+    /**
+     * The store credit, in cents, the referrer earns for each friend.
+     */
+    reward: number;
+    /**
+     * Days after the friend's order before the referrer's credit is paid (returns settle first).
+     */
+    pay_after_days: number;
+    /**
+     * Whether the friend's discount also applies to custom prints.
+     */
+    custom_prints: boolean;
+    /**
+     * The most referrals a referrer is rewarded for a month; null: no limit.
+     */
+    monthly_cap: number | null;
+    /**
+     * The most of an order's total store credit can pay, in percent.
+     */
+    credit_max_percent: number;
+    /**
+     * Months before unused credit lapses; null: it never does.
+     */
+    credit_expiry_months: number | null;
 };
 
 export type AdminStatsResponse = {
@@ -1623,7 +1715,7 @@ export type AdminOrderDetail = {
     subtotal: number;
     shipping: number;
     /**
-     * subtotal − discount + shipping
+     * subtotal − discount + shipping − credit
      */
     total: number;
     currency: string;
@@ -1653,6 +1745,10 @@ export type AdminOrderDetail = {
      * The discount code used, as it was then
      */
     coupon_code: string | null;
+    /**
+     * Store credit the order paid with
+     */
+    credit: number;
     items: Array<AdminOrderItem>;
     customer: {
         id: string;
@@ -1825,6 +1921,48 @@ export type ShippingBody = {
     free_items?: number | null;
 };
 
+/**
+ * Replaces the referral programme: whether it runs, the friend's discount, the referrer's credit and when it's paid, and the limits on credit. Referrals already made keep their rule.
+ */
+export type ReferralBody = {
+    /**
+     * Run the programme, or pause it and keep its rule.
+     */
+    enabled: boolean;
+    friend_kind: ReferralFriendKind;
+    /**
+     * Cents, 1 to 100000, or a percent, 1 to 50.
+     */
+    friend_value: number;
+    /**
+     * Cents, 1 to 100000; left out or null: no minimum.
+     */
+    friend_min?: number | null;
+    /**
+     * Cents, 1 to 100000.
+     */
+    reward: number;
+    /**
+     * Days, 0 to 365; 0 pays as soon as the order is paid.
+     */
+    pay_after_days: number;
+    custom_prints: boolean;
+    /**
+     * Referrals, 1 to 100; left out or null: no limit.
+     */
+    monthly_cap?: number | null;
+    /**
+     * Percent, 1 to 100.
+     */
+    credit_max_percent: number;
+    /**
+     * Months, 1 to 60; left out or null: credit never lapses.
+     */
+    credit_expiry_months?: number | null;
+};
+
+export type ReferralFriendKind = 'amount' | 'percent';
+
 export type AdminCouponListResponse = {
     success: true;
     message: string;
@@ -1903,6 +2041,222 @@ export type CouponBody = {
 
 export type CouponActiveBody = {
     is_active: boolean;
+};
+
+export type ReferralOfferResponse = {
+    success: true;
+    message: string;
+    data: ReferralOffer;
+};
+
+/**
+ * What a shared link offers a friend, for the storefront's welcome. Whether it applies to them is checked on their bag.
+ */
+export type ReferralOffer = {
+    code: string;
+    /**
+     * Whether friend_value is cents off or a percent off.
+     */
+    friend_kind: 'amount' | 'percent';
+    /**
+     * What a referred friend's first order gets off: cents, or a percent (1 to 50).
+     */
+    friend_value: number;
+    /**
+     * The subtotal, in cents, the friend's order needs for the discount; null: no minimum.
+     */
+    friend_min: number | null;
+};
+
+export type MyReferralsResponse = {
+    success: true;
+    message: string;
+    data: MyReferrals;
+};
+
+/**
+ * The customer's code, the friends it brought and their credit.
+ */
+export type MyReferrals = {
+    code: string;
+    rule: ReferralRule;
+    /**
+     * Newest first, at most 100
+     */
+    referrals: Array<MyReferral>;
+    /**
+     * The customer's store credit now
+     */
+    balance: number;
+};
+
+export type MyReferral = {
+    id: string;
+    /**
+     * The friend's email, masked: "a***@example.com"
+     */
+    friend: string;
+    status: ReferralStatus;
+    reward: number;
+    created_at: string;
+    /**
+     * When the credit is (or was) due; null until the order arrives
+     */
+    payout_at: string | null;
+};
+
+/**
+ * pending: waiting for the order to arrive and the wait to pass; earned: the credit is paid; capped: past the monthly cap, no credit; cancelled: the order was cancelled or refunded first
+ */
+export type ReferralStatus = 'pending' | 'earned' | 'capped' | 'cancelled';
+
+export type MyCreditResponse = {
+    success: true;
+    message: string;
+    data: MyCredit;
+};
+
+export type MyCredit = {
+    /**
+     * What's there to spend
+     */
+    balance: number;
+    /**
+     * The balance less what unpaid checkouts hold
+     */
+    available: number;
+    /**
+     * The most of an order's total credit can pay
+     */
+    max_percent: number;
+};
+
+export type AdminReferralListResponse = {
+    success: true;
+    message: string;
+    data: Array<AdminReferral>;
+    meta: PaginationMeta;
+};
+
+export type AdminReferral = {
+    id: string;
+    status: ReferralStatus;
+    reward: number;
+    /**
+     * What the friend's order got off
+     */
+    discount: number;
+    friend_email: string;
+    created_at: string;
+    settled_at: string | null;
+    payout_at: string | null;
+    referrer_id: string;
+    referrer_name: string;
+    referrer_email: string;
+    order_number: number;
+    order_status: string;
+};
+
+export type CreditCustomerListResponse = {
+    success: true;
+    message: string;
+    data: Array<CreditCustomer>;
+};
+
+export type CreditCustomer = {
+    id: string;
+    name: string;
+    email: string;
+    balance: number;
+};
+
+export type CreditAccountResponse = {
+    success: true;
+    message: string;
+    data: CreditAccount;
+};
+
+export type CreditAccount = {
+    id: string;
+    name: string;
+    email: string;
+    balance: number;
+    /**
+     * The balance less what unpaid checkouts hold
+     */
+    available: number;
+    max_percent: number;
+    /**
+     * Newest first
+     */
+    entries: Array<CreditEntry>;
+};
+
+/**
+ * One change to store credit.
+ */
+export type CreditEntry = {
+    id: string;
+    /**
+     * Cents: added above 0, taken below
+     */
+    amount: number;
+    kind: CreditKind;
+    order_id: string | null;
+    referral_id: string | null;
+    /**
+     * When credit added lapses; null never
+     */
+    expires_at: string | null;
+    note: string;
+    created_at: string;
+};
+
+export type CreditKind = 'earned' | 'spent' | 'expired' | 'adjusted' | 'reversed';
+
+/**
+ * Adds or takes off credit by hand, with the reason.
+ */
+export type CreditAdjustBody = {
+    /**
+     * Cents: above 0 adds credit, below 0 takes it off
+     */
+    amount: number;
+    note: string;
+};
+
+export type CreditRedemptionResponse = {
+    success: true;
+    message: string;
+    data: CreditRedemption;
+};
+
+export type CreditRedemption = {
+    id: string;
+    amount: number;
+    bill: number;
+    /**
+     * The emailed code works until then
+     */
+    expires_at: string;
+};
+
+/**
+ * Asks to pay part of an in-store bill with credit: the customer is emailed a code to confirm it.
+ */
+export type CreditRedeemBody = {
+    /**
+     * The in-store bill's total, in cents
+     */
+    bill: number;
+    /**
+     * The credit to take off it, in cents
+     */
+    amount: number;
+};
+
+export type CreditConfirmBody = {
+    code: string;
 };
 
 export type GetHealthData = {
@@ -3516,6 +3870,80 @@ export type ApplyCartCouponResponses = {
 
 export type ApplyCartCouponResponse = ApplyCartCouponResponses[keyof ApplyCartCouponResponses];
 
+export type RemoveCartReferralData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cart/referral';
+};
+
+export type RemoveCartReferralErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type RemoveCartReferralError = RemoveCartReferralErrors[keyof RemoveCartReferralErrors];
+
+export type RemoveCartReferralResponses = {
+    /**
+     * Friend's discount removed
+     */
+    200: CartResponse;
+};
+
+export type RemoveCartReferralResponse = RemoveCartReferralResponses[keyof RemoveCartReferralResponses];
+
+export type ApplyCartReferralData = {
+    body: ApplyReferralBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cart/referral';
+};
+
+export type ApplyCartReferralErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No such code, or the programme is off (REFERRAL_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * The code can't be used (REFERRAL_OWN_CODE, REFERRAL_NOT_FIRST_ORDER)
+     */
+    409: ApiError;
+    /**
+     * Too many failed codes (TOO_MANY_REQUESTS)
+     */
+    429: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ApplyCartReferralError = ApplyCartReferralErrors[keyof ApplyCartReferralErrors];
+
+export type ApplyCartReferralResponses = {
+    /**
+     * Friend's discount added
+     */
+    200: CartResponse;
+};
+
+export type ApplyCartReferralResponse = ApplyCartReferralResponses[keyof ApplyCartReferralResponses];
+
 export type StartCheckoutData = {
     body: CheckoutBody;
     path?: never;
@@ -3537,7 +3965,7 @@ export type StartCheckoutErrors = {
      */
     404: ApiError;
     /**
-     * The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED)
+     * The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED), or a friend's referral on it stopped applying (REFERRAL_NOT_FOUND, REFERRAL_OWN_CODE, REFERRAL_NOT_FIRST_ORDER, REFERRAL_MIN_SUBTOTAL; it is taken off the bag, so paying again goes on without it)
      */
     409: ApiError;
     /**
@@ -5282,6 +5710,43 @@ export type AdminSetShippingResponses = {
 
 export type AdminSetShippingResponse = AdminSetShippingResponses[keyof AdminSetShippingResponses];
 
+export type AdminSetReferralsData = {
+    body: ReferralBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/settings/referrals';
+};
+
+export type AdminSetReferralsErrors = {
+    /**
+     * An amount, percent or limit out of range, or not whole cents (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetReferralsError = AdminSetReferralsErrors[keyof AdminSetReferralsErrors];
+
+export type AdminSetReferralsResponses = {
+    /**
+     * Referral programme updated
+     */
+    200: StoreSettingsResponse;
+};
+
+export type AdminSetReferralsResponse = AdminSetReferralsResponses[keyof AdminSetReferralsResponses];
+
 export type AdminListCouponsData = {
     body?: never;
     path?: never;
@@ -5498,3 +5963,374 @@ export type AdminSetCouponActiveResponses = {
 };
 
 export type AdminSetCouponActiveResponse = AdminSetCouponActiveResponses[keyof AdminSetCouponActiveResponses];
+
+export type GetReferralOfferData = {
+    body?: never;
+    path: {
+        code: string;
+    };
+    query?: never;
+    url: '/api/v1/referrals/{code}';
+};
+
+export type GetReferralOfferErrors = {
+    /**
+     * No such code, or the programme is off (REFERRAL_NOT_FOUND; the message says which)
+     */
+    404: ApiError;
+    /**
+     * Too many unknown codes (TOO_MANY_REQUESTS)
+     */
+    429: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type GetReferralOfferError = GetReferralOfferErrors[keyof GetReferralOfferErrors];
+
+export type GetReferralOfferResponses = {
+    /**
+     * Referral offer fetched
+     */
+    200: ReferralOfferResponse;
+};
+
+export type GetReferralOfferResponse = GetReferralOfferResponses[keyof GetReferralOfferResponses];
+
+export type GetMyReferralsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/account/referrals';
+};
+
+export type GetMyReferralsErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
+    /**
+     * The programme is off (REFERRALS_DISABLED)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type GetMyReferralsError = GetMyReferralsErrors[keyof GetMyReferralsErrors];
+
+export type GetMyReferralsResponses = {
+    /**
+     * Referrals fetched
+     */
+    200: MyReferralsResponse;
+};
+
+export type GetMyReferralsResponse = GetMyReferralsResponses[keyof GetMyReferralsResponses];
+
+export type GetMyCreditData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/account/credit';
+};
+
+export type GetMyCreditErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * A guest session: sign in or create an account (GUEST_NOT_ALLOWED)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type GetMyCreditError = GetMyCreditErrors[keyof GetMyCreditErrors];
+
+export type GetMyCreditResponses = {
+    /**
+     * Store credit fetched
+     */
+    200: MyCreditResponse;
+};
+
+export type GetMyCreditResponse = GetMyCreditResponses[keyof GetMyCreditResponses];
+
+export type AdminListReferralsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        /**
+         * pending: waiting for the order to arrive and the wait to pass; earned: the credit is paid; capped: past the monthly cap, no credit; cancelled: the order was cancelled or refunded first
+         */
+        status?: ReferralStatus;
+    };
+    url: '/api/v1/admin/referrals';
+};
+
+export type AdminListReferralsErrors = {
+    /**
+     * Invalid page (INVALID_PAGE_PARAMETER) or status (INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListReferralsError = AdminListReferralsErrors[keyof AdminListReferralsErrors];
+
+export type AdminListReferralsResponses = {
+    /**
+     * Referrals fetched
+     */
+    200: AdminReferralListResponse;
+};
+
+export type AdminListReferralsResponse = AdminListReferralsResponses[keyof AdminListReferralsResponses];
+
+export type AdminSearchCreditCustomersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        q?: string;
+    };
+    url: '/api/v1/admin/credit/customers';
+};
+
+export type AdminSearchCreditCustomersErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSearchCreditCustomersError = AdminSearchCreditCustomersErrors[keyof AdminSearchCreditCustomersErrors];
+
+export type AdminSearchCreditCustomersResponses = {
+    /**
+     * Customers fetched
+     */
+    200: CreditCustomerListResponse;
+};
+
+export type AdminSearchCreditCustomersResponse = AdminSearchCreditCustomersResponses[keyof AdminSearchCreditCustomersResponses];
+
+export type AdminGetCreditAccountData = {
+    body?: never;
+    path: {
+        userID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/credit/customers/{userID}';
+};
+
+export type AdminGetCreditAccountErrors = {
+    /**
+     * No such customer (CUSTOMER_NOT_FOUND), or a bad id (INVALID_USER_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such customer (CUSTOMER_NOT_FOUND), or a bad id (INVALID_USER_ID)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminGetCreditAccountError = AdminGetCreditAccountErrors[keyof AdminGetCreditAccountErrors];
+
+export type AdminGetCreditAccountResponses = {
+    /**
+     * Store credit fetched
+     */
+    200: CreditAccountResponse;
+};
+
+export type AdminGetCreditAccountResponse = AdminGetCreditAccountResponses[keyof AdminGetCreditAccountResponses];
+
+export type AdminAdjustCreditData = {
+    body: CreditAdjustBody;
+    path: {
+        userID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/credit/customers/{userID}/adjust';
+};
+
+export type AdminAdjustCreditErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED) or id (INVALID_USER_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such customer (CUSTOMER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Not that much credit (CREDIT_NOT_ENOUGH)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminAdjustCreditError = AdminAdjustCreditErrors[keyof AdminAdjustCreditErrors];
+
+export type AdminAdjustCreditResponses = {
+    /**
+     * Store credit adjusted
+     */
+    200: CreditAccountResponse;
+};
+
+export type AdminAdjustCreditResponse = AdminAdjustCreditResponses[keyof AdminAdjustCreditResponses];
+
+export type AdminStartCreditRedemptionData = {
+    body: CreditRedeemBody;
+    path: {
+        userID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/credit/customers/{userID}/redemptions';
+};
+
+export type AdminStartCreditRedemptionErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED) or id (INVALID_USER_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such customer (CUSTOMER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Over the store's share of the bill (CREDIT_OVER_LIMIT), or not that much credit (CREDIT_NOT_ENOUGH)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+    /**
+     * Mail isn't set up, or the email failed (MAIL_UNAVAILABLE)
+     */
+    503: ApiError;
+};
+
+export type AdminStartCreditRedemptionError = AdminStartCreditRedemptionErrors[keyof AdminStartCreditRedemptionErrors];
+
+export type AdminStartCreditRedemptionResponses = {
+    /**
+     * Code sent to the customer
+     */
+    201: CreditRedemptionResponse;
+};
+
+export type AdminStartCreditRedemptionResponse = AdminStartCreditRedemptionResponses[keyof AdminStartCreditRedemptionResponses];
+
+export type AdminConfirmCreditRedemptionData = {
+    body: CreditConfirmBody;
+    path: {
+        redemptionID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/credit/redemptions/{redemptionID}/confirm';
+};
+
+export type AdminConfirmCreditRedemptionErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED) or id (INVALID_REDEMPTION_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such redemption (REDEMPTION_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * A wrong code (CREDIT_CODE_INVALID), one expired, used or out of tries (CREDIT_CODE_EXPIRED), or not that much credit left (CREDIT_NOT_ENOUGH)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminConfirmCreditRedemptionError = AdminConfirmCreditRedemptionErrors[keyof AdminConfirmCreditRedemptionErrors];
+
+export type AdminConfirmCreditRedemptionResponses = {
+    /**
+     * Store credit used
+     */
+    200: CreditAccountResponse;
+};
+
+export type AdminConfirmCreditRedemptionResponse = AdminConfirmCreditRedemptionResponses[keyof AdminConfirmCreditRedemptionResponses];

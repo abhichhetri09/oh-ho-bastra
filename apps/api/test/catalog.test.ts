@@ -833,6 +833,18 @@ describe("GET /settings", () => {
         business_phone: "",
         // the rule the code hard-coded before it was editable
         shipping: { flat: 490, free_from: 6000, free_items: null },
+        referrals: {
+          enabled: false,
+          friend_kind: "amount",
+          friend_value: 500,
+          friend_min: null,
+          reward: 500,
+          pay_after_days: 30,
+          custom_prints: false,
+          monthly_cap: null,
+          credit_max_percent: 30,
+          credit_expiry_months: null,
+        },
         logo_url: null,
         updated_at: expect.any(String),
       },

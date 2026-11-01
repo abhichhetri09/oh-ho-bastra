@@ -41,6 +41,12 @@ export const adminKeys = {
   customer: (id: string) => [...adminKeys.customers(), "detail", id] as const,
   coupons: () => [...adminKeys.all, "coupons"] as const,
   couponList: (page: number) => [...adminKeys.coupons(), page] as const,
+  referrals: () => [...adminKeys.all, "referrals"] as const,
+  referralList: (page: number) => [...adminKeys.referrals(), page] as const,
+  credit: () => [...adminKeys.all, "credit"] as const,
+  creditSearch: (q: string) => [...adminKeys.credit(), "search", q] as const,
+  creditAccount: (id: string) =>
+    [...adminKeys.credit(), "account", id] as const,
   reviews: () => [...adminKeys.all, "reviews"] as const,
   reviewList: (filters: AdminReviewFilters) =>
     [...adminKeys.reviews(), "list", filters] as const,

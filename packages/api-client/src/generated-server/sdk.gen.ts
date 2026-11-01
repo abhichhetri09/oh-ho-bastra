@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminCancelOrderData, AdminCancelOrderErrors, AdminCancelOrderResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateCouponData, AdminCreateCouponErrors, AdminCreateCouponResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteCouponData, AdminDeleteCouponErrors, AdminDeleteCouponResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminDeliverOrderData, AdminDeliverOrderErrors, AdminDeliverOrderResponses, AdminEndSaleData, AdminEndSaleErrors, AdminEndSaleResponses, AdminExportOrdersData, AdminExportOrdersErrors, AdminExportOrdersResponses, AdminGetCountsData, AdminGetCountsErrors, AdminGetCountsResponses, AdminGetCustomerData, AdminGetCustomerErrors, AdminGetCustomerResponses, AdminGetOrderData, AdminGetOrderErrors, AdminGetOrderResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListCouponsData, AdminListCouponsErrors, AdminListCouponsResponses, AdminListCustomersData, AdminListCustomersErrors, AdminListCustomersResponses, AdminListEmailsData, AdminListEmailsErrors, AdminListEmailsResponses, AdminListInventoryData, AdminListInventoryErrors, AdminListInventoryResponses, AdminListOrdersData, AdminListOrdersErrors, AdminListOrdersResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListReviewsData, AdminListReviewsErrors, AdminListReviewsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminPutOnSaleData, AdminPutOnSaleErrors, AdminPutOnSaleResponses, AdminRefundOrderData, AdminRefundOrderErrors, AdminRefundOrderResponses, AdminRetryEmailData, AdminRetryEmailErrors, AdminRetryEmailResponses, AdminSearchData, AdminSearchErrors, AdminSearchResponses, AdminSetAnnouncementsData, AdminSetAnnouncementsErrors, AdminSetAnnouncementsResponses, AdminSetBusinessDetailsData, AdminSetBusinessDetailsErrors, AdminSetBusinessDetailsResponses, AdminSetCouponActiveData, AdminSetCouponActiveErrors, AdminSetCouponActiveResponses, AdminSetOrderTrackingData, AdminSetOrderTrackingErrors, AdminSetOrderTrackingResponses, AdminSetReviewStatusData, AdminSetReviewStatusErrors, AdminSetReviewStatusResponses, AdminSetShippingData, AdminSetShippingErrors, AdminSetShippingResponses, AdminSetStoreLogoData, AdminSetStoreLogoErrors, AdminSetStoreLogoResponses, AdminSetStoreThemeData, AdminSetStoreThemeErrors, AdminSetStoreThemeResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminShipOrderData, AdminShipOrderErrors, AdminShipOrderResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateCouponData, AdminUpdateCouponErrors, AdminUpdateCouponResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ApplyCartCouponData, ApplyCartCouponErrors, ApplyCartCouponResponses, ChangePasswordData, ChangePasswordErrors, ChangePasswordResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, ForgotPasswordData, ForgotPasswordErrors, ForgotPasswordResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, GetStoreSettingsData, GetStoreSettingsErrors, GetStoreSettingsResponses, GoogleCallbackData, GoogleCallbackErrors, GoogleSignInData, GoogleSignInErrors, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, LookupOrderData, LookupOrderErrors, LookupOrderResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartCouponData, RemoveCartCouponErrors, RemoveCartCouponResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, ResetPasswordData, ResetPasswordErrors, ResetPasswordResponses, SendContactMessageData, SendContactMessageErrors, SendContactMessageResponses, SetDefaultAddressData, SetDefaultAddressErrors, SetDefaultAddressResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StartGuestSessionData, StartGuestSessionErrors, StartGuestSessionResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, UpdateProfileData, UpdateProfileErrors, UpdateProfileResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
+import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminAdjustCreditData, AdminAdjustCreditErrors, AdminAdjustCreditResponses, AdminCancelOrderData, AdminCancelOrderErrors, AdminCancelOrderResponses, AdminConfirmCreditRedemptionData, AdminConfirmCreditRedemptionErrors, AdminConfirmCreditRedemptionResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateCouponData, AdminCreateCouponErrors, AdminCreateCouponResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteCouponData, AdminDeleteCouponErrors, AdminDeleteCouponResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminDeliverOrderData, AdminDeliverOrderErrors, AdminDeliverOrderResponses, AdminEndSaleData, AdminEndSaleErrors, AdminEndSaleResponses, AdminExportOrdersData, AdminExportOrdersErrors, AdminExportOrdersResponses, AdminGetCountsData, AdminGetCountsErrors, AdminGetCountsResponses, AdminGetCreditAccountData, AdminGetCreditAccountErrors, AdminGetCreditAccountResponses, AdminGetCustomerData, AdminGetCustomerErrors, AdminGetCustomerResponses, AdminGetOrderData, AdminGetOrderErrors, AdminGetOrderResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListCouponsData, AdminListCouponsErrors, AdminListCouponsResponses, AdminListCustomersData, AdminListCustomersErrors, AdminListCustomersResponses, AdminListEmailsData, AdminListEmailsErrors, AdminListEmailsResponses, AdminListInventoryData, AdminListInventoryErrors, AdminListInventoryResponses, AdminListOrdersData, AdminListOrdersErrors, AdminListOrdersResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListReferralsData, AdminListReferralsErrors, AdminListReferralsResponses, AdminListReviewsData, AdminListReviewsErrors, AdminListReviewsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminPutOnSaleData, AdminPutOnSaleErrors, AdminPutOnSaleResponses, AdminRefundOrderData, AdminRefundOrderErrors, AdminRefundOrderResponses, AdminRetryEmailData, AdminRetryEmailErrors, AdminRetryEmailResponses, AdminSearchCreditCustomersData, AdminSearchCreditCustomersErrors, AdminSearchCreditCustomersResponses, AdminSearchData, AdminSearchErrors, AdminSearchResponses, AdminSetAnnouncementsData, AdminSetAnnouncementsErrors, AdminSetAnnouncementsResponses, AdminSetBusinessDetailsData, AdminSetBusinessDetailsErrors, AdminSetBusinessDetailsResponses, AdminSetCouponActiveData, AdminSetCouponActiveErrors, AdminSetCouponActiveResponses, AdminSetOrderTrackingData, AdminSetOrderTrackingErrors, AdminSetOrderTrackingResponses, AdminSetReferralsData, AdminSetReferralsErrors, AdminSetReferralsResponses, AdminSetReviewStatusData, AdminSetReviewStatusErrors, AdminSetReviewStatusResponses, AdminSetShippingData, AdminSetShippingErrors, AdminSetShippingResponses, AdminSetStoreLogoData, AdminSetStoreLogoErrors, AdminSetStoreLogoResponses, AdminSetStoreThemeData, AdminSetStoreThemeErrors, AdminSetStoreThemeResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminShipOrderData, AdminShipOrderErrors, AdminShipOrderResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminStartCreditRedemptionData, AdminStartCreditRedemptionErrors, AdminStartCreditRedemptionResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateCouponData, AdminUpdateCouponErrors, AdminUpdateCouponResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ApplyCartCouponData, ApplyCartCouponErrors, ApplyCartCouponResponses, ApplyCartReferralData, ApplyCartReferralErrors, ApplyCartReferralResponses, ChangePasswordData, ChangePasswordErrors, ChangePasswordResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, ForgotPasswordData, ForgotPasswordErrors, ForgotPasswordResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyCreditData, GetMyCreditErrors, GetMyCreditResponses, GetMyReferralsData, GetMyReferralsErrors, GetMyReferralsResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, GetReferralOfferData, GetReferralOfferErrors, GetReferralOfferResponses, GetStoreSettingsData, GetStoreSettingsErrors, GetStoreSettingsResponses, GoogleCallbackData, GoogleCallbackErrors, GoogleSignInData, GoogleSignInErrors, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, LookupOrderData, LookupOrderErrors, LookupOrderResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartCouponData, RemoveCartCouponErrors, RemoveCartCouponResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveCartReferralData, RemoveCartReferralErrors, RemoveCartReferralResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, ResetPasswordData, ResetPasswordErrors, ResetPasswordResponses, SendContactMessageData, SendContactMessageErrors, SendContactMessageResponses, SetDefaultAddressData, SetDefaultAddressErrors, SetDefaultAddressResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StartGuestSessionData, StartGuestSessionErrors, StartGuestSessionResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, UpdateProfileData, UpdateProfileErrors, UpdateProfileResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -604,6 +604,40 @@ export const applyCartCoupon = <ThrowOnError extends boolean = false>(options: O
             type: 'apiKey'
         }],
     url: '/api/v1/cart/coupon',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove the friend's referral code
+ *
+ * Removing when there is none succeeds.
+ */
+export const removeCartReferral = <ThrowOnError extends boolean = false>(options?: Options<RemoveCartReferralData, ThrowOnError>): RequestResult<RemoveCartReferralResponses, RemoveCartReferralErrors, ThrowOnError> => (options?.client ?? client).delete<RemoveCartReferralResponses, RemoveCartReferralErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/cart/referral',
+    ...options
+});
+
+/**
+ * Apply a friend's referral code
+ *
+ * Checks the code against the bag and the buyer (a first order, not the referrer) and puts it on the bag, replacing any other; the storefront does this for a shopper who came through a shared link. One discount per order: it counts only when it takes off more than the bag's discount code. A bag below the friend's minimum keeps it, with the issue. Failed attempts are limited as discount codes are.
+ */
+export const applyCartReferral = <ThrowOnError extends boolean = false>(options: Options<ApplyCartReferralData, ThrowOnError>): RequestResult<ApplyCartReferralResponses, ApplyCartReferralErrors, ThrowOnError> => (options.client ?? client).put<ApplyCartReferralResponses, ApplyCartReferralErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/cart/referral',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1271,6 +1305,25 @@ export const adminSetShipping = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
+ * Change the referral programme
+ *
+ * Replaces the referral programme: whether it runs, a referred friend's discount (cents or a percent, from an optional minimum), the referrer's credit and how many days after the friend's order it's paid, a monthly cap, and how much of an order credit can pay and when it lapses. Referrals already made keep the rule they were made under.
+ */
+export const adminSetReferrals = <ThrowOnError extends boolean = false>(options: Options<AdminSetReferralsData, ThrowOnError>): RequestResult<AdminSetReferralsResponses, AdminSetReferralsErrors, ThrowOnError> => (options.client ?? client).put<AdminSetReferralsResponses, AdminSetReferralsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/settings/referrals',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Discount codes
  *
  * Newest first, 20 per page, each with its uses (unpaid checkouts hold theirs until they are cancelled).
@@ -1348,6 +1401,145 @@ export const adminSetCouponActive = <ThrowOnError extends boolean = false>(optio
             type: 'apiKey'
         }],
     url: '/api/v1/admin/coupons/{couponID}/active',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * What a referral link offers
+ *
+ * The friend's discount a shared link's code gives (any case), for the storefront's welcome. Whether it applies to a shopper (a first order, not the referrer's own) is checked on their bag. Unknown codes are limited to 10 per 15 minutes, against guessing.
+ */
+export const getReferralOffer = <ThrowOnError extends boolean = false>(options: Options<GetReferralOfferData, ThrowOnError>): RequestResult<GetReferralOfferResponses, GetReferralOfferErrors, ThrowOnError> => (options.client ?? client).get<GetReferralOfferResponses, GetReferralOfferErrors, ThrowOnError>({ url: '/api/v1/referrals/{code}', ...options });
+
+/**
+ * My referral code and referrals
+ *
+ * The customer's code (made the first time they ask; it never changes), the programme as it is now, the friends the code brought (newest first, at most 100, emails masked) and their store credit.
+ */
+export const getMyReferrals = <ThrowOnError extends boolean = false>(options?: Options<GetMyReferralsData, ThrowOnError>): RequestResult<GetMyReferralsResponses, GetMyReferralsErrors, ThrowOnError> => (options?.client ?? client).get<GetMyReferralsResponses, GetMyReferralsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/account/referrals',
+    ...options
+});
+
+/**
+ * My store credit
+ *
+ * The balance, what unpaid checkouts don't hold, and the most of an order's total credit can pay (checkout's use_credit).
+ */
+export const getMyCredit = <ThrowOnError extends boolean = false>(options?: Options<GetMyCreditData, ThrowOnError>): RequestResult<GetMyCreditResponses, GetMyCreditErrors, ThrowOnError> => (options?.client ?? client).get<GetMyCreditResponses, GetMyCreditErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/account/credit',
+    ...options
+});
+
+/**
+ * Referrals
+ *
+ * Newest first, 20 per page: the referrer, the friend, the order, the status and when it pays out (or did). Abandoned checkouts show as cancelled.
+ */
+export const adminListReferrals = <ThrowOnError extends boolean = false>(options?: Options<AdminListReferralsData, ThrowOnError>): RequestResult<AdminListReferralsResponses, AdminListReferralsErrors, ThrowOnError> => (options?.client ?? client).get<AdminListReferralsResponses, AdminListReferralsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/referrals',
+    ...options
+});
+
+/**
+ * Find a customer's store credit
+ *
+ * Customers whose name or email contains q (2 characters or more; fewer finds nobody), at most 20, with their balances.
+ */
+export const adminSearchCreditCustomers = <ThrowOnError extends boolean = false>(options?: Options<AdminSearchCreditCustomersData, ThrowOnError>): RequestResult<AdminSearchCreditCustomersResponses, AdminSearchCreditCustomersErrors, ThrowOnError> => (options?.client ?? client).get<AdminSearchCreditCustomersResponses, AdminSearchCreditCustomersErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/credit/customers',
+    ...options
+});
+
+/**
+ * A customer's store credit
+ *
+ * The balance, what's free to spend and the ledger, newest first.
+ */
+export const adminGetCreditAccount = <ThrowOnError extends boolean = false>(options: Options<AdminGetCreditAccountData, ThrowOnError>): RequestResult<AdminGetCreditAccountResponses, AdminGetCreditAccountErrors, ThrowOnError> => (options.client ?? client).get<AdminGetCreditAccountResponses, AdminGetCreditAccountErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/credit/customers/{userID}',
+    ...options
+});
+
+/**
+ * Adjust a customer's store credit
+ *
+ * Adds (above 0) or takes off (below 0) credit by hand, with a note saying why; taking off more than is free to spend is refused.
+ */
+export const adminAdjustCredit = <ThrowOnError extends boolean = false>(options: Options<AdminAdjustCreditData, ThrowOnError>): RequestResult<AdminAdjustCreditResponses, AdminAdjustCreditErrors, ThrowOnError> => (options.client ?? client).post<AdminAdjustCreditResponses, AdminAdjustCreditErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/credit/customers/{userID}/adjust',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Use store credit on an in-store bill
+ *
+ * Checks the amount against the customer's credit and the store's share of the bill, then emails the customer a 6-digit code (valid 10 minutes, 5 tries) for staff to confirm with.
+ */
+export const adminStartCreditRedemption = <ThrowOnError extends boolean = false>(options: Options<AdminStartCreditRedemptionData, ThrowOnError>): RequestResult<AdminStartCreditRedemptionResponses, AdminStartCreditRedemptionErrors, ThrowOnError> => (options.client ?? client).post<AdminStartCreditRedemptionResponses, AdminStartCreditRedemptionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/credit/customers/{userID}/redemptions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Confirm an in-store redemption
+ *
+ * Spends the credit once the customer's code matches. A wrong code uses one of 5 tries.
+ */
+export const adminConfirmCreditRedemption = <ThrowOnError extends boolean = false>(options: Options<AdminConfirmCreditRedemptionData, ThrowOnError>): RequestResult<AdminConfirmCreditRedemptionResponses, AdminConfirmCreditRedemptionErrors, ThrowOnError> => (options.client ?? client).post<AdminConfirmCreditRedemptionResponses, AdminConfirmCreditRedemptionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/credit/redemptions/{redemptionID}/confirm',
     ...options,
     headers: {
         'Content-Type': 'application/json',

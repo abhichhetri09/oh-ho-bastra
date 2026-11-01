@@ -1,0 +1,11 @@
+ALTER TABLE store_settings
+    DROP COLUMN referrals_enabled,
+    DROP COLUMN referral_friend_kind,
+    DROP COLUMN referral_friend_value,
+    DROP COLUMN referral_friend_min,
+    DROP COLUMN referral_reward,
+    DROP COLUMN referral_pay_after_days,
+    DROP COLUMN referral_custom_prints,
+    DROP COLUMN referral_monthly_cap,
+    DROP COLUMN credit_max_percent,
+    DROP COLUMN credit_expiry_months;

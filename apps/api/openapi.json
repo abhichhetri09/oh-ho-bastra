@@ -144,7 +144,18 @@
           "WISHLIST_FULL",
           "NOT_VERIFIED_BUYER",
           "REVIEW_NOT_FOUND",
-          "INVALID_REVIEW_ID"
+          "INVALID_REVIEW_ID",
+          "REFERRALS_DISABLED",
+          "REFERRAL_NOT_FOUND",
+          "REFERRAL_OWN_CODE",
+          "REFERRAL_NOT_FIRST_ORDER",
+          "REFERRAL_MIN_SUBTOTAL",
+          "CREDIT_NOT_ENOUGH",
+          "CREDIT_OVER_LIMIT",
+          "CREDIT_CODE_INVALID",
+          "CREDIT_CODE_EXPIRED",
+          "INVALID_REDEMPTION_ID",
+          "REDEMPTION_NOT_FOUND"
         ],
         "description": "Machine-readable failure code."
       },
@@ -1988,7 +1999,7 @@
           "discount": {
             "type": "integer",
             "minimum": 0,
-            "description": "What the code takes off the subtotal"
+            "description": "What the code, or a friend's referral, takes off the subtotal (one of them)"
           },
           "shipping": {
             "type": "integer",
@@ -2063,6 +2074,52 @@
             ],
             "description": "null without a code"
           },
+          "referral": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "discount": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "What the friend's discount takes off this bag; 0 with an issue"
+              },
+              "applied": {
+                "type": "boolean",
+                "description": "Whether it is the bag's discount: one discount per order, so a code that takes off more wins"
+              },
+              "issue": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "code": {
+                    "$ref": "#/components/schemas/ReferralIssueCode"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "description": "Why it doesn't apply (it stays on the bag; checkout goes ahead without it)"
+              }
+            },
+            "required": [
+              "code",
+              "discount",
+              "applied",
+              "issue"
+            ],
+            "description": "null without one, or while the programme is off"
+          },
           "has_issues": {
             "type": "boolean",
             "description": "A line is off sale or above its stock; checkout refuses until it is fixed"
@@ -2076,6 +2133,7 @@
           "shipping",
           "total",
           "coupon",
+          "referral",
           "has_issues"
         ]
       },
@@ -2145,6 +2203,10 @@
               "$ref": "#/components/schemas/VariantOption"
             }
           },
+          "custom_print": {
+            "type": "boolean",
+            "description": "Made to order (a product under the custom category); a friend's discount may leave it out"
+          },
           "line_total": {
             "type": "integer",
             "minimum": 0,
@@ -2171,6 +2233,7 @@
           "price",
           "available",
           "options",
+          "custom_print",
           "line_total",
           "max_quantity"
         ],
@@ -2186,6 +2249,16 @@
           "COUPON_ALREADY_USED"
         ],
         "description": "COUPON_NOT_FOUND also covers a code that is switched off or not started yet"
+      },
+      "ReferralIssueCode": {
+        "type": "string",
+        "enum": [
+          "REFERRAL_NOT_FOUND",
+          "REFERRAL_OWN_CODE",
+          "REFERRAL_NOT_FIRST_ORDER",
+          "REFERRAL_MIN_SUBTOTAL"
+        ],
+        "description": "REFERRAL_NOT_FOUND also covers the programme being switched off"
       },
       "AddCartItemBody": {
         "type": "object",
@@ -2220,6 +2293,20 @@
         ]
       },
       "ApplyCouponBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "description": "Any case; spaces around it are ignored."
+      },
+      "ApplyReferralBody": {
         "type": "object",
         "properties": {
           "code": {
@@ -2344,6 +2431,10 @@
           "make_default": {
             "type": "boolean",
             "description": "With save_address: make the new address the default"
+          },
+          "use_credit": {
+            "type": "boolean",
+            "description": "Pay part of the order with store credit, up to the store's share of the total (not for a guest)"
           }
         },
         "description": "Ship to a saved address or a new one: exactly one of the two. A guest gives an email and a new address."
@@ -2418,7 +2509,7 @@
           "total": {
             "type": "integer",
             "minimum": 0,
-            "description": "subtotal − discount + shipping"
+            "description": "subtotal − discount + shipping − credit"
           },
           "currency": {
             "type": "string"
@@ -2502,6 +2593,11 @@
             ],
             "description": "The discount code used, as it was then"
           },
+          "credit": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Store credit the order paid with"
+          },
           "items": {
             "type": "array",
             "items": {
@@ -2540,6 +2636,7 @@
           "tracking_number",
           "discount",
           "coupon_code",
+          "credit",
           "items",
           "reviewed_product_ids"
         ]
@@ -3468,6 +3565,9 @@
           "shipping": {
             "$ref": "#/components/schemas/ShippingRule"
           },
+          "referrals": {
+            "$ref": "#/components/schemas/ReferralRule"
+          },
           "logo_url": {
             "type": [
               "string",
@@ -3493,6 +3593,7 @@
           "business_email",
           "business_phone",
           "shipping",
+          "referrals",
           "logo_url",
           "updated_at"
         ],
@@ -3538,6 +3639,85 @@
           "free_items"
         ],
         "description": "What delivery costs. Checkout charges it as it is then, and each order keeps what it was charged."
+      },
+      "ReferralRule": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the programme runs; off keeps its rule."
+          },
+          "friend_kind": {
+            "type": "string",
+            "enum": [
+              "amount",
+              "percent"
+            ],
+            "description": "Whether friend_value is cents off or a percent off."
+          },
+          "friend_value": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "What a referred friend's first order gets off: cents, or a percent (1 to 50)."
+          },
+          "friend_min": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "description": "The subtotal, in cents, the friend's order needs for the discount; null: no minimum."
+          },
+          "reward": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The store credit, in cents, the referrer earns for each friend."
+          },
+          "pay_after_days": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Days after the friend's order before the referrer's credit is paid (returns settle first)."
+          },
+          "custom_prints": {
+            "type": "boolean",
+            "description": "Whether the friend's discount also applies to custom prints."
+          },
+          "monthly_cap": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "description": "The most referrals a referrer is rewarded for a month; null: no limit."
+          },
+          "credit_max_percent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "The most of an order's total store credit can pay, in percent."
+          },
+          "credit_expiry_months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "description": "Months before unused credit lapses; null: it never does."
+          }
+        },
+        "required": [
+          "enabled",
+          "friend_kind",
+          "friend_value",
+          "friend_min",
+          "reward",
+          "pay_after_days",
+          "custom_prints",
+          "monthly_cap",
+          "credit_max_percent",
+          "credit_expiry_months"
+        ],
+        "description": "The referral programme. Each referral keeps the rule it was made under."
       },
       "AdminStatsResponse": {
         "type": "object",
@@ -4829,7 +5009,7 @@
           "total": {
             "type": "integer",
             "minimum": 0,
-            "description": "subtotal − discount + shipping"
+            "description": "subtotal − discount + shipping − credit"
           },
           "currency": {
             "type": "string"
@@ -4912,6 +5092,11 @@
               "null"
             ],
             "description": "The discount code used, as it was then"
+          },
+          "credit": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Store credit the order paid with"
           },
           "items": {
             "type": "array",
@@ -5030,6 +5215,7 @@
           "tracking_number",
           "discount",
           "coupon_code",
+          "credit",
           "items",
           "customer",
           "payment"
@@ -5420,6 +5606,89 @@
         ],
         "description": "Replaces what delivery costs: the flat price, and the subtotal (after any discount code) or item count from which orders ship free."
       },
+      "ReferralBody": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Run the programme, or pause it and keep its rule."
+          },
+          "friend_kind": {
+            "$ref": "#/components/schemas/ReferralFriendKind"
+          },
+          "friend_value": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "Cents, 1 to 100000, or a percent, 1 to 50."
+          },
+          "friend_min": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "Cents, 1 to 100000; left out or null: no minimum."
+          },
+          "reward": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "Cents, 1 to 100000."
+          },
+          "pay_after_days": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365,
+            "description": "Days, 0 to 365; 0 pays as soon as the order is paid."
+          },
+          "custom_prints": {
+            "type": "boolean"
+          },
+          "monthly_cap": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Referrals, 1 to 100; left out or null: no limit."
+          },
+          "credit_max_percent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Percent, 1 to 100."
+          },
+          "credit_expiry_months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 60,
+            "description": "Months, 1 to 60; left out or null: credit never lapses."
+          }
+        },
+        "required": [
+          "enabled",
+          "friend_kind",
+          "friend_value",
+          "reward",
+          "pay_after_days",
+          "custom_prints",
+          "credit_max_percent"
+        ],
+        "description": "Replaces the referral programme: whether it runs, the friend's discount, the referrer's credit and when it's paid, and the limits on credit. Referrals already made keep their rule."
+      },
+      "ReferralFriendKind": {
+        "type": "string",
+        "enum": [
+          "amount",
+          "percent"
+        ]
+      },
       "AdminCouponListResponse": {
         "type": "object",
         "properties": {
@@ -5622,6 +5891,603 @@
         },
         "required": [
           "is_active"
+        ]
+      },
+      "ReferralOfferResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ReferralOffer"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "ReferralOffer": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "friend_kind": {
+            "type": "string",
+            "enum": [
+              "amount",
+              "percent"
+            ],
+            "description": "Whether friend_value is cents off or a percent off."
+          },
+          "friend_value": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "What a referred friend's first order gets off: cents, or a percent (1 to 50)."
+          },
+          "friend_min": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "description": "The subtotal, in cents, the friend's order needs for the discount; null: no minimum."
+          }
+        },
+        "required": [
+          "code",
+          "friend_kind",
+          "friend_value",
+          "friend_min"
+        ],
+        "description": "What a shared link offers a friend, for the storefront's welcome. Whether it applies to them is checked on their bag."
+      },
+      "MyReferralsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MyReferrals"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "MyReferrals": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/ReferralRule"
+          },
+          "referrals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyReferral"
+            },
+            "description": "Newest first, at most 100"
+          },
+          "balance": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The customer's store credit now"
+          }
+        },
+        "required": [
+          "code",
+          "rule",
+          "referrals",
+          "balance"
+        ],
+        "description": "The customer's code, the friends it brought and their credit."
+      },
+      "MyReferral": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "friend": {
+            "type": "string",
+            "description": "The friend's email, masked: \"a***@example.com\""
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReferralStatus"
+          },
+          "reward": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "payout_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the credit is (or was) due; null until the order arrives"
+          }
+        },
+        "required": [
+          "id",
+          "friend",
+          "status",
+          "reward",
+          "created_at",
+          "payout_at"
+        ]
+      },
+      "ReferralStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "earned",
+          "capped",
+          "cancelled"
+        ],
+        "description": "pending: waiting for the order to arrive and the wait to pass; earned: the credit is paid; capped: past the monthly cap, no credit; cancelled: the order was cancelled or refunded first"
+      },
+      "MyCreditResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MyCredit"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "MyCredit": {
+        "type": "object",
+        "properties": {
+          "balance": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What's there to spend"
+          },
+          "available": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The balance less what unpaid checkouts hold"
+          },
+          "max_percent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "The most of an order's total credit can pay"
+          }
+        },
+        "required": [
+          "balance",
+          "available",
+          "max_percent"
+        ]
+      },
+      "AdminReferralListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminReferral"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "meta"
+        ]
+      },
+      "AdminReferral": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReferralStatus"
+          },
+          "reward": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "discount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What the friend's order got off"
+          },
+          "friend_email": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "settled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "payout_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "referrer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "referrer_name": {
+            "type": "string"
+          },
+          "referrer_email": {
+            "type": "string"
+          },
+          "order_number": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "order_status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "reward",
+          "discount",
+          "friend_email",
+          "created_at",
+          "settled_at",
+          "payout_at",
+          "referrer_id",
+          "referrer_name",
+          "referrer_email",
+          "order_number",
+          "order_status"
+        ]
+      },
+      "CreditCustomerListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreditCustomer"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CreditCustomer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "balance"
+        ]
+      },
+      "CreditAccountResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CreditAccount"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CreditAccount": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "available": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The balance less what unpaid checkouts hold"
+          },
+          "max_percent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreditEntry"
+            },
+            "description": "Newest first"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "balance",
+          "available",
+          "max_percent",
+          "entries"
+        ]
+      },
+      "CreditEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "Cents: added above 0, taken below"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CreditKind"
+          },
+          "order_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "referral_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When credit added lapses; null never"
+          },
+          "note": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "kind",
+          "order_id",
+          "referral_id",
+          "expires_at",
+          "note",
+          "created_at"
+        ],
+        "description": "One change to store credit."
+      },
+      "CreditKind": {
+        "type": "string",
+        "enum": [
+          "earned",
+          "spent",
+          "expired",
+          "adjusted",
+          "reversed"
+        ]
+      },
+      "CreditAdjustBody": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "description": "Cents: above 0 adds credit, below 0 takes it off"
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "amount",
+          "note"
+        ],
+        "description": "Adds or takes off credit by hand, with the reason."
+      },
+      "CreditRedemptionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CreditRedemption"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CreditRedemption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "bill": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The emailed code works until then"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "bill",
+          "expires_at"
+        ]
+      },
+      "CreditRedeemBody": {
+        "type": "object",
+        "properties": {
+          "bill": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000000,
+            "description": "The in-store bill's total, in cents"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000000,
+            "description": "The credit to take off it, in cents"
+          }
+        },
+        "required": [
+          "bill",
+          "amount"
+        ],
+        "description": "Asks to pay part of an in-store bill with credit: the customer is emailed a code to confirm it."
+      },
+      "CreditConfirmBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "code"
         ]
       }
     },
@@ -8937,6 +9803,148 @@
         }
       }
     },
+    "/api/v1/cart/referral": {
+      "put": {
+        "operationId": "applyCartReferral",
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Apply a friend's referral code",
+        "description": "Checks the code against the bag and the buyer (a first order, not the referrer) and puts it on the bag, replacing any other; the storefront does this for a shopper who came through a shared link. One discount per order: it counts only when it takes off more than the bag's discount code. A bag below the friend's minimum keeps it, with the issue. Failed attempts are limited as discount codes are.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyReferralBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Friend's discount added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such code, or the programme is off (REFERRAL_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The code can't be used (REFERRAL_OWN_CODE, REFERRAL_NOT_FIRST_ORDER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failed codes (TOO_MANY_REQUESTS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeCartReferral",
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Remove the friend's referral code",
+        "description": "Removing when there is none succeeds.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Friend's discount removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/checkout": {
       "post": {
         "operationId": "startCheckout",
@@ -9002,7 +10010,7 @@
             }
           },
           "409": {
-            "description": "The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED)",
+            "description": "The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED), or a friend's referral on it stopped applying (REFERRAL_NOT_FOUND, REFERRAL_OWN_CODE, REFERRAL_NOT_FIRST_ORDER, REFERRAL_MIN_SUBTOTAL; it is taken off the bag, so paying again goes on without it)",
             "content": {
               "application/json": {
                 "schema": {
@@ -12636,6 +13644,83 @@
         }
       }
     },
+    "/api/v1/admin/settings/referrals": {
+      "put": {
+        "operationId": "adminSetReferrals",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Change the referral programme",
+        "description": "Replaces the referral programme: whether it runs, a referred friend's discount (cents or a percent, from an optional minimum), the referrer's credit and how many days after the friend's order it's paid, a monthly cap, and how much of an order credit can pay and when it lapses. Referrals already made keep the rule they were made under.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferralBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Referral programme updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An amount, percent or limit out of range, or not whole cents (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/coupons": {
       "get": {
         "operationId": "adminListCoupons",
@@ -13080,6 +14165,769 @@
           },
           "404": {
             "description": "No such coupon (COUPON_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/referrals/{code}": {
+      "get": {
+        "operationId": "getReferralOffer",
+        "tags": [
+          "Referrals"
+        ],
+        "summary": "What a referral link offers",
+        "description": "The friend's discount a shared link's code gives (any case), for the storefront's welcome. Whether it applies to a shopper (a first order, not the referrer's own) is checked on their bag. Unknown codes are limited to 10 per 15 minutes, against guessing.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "code",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Referral offer fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralOfferResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such code, or the programme is off (REFERRAL_NOT_FOUND; the message says which)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many unknown codes (TOO_MANY_REQUESTS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/referrals": {
+      "get": {
+        "operationId": "getMyReferrals",
+        "tags": [
+          "Referrals"
+        ],
+        "summary": "My referral code and referrals",
+        "description": "The customer's code (made the first time they ask; it never changes), the programme as it is now, the friends the code brought (newest first, at most 100, emails masked) and their store credit.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Referrals fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyReferralsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The programme is off (REFERRALS_DISABLED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/credit": {
+      "get": {
+        "operationId": "getMyCredit",
+        "tags": [
+          "Referrals"
+        ],
+        "summary": "My store credit",
+        "description": "The balance, what unpaid checkouts don't hold, and the most of an order's total credit can pay (checkout's use_credit).",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Store credit fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyCreditResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A guest session: sign in or create an account (GUEST_NOT_ALLOWED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/referrals": {
+      "get": {
+        "operationId": "adminListReferrals",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Referrals",
+        "description": "Newest first, 20 per page: the referrer, the friend, the order, the status and when it pays out (or did). Abandoned checkouts show as cancelled.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ReferralStatus"
+            },
+            "required": false,
+            "description": "pending: waiting for the order to arrive and the wait to pass; earned: the credit is paid; capped: past the monthly cap, no credit; cancelled: the order was cancelled or refunded first",
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Referrals fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReferralListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid page (INVALID_PAGE_PARAMETER) or status (INVALID_QUERY_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/credit/customers": {
+      "get": {
+        "operationId": "adminSearchCreditCustomers",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Find a customer's store credit",
+        "description": "Customers whose name or email contains q (2 characters or more; fewer finds nobody), at most 20, with their balances.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customers fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCustomerListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/credit/customers/{userID}": {
+      "get": {
+        "operationId": "adminGetCreditAccount",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "A customer's store credit",
+        "description": "The balance, what's free to spend and the ledger, newest first.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "userID",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Store credit fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No such customer (CUSTOMER_NOT_FOUND), or a bad id (INVALID_USER_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such customer (CUSTOMER_NOT_FOUND), or a bad id (INVALID_USER_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/credit/customers/{userID}/adjust": {
+      "post": {
+        "operationId": "adminAdjustCredit",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Adjust a customer's store credit",
+        "description": "Adds (above 0) or takes off (below 0) credit by hand, with a note saying why; taking off more than is free to spend is refused.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "userID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditAdjustBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Store credit adjusted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED) or id (INVALID_USER_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such customer (CUSTOMER_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not that much credit (CREDIT_NOT_ENOUGH)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/credit/customers/{userID}/redemptions": {
+      "post": {
+        "operationId": "adminStartCreditRedemption",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Use store credit on an in-store bill",
+        "description": "Checks the amount against the customer's credit and the store's share of the bill, then emails the customer a 6-digit code (valid 10 minutes, 5 tries) for staff to confirm with.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "userID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditRedeemBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Code sent to the customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditRedemptionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED) or id (INVALID_USER_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such customer (CUSTOMER_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Over the store's share of the bill (CREDIT_OVER_LIMIT), or not that much credit (CREDIT_NOT_ENOUGH)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Mail isn't set up, or the email failed (MAIL_UNAVAILABLE)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/credit/redemptions/{redemptionID}/confirm": {
+      "post": {
+        "operationId": "adminConfirmCreditRedemption",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Confirm an in-store redemption",
+        "description": "Spends the credit once the customer's code matches. A wrong code uses one of 5 tries.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "redemptionID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditConfirmBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Store credit used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED) or id (INVALID_REDEMPTION_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such redemption (REDEMPTION_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A wrong code (CREDIT_CODE_INVALID), one expired, used or out of tries (CREDIT_CODE_EXPIRED), or not that much credit left (CREDIT_NOT_ENOUGH)",
             "content": {
               "application/json": {
                 "schema": {

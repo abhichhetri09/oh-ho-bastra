@@ -24,7 +24,7 @@ export function registerCheckoutPaths() {
     errors: {
       400: "Invalid body, not exactly one of address_id and address, or a guest without an email or with an address_id (VALIDATION_FAILED)",
       404: "No such saved address (ADDRESS_NOT_FOUND)",
-      409: "The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED)",
+      409: "The cart is empty, a line is off sale or short, or its discount code can't be used (CART_EMPTY, CART_HAS_ISSUES, COUPON_NOT_FOUND, COUPON_EXPIRED, COUPON_MIN_SUBTOTAL, COUPON_USED_UP, COUPON_ALREADY_USED), or a friend's referral on it stopped applying (REFERRAL_NOT_FOUND, REFERRAL_OWN_CODE, REFERRAL_NOT_FIRST_ORDER, REFERRAL_MIN_SUBTOTAL; it is taken off the bag, so paying again goes on without it)",
       502: "Stripe could not be reached; the reservation was released (PAYMENT_PROVIDER_ERROR)",
       503: unavailable,
     },

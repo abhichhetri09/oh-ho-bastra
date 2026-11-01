@@ -2,6 +2,7 @@ import {
   type Cart,
   type CartCoupon,
   type CartLine,
+  type CartReferral,
   MAX_LINE_QUANTITY,
   type ProductDetail,
   type ShippingRule,
@@ -22,13 +23,16 @@ export function lineIsReady(line: CartLine): boolean {
 }
 
 /**
- * Recomputes the totals from the lines, with the bag's discount code (if
- * any) taken off before shipping under rule, as the API does.
+ * Recomputes the totals from the lines, with the bag's discount (its code's,
+ * or a friend's referral when that takes off more: one per order) taken off
+ * before shipping under rule, as the API does. The referral keeps what the
+ * API last said it takes off; the API's answer replaces it.
  */
 export function withTotals(
   items: CartLine[],
   coupon: CartCoupon | null,
   rule: ShippingRule,
+  referral: CartReferral | null = null,
 ): Cart {
   let itemCount = 0;
   let subtotal = 0;
@@ -42,7 +46,10 @@ export function withTotals(
     subtotal += line.price * line.quantity;
   }
   const repriced = repriceCoupon(coupon, subtotal);
-  const discount = repriced?.discount ?? 0;
+  const couponOff = repriced?.discount ?? 0;
+  const friendOff = Math.min(referral?.discount ?? 0, subtotal);
+  const useReferral = friendOff > couponOff;
+  const discount = useReferral ? friendOff : couponOff;
   // Nothing to check out ships for nothing.
   const shipping =
     itemCount === 0 ? 0 : shippingFor(subtotal - discount, itemCount, rule);
@@ -54,6 +61,7 @@ export function withTotals(
     shipping,
     total: subtotal - discount + shipping,
     coupon: repriced,
+    referral: referral && { ...referral, applied: useReferral },
     has_issues: hasIssues,
   };
 }
@@ -72,6 +80,7 @@ export function setLineQuantity(
     ),
     cart.coupon,
     rule,
+    cart.referral,
   );
 }
 
@@ -84,18 +93,24 @@ export function removeLine(
     cart.items.filter((l) => l.variant_id !== variantId),
     cart.coupon,
     rule,
+    cart.referral,
   );
 }
 
 /** The bag without its discount code. */
 export function removeCoupon(cart: Cart, rule: ShippingRule): Cart {
-  return withTotals(cart.items, null, rule);
+  return withTotals(cart.items, null, rule, cart.referral);
 }
 
 /** What a page knows about a variant, enough to show it in the bag. */
 export type LinePreview = Omit<
   CartLine,
-  "quantity" | "added_at" | "available" | "line_total" | "max_quantity"
+  | "quantity"
+  | "added_at"
+  | "available"
+  | "line_total"
+  | "max_quantity"
+  | "custom_print"
 >;
 
 /** The bag line a product page would add: the chosen variant, else the default. */
@@ -177,10 +192,13 @@ export function addLine(
         available: true,
         line_total: preview.price * quantity,
         max_quantity: Math.min(preview.stock, MAX_LINE_QUANTITY),
+        // The API says, with its answer.
+        custom_print: false,
       },
     ],
     cart.coupon,
     rule,
+    cart.referral,
   );
 }
 

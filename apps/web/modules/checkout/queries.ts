@@ -4,14 +4,17 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { OrderDetail, OrderLookupBody } from "@repo/types";
 import {
   getCheckoutSession,
+  getMyCredit,
+  getMyReferrals,
   getOrder,
   listAddresses,
   listOrders,
   lookupOrder,
 } from "@/lib/api/client";
+import { getApiError } from "@/lib/api/errors";
 import { accountOf } from "@/lib/auth/redirect";
 import { useAuth } from "@/providers/auth-provider";
-import { addressKeys, orderKeys } from "./keys";
+import { addressKeys, creditKeys, orderKeys } from "./keys";
 
 function useUserId() {
   return useAuth((s) => s.user?.id ?? "");
@@ -25,6 +28,40 @@ export function useAddresses() {
     queryFn: async ({ signal }) => {
       const { data } = await listAddresses({ signal, throwOnError: true });
       return data.data;
+    },
+    enabled: Boolean(userId),
+  });
+}
+
+/** The account's store credit; idle for a guest, which has none. */
+export function useMyCredit() {
+  const userId = useAuth((s) => accountOf(s.user)?.id ?? "");
+  return useQuery({
+    queryKey: creditKeys.mine(userId),
+    queryFn: async ({ signal }) => {
+      const { data } = await getMyCredit({ signal, throwOnError: true });
+      return data.data;
+    },
+    enabled: Boolean(userId),
+  });
+}
+
+/**
+ * The account's referral code, its referrals and credit; null while the
+ * programme is off (the API's 404).
+ */
+export function useMyReferrals() {
+  const userId = useAuth((s) => accountOf(s.user)?.id ?? "");
+  return useQuery({
+    queryKey: creditKeys.referrals(userId),
+    queryFn: async ({ signal }) => {
+      try {
+        const { data } = await getMyReferrals({ signal, throwOnError: true });
+        return data.data;
+      } catch (error) {
+        if (getApiError(error)?.code === "REFERRALS_DISABLED") return null;
+        throw error;
+      }
     },
     enabled: Boolean(userId),
   });

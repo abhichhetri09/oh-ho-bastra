@@ -118,4 +118,34 @@ export function registerCartPaths() {
     auth: "user",
     success: { ...cart, description: "Code removed" },
   });
+
+  operation({
+    method: "put",
+    path: "/api/v1/cart/referral",
+    operationId: "applyCartReferral",
+    tag,
+    summary: "Apply a friend's referral code",
+    description:
+      "Checks the code against the bag and the buyer (a first order, not the referrer) and puts it on the bag, replacing any other; the storefront does this for a shopper who came through a shared link. One discount per order: it counts only when it takes off more than the bag's discount code. A bag below the friend's minimum keeps it, with the issue. Failed attempts are limited as discount codes are.",
+    auth: "user",
+    request: body(schemas.ApplyReferralBodySchema),
+    success: { ...cart, description: "Friend's discount added" },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      404: "No such code, or the programme is off (REFERRAL_NOT_FOUND)",
+      409: "The code can't be used (REFERRAL_OWN_CODE, REFERRAL_NOT_FIRST_ORDER)",
+      429: "Too many failed codes (TOO_MANY_REQUESTS)",
+    },
+  });
+
+  operation({
+    method: "delete",
+    path: "/api/v1/cart/referral",
+    operationId: "removeCartReferral",
+    tag,
+    summary: "Remove the friend's referral code",
+    description: "Removing when there is none succeeds.",
+    auth: "user",
+    success: { ...cart, description: "Friend's discount removed" },
+  });
 }

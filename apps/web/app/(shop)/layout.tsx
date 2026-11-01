@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { getSessionUser } from "@/lib/auth/session";
 import { PendingIntentRunner } from "@/modules/auth/components/pending-intent";
 import { getServerCart } from "@/modules/cart/api";
+import { ReferralWelcome } from "@/modules/cart/components/referral-welcome";
 import { cartKeys } from "@/modules/cart/keys";
 
 export default async function ShopLayout({
@@ -32,6 +33,7 @@ export default async function ShopLayout({
       </a>
       <AnnouncementBar />
       <SiteHeader />
+      <ReferralWelcome />
       <main id="content" className="flex w-full flex-1 flex-col">
         {children}
       </main>

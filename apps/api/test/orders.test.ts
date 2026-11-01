@@ -120,6 +120,7 @@ describe("GET /orders/:number", () => {
       "tracking_number",
       "discount",
       "coupon_code",
+      "credit",
       "items",
       "reviewed_product_ids",
     ]);

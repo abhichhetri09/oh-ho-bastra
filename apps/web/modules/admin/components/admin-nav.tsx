@@ -7,6 +7,7 @@ import {
   ChatCircleTextIcon,
   EnvelopeSimpleIcon,
   GearSixIcon,
+  HandshakeIcon,
   PackageIcon,
   ReceiptIcon,
   SignOutIcon,
@@ -15,6 +16,7 @@ import {
   TagIcon,
   TreeStructureIcon,
   UsersIcon,
+  WalletIcon,
   type Icon,
 } from "@phosphor-icons/react";
 import type { AdminCounts } from "@repo/types";
@@ -49,6 +51,8 @@ export const groups: { label: string; links: NavLink[] }[] = [
       },
       { label: "Customers", href: "/admin/customers", icon: UsersIcon },
       { label: "Coupons", href: "/admin/coupons", icon: TagIcon },
+      { label: "Referrals", href: "/admin/referrals", icon: HandshakeIcon },
+      { label: "Store credit", href: "/admin/credit", icon: WalletIcon },
     ],
   },
   {

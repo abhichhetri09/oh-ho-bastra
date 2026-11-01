@@ -2,8 +2,9 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { getStoreSettings } from "@repo/api-client/server";
-import type { ShippingRule, StoreSettings } from "@repo/types";
+import type { ReferralRule, ShippingRule, StoreSettings } from "@repo/types";
 import { publicClient, SETTINGS_TAG } from "./api/public";
+import { DEFAULT_REFERRALS } from "./referrals";
 import { DEFAULT_SHIPPING } from "./shipping";
 import { site } from "./site";
 import {
@@ -134,6 +135,14 @@ export async function storeBusiness(): Promise<BusinessDetails> {
  */
 export async function storeShipping(): Promise<ShippingRule> {
   return (await storeSettings())?.shipping ?? DEFAULT_SHIPPING;
+}
+
+/**
+ * The referral programme, as an admin set it in Admin → Settings →
+ * Referrals; the store's default (off) while the API can't answer.
+ */
+export async function storeReferrals(): Promise<ReferralRule> {
+  return (await storeSettings())?.referrals ?? DEFAULT_REFERRALS;
 }
 
 /** The admin's uploaded logo, or null for the built-in mark. */

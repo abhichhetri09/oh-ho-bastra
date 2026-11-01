@@ -67,7 +67,7 @@ export async function restoreStock(db: Queryable, order_id: string): Promise<voi
   await db.query(restoreStockSql, [order_id]);
 }
 
-export const createOrderSql = "INSERT INTO orders (\n    user_id, subtotal, discount, coupon_code, shipping, total, currency,\n    email, shipping_address, expires_at\n)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\nRETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code";
+export const createOrderSql = "INSERT INTO orders (\n    user_id, subtotal, discount, coupon_code, shipping, total, currency,\n    email, shipping_address, expires_at, credit\n)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\nRETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit";
 
 export interface CreateOrderParams {
   user_id: string;
@@ -80,10 +80,11 @@ export interface CreateOrderParams {
   email: string;
   shipping_address: unknown;
   expires_at: Date | string;
+  credit: number;
 }
 
 export async function createOrder(db: Queryable, p: CreateOrderParams): Promise<Order | null> {
-  const { rows } = await db.query(createOrderSql, [p["user_id"], p["subtotal"], p["discount"], p["coupon_code"], p["shipping"], p["total"], p["currency"], p["email"], p["shipping_address"], p["expires_at"]]);
+  const { rows } = await db.query(createOrderSql, [p["user_id"], p["subtotal"], p["discount"], p["coupon_code"], p["shipping"], p["total"], p["currency"], p["email"], p["shipping_address"], p["expires_at"], p["credit"]]);
   return (rows[0] as Order | undefined) ?? null;
 }
 
@@ -118,7 +119,7 @@ export async function setOrderSession(db: Queryable, p: SetOrderSessionParams): 
   await db.query(setOrderSessionSql, [p["id"], p["stripe_session_id"]]);
 }
 
-export const getOrderForUpdateSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code FROM orders WHERE id = $1 FOR UPDATE";
+export const getOrderForUpdateSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit FROM orders WHERE id = $1 FOR UPDATE";
 
 export async function getOrderForUpdate(db: Queryable, id: string): Promise<Order | null> {
   const { rows } = await db.query(getOrderForUpdateSql, [id]);
@@ -206,7 +207,7 @@ export async function recordStripeEvent(db: Queryable, p: RecordStripeEventParam
   return rowCount ?? 0;
 }
 
-export const getOrderBySessionSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code FROM orders WHERE stripe_session_id = $1 AND user_id = $2";
+export const getOrderBySessionSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit FROM orders WHERE stripe_session_id = $1 AND user_id = $2";
 
 export interface GetOrderBySessionParams {
   stripe_session_id: string | null;
@@ -218,7 +219,7 @@ export async function getOrderBySession(db: Queryable, p: GetOrderBySessionParam
   return (rows[0] as Order | undefined) ?? null;
 }
 
-export const getOrderByNumberSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code FROM orders WHERE number = $1 AND user_id = $2";
+export const getOrderByNumberSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit FROM orders WHERE number = $1 AND user_id = $2";
 
 export interface GetOrderByNumberParams {
   number: number;
@@ -232,7 +233,7 @@ export async function getOrderByNumber(db: Queryable, p: GetOrderByNumberParams)
 
 // A placed order by its number and the email it was placed with (any
 // case), for shoppers without an account.
-export const lookupOrderSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code FROM orders\nWHERE number = $1 AND lower(email) = lower($2::text)\n  AND status <> 'pending' AND NOT (status = 'cancelled' AND paid_at IS NULL)";
+export const lookupOrderSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit FROM orders\nWHERE number = $1 AND lower(email) = lower($2::text)\n  AND status <> 'pending' AND NOT (status = 'cancelled' AND paid_at IS NULL)";
 
 export interface LookupOrderParams {
   number: number;
@@ -400,7 +401,7 @@ export async function adminExportOrders(db: Queryable, p: AdminExportOrdersParam
   return rows as AdminExportOrdersRow[];
 }
 
-export const adminGetOrderSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code FROM orders WHERE number = $1";
+export const adminGetOrderSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit FROM orders WHERE number = $1";
 
 export async function adminGetOrder(db: Queryable, number: number): Promise<Order | null> {
   const { rows } = await db.query(adminGetOrderSql, [number]);
@@ -408,7 +409,7 @@ export async function adminGetOrder(db: Queryable, number: number): Promise<Orde
 }
 
 // Fulfilment changes lock the order first, like checkout's settling does.
-export const adminGetOrderForUpdateSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code FROM orders WHERE number = $1 FOR UPDATE";
+export const adminGetOrderForUpdateSql = "SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit FROM orders WHERE number = $1 FOR UPDATE";
 
 export async function adminGetOrderForUpdate(db: Queryable, number: number): Promise<Order | null> {
   const { rows } = await db.query(adminGetOrderForUpdateSql, [number]);
@@ -424,7 +425,7 @@ export async function getOrderPayment(db: Queryable, order_id: string): Promise<
 
 // Sets or clears (NULL) the tracking number of a shipped or delivered
 // order; no row when the order isn't one.
-export const setOrderTrackingSql = "UPDATE orders SET tracking_number = $1\nWHERE number = $2 AND status IN ('shipped', 'delivered')\nRETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code";
+export const setOrderTrackingSql = "UPDATE orders SET tracking_number = $1\nWHERE number = $2 AND status IN ('shipped', 'delivered')\nRETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit";
 
 export interface SetOrderTrackingParams {
   tracking_number: string | null;
@@ -436,7 +437,7 @@ export async function setOrderTracking(db: Queryable, p: SetOrderTrackingParams)
   return (rows[0] as Order | undefined) ?? null;
 }
 
-export const shipOrderSql = "UPDATE orders SET status = 'shipped', shipped_at = now(), tracking_number = $1\nWHERE id = $2 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code";
+export const shipOrderSql = "UPDATE orders SET status = 'shipped', shipped_at = now(), tracking_number = $1\nWHERE id = $2 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit";
 
 export interface ShipOrderParams {
   tracking_number: string | null;
@@ -448,14 +449,14 @@ export async function shipOrder(db: Queryable, p: ShipOrderParams): Promise<Orde
   return (rows[0] as Order | undefined) ?? null;
 }
 
-export const deliverOrderSql = "UPDATE orders SET status = 'delivered', delivered_at = now()\nWHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code";
+export const deliverOrderSql = "UPDATE orders SET status = 'delivered', delivered_at = now()\nWHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit";
 
 export async function deliverOrder(db: Queryable, id: string): Promise<Order | null> {
   const { rows } = await db.query(deliverOrderSql, [id]);
   return (rows[0] as Order | undefined) ?? null;
 }
 
-export const refundOrderSql = "UPDATE orders SET status = 'refunded', refunded_at = now()\nWHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code";
+export const refundOrderSql = "UPDATE orders SET status = 'refunded', refunded_at = now()\nWHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, coupon_code, credit";
 
 export async function refundOrder(db: Queryable, id: string): Promise<Order | null> {
   const { rows } = await db.query(refundOrderSql, [id]);
