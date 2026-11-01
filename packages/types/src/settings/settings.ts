@@ -3,7 +3,7 @@ import { Cents, successResponse, Timestamp } from "../api/response";
 
 /** The storefront themes (apps/web/lib/themes.ts holds their look). */
 export const StoreThemeSchema = z
-  .enum(["editorial", "studio", "botanical", "blaze"])
+  .enum(["editorial", "studio", "botanical", "blaze", "ember", "volt"])
   .meta({ id: "StoreTheme" });
 export type StoreTheme = z.infer<typeof StoreThemeSchema>;
 

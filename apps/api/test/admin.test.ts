@@ -977,7 +977,8 @@ describe("PUT /admin/settings", () => {
         {
           code: "INVALID_VALUE",
           field: "theme",
-          message: "Theme must be one of: editorial, studio, botanical, blaze",
+          message:
+            "Theme must be one of: editorial, studio, botanical, blaze, ember, volt",
         },
       ],
       [

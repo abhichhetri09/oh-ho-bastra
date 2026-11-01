@@ -285,6 +285,79 @@
   --sidebar-ring: oklch(0.686 0.189 45.9);
 }
 
+/* Ember and Volt: dark-only. Near-black pages, white headlines in heavy
+   Archivo with the emphasis in italic and the accent, square corners. The
+   accent fills carry black text (white would be under 3:1 on either);
+   --clay is the accent itself, which reads at 7:1+ on the black. Volt also
+   turns on the slanted shapes (--slant, see .slant and .stripes). */
+[data-theme="ember"],
+[data-theme="volt"] {
+  color-scheme: dark;
+  --heading-font: var(--font-archivo);
+  --heading-weight: 800;
+  --heading-tracking: -0.025em;
+  --heading-leading: 0.9;
+  --heading-variation: normal;
+  --heading-size-adjust: 0.4;
+  --em-style: italic;
+  --em-color: var(--clay);
+  --theme-radius-control: 0;
+  --theme-radius-field: 0;
+  --theme-radius-panel: 0;
+  --theme-radius-media: 0;
+  --radius: 0;
+  --background: oklch(0.15 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.19 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.19 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary-foreground: oklch(0.15 0 0);
+  --secondary: oklch(0.24 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.22 0 0);
+  --muted-foreground: oklch(0.74 0 0);
+  --accent: oklch(0.25 0 0);
+  --accent-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.66 0.2 25);
+  --clay-foreground: oklch(0.15 0 0);
+  --success: oklch(0.72 0.15 155);
+  --surface: oklch(0.2 0 0);
+  --border: oklch(0.29 0 0);
+  --input: oklch(0.34 0 0);
+  --chart-2: oklch(0.97 0 0);
+  --chart-3: oklch(0.55 0 0);
+  --chart-4: oklch(0.72 0.15 155);
+  --chart-5: oklch(0.4 0 0);
+  --sidebar: oklch(0.13 0 0);
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-primary-foreground: oklch(0.15 0 0);
+  --sidebar-accent: oklch(0.24 0 0);
+  --sidebar-accent-foreground: oklch(0.97 0 0);
+  --sidebar-border: oklch(0.29 0 0);
+}
+
+/* Ember: glowing orange (#FF6A13). */
+[data-theme="ember"] {
+  --primary: oklch(0.701 0.2 43.7);
+  --clay: oklch(0.701 0.2 43.7);
+  --ring: oklch(0.701 0.2 43.7);
+  --chart-1: oklch(0.701 0.2 43.7);
+  --sidebar-primary: oklch(0.701 0.2 43.7);
+  --sidebar-ring: oklch(0.701 0.2 43.7);
+}
+
+/* Volt: electric yellow (#FFD21F), with slanted tiles and stripes. */
+[data-theme="volt"] {
+  --slant: 1.75rem;
+  --primary: oklch(0.877 0.174 92.5);
+  --clay: oklch(0.877 0.174 92.5);
+  --ring: oklch(0.877 0.174 92.5);
+  --chart-1: oklch(0.877 0.174 92.5);
+  --sidebar-primary: oklch(0.877 0.174 92.5);
+  --sidebar-ring: oklch(0.877 0.174 92.5);
+}
+
 /*
  * The store's own headline font and corners (Admin → Settings), over the
  * theme's: <html data-font="…" data-corners="…">, set only when the store
@@ -462,6 +535,33 @@
   :is(.display, .font-serif) em {
     font-style: var(--em-style);
     color: var(--em-color);
+  }
+
+  /* A parallelogram, for themes that set --slant (Volt); a plain box in
+     the rest. Focus outlines sit inside (outline-offset) so the clip
+     doesn't hide them. */
+  .slant {
+    clip-path: polygon(
+      var(--slant, 0px) 0,
+      100% 0,
+      calc(100% - var(--slant, 0px)) 100%,
+      0 100%
+    );
+  }
+
+  /* "////" accent stripes beside a heading: only where --slant is set. */
+  .stripes {
+    display: none;
+    width: 4.5rem;
+    height: 0.875rem;
+    background: repeating-linear-gradient(
+      115deg,
+      var(--primary) 0 0.55rem,
+      transparent 0.55rem 0.9rem
+    );
+  }
+  [data-theme="volt"] .stripes {
+    display: block;
   }
 
   /* An underline that grows from the left on hover. */

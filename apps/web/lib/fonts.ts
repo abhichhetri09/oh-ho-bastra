@@ -48,6 +48,8 @@ const playfair = Playfair_Display({
 // Variable: its headlines use 800.
 const archivo = Archivo({
   subsets: ["latin"],
+  // Ember and Volt set their emphasis in italic
+  style: ["normal", "italic"],
   variable: "--font-archivo",
   preload: false,
 });

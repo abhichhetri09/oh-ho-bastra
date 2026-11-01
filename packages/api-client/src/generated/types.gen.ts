@@ -1237,7 +1237,7 @@ export type StoreSettings = {
     updated_at: string;
 };
 
-export type StoreTheme = 'editorial' | 'studio' | 'botanical' | 'blaze';
+export type StoreTheme = 'editorial' | 'studio' | 'botanical' | 'blaze' | 'ember' | 'volt';
 
 /**
  * What delivery costs. Checkout charges it as it is then, and each order keeps what it was charged.

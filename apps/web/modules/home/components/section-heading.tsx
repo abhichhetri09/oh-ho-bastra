@@ -10,7 +10,7 @@ export function SectionHeading({
   linkLabel = "View all",
   className,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   href?: string;
   linkLabel?: string;
@@ -24,13 +24,16 @@ export function SectionHeading({
       )}
     >
       <div className="space-y-3">
-        <p className="eyebrow">{eyebrow}</p>
-        <h2 className="display text-4xl sm:text-5xl lg:text-6xl">{title}</h2>
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+        <div className="flex items-center gap-5">
+          <h2 className="display text-4xl sm:text-5xl lg:text-6xl">{title}</h2>
+          <span aria-hidden className="stripes" />
+        </div>
       </div>
       {href && (
         <Link
           href={href}
-          className="group hidden shrink-0 items-center gap-2 pb-2 text-[0.8125rem] sm:inline-flex"
+          className="group inline-flex shrink-0 items-center gap-2 pb-2 text-[0.8125rem] text-clay"
         >
           <span className="link-underline">{linkLabel}</span>
           <ArrowRightIcon className="size-3.5 transition-transform duration-300 group-hover:translate-x-1" />
