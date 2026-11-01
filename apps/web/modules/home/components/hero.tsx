@@ -23,9 +23,9 @@ export function Hero() {
           fill
           preload
           sizes="(min-width: 1024px) 62vw, 100vw"
-          className="animate-[hero-settle_2.2s_var(--ease-out-expo)_both] object-cover"
+          className="animate-[hero-settle_2.2s_var(--ease-out-expo)_both] object-cover [filter:var(--hero-tone,none)]"
         />
-        <div className="absolute inset-0 bg-linear-to-t from-background via-transparent to-transparent lg:bg-linear-to-r lg:from-background lg:via-background/40" />
+        <div className="absolute inset-0 bg-linear-to-t from-background via-transparent to-transparent lg:bg-linear-to-r lg:from-background lg:via-transparent lg:via-25%" />
       </div>
 
       <div className="relative container-page -mt-16 space-y-7 pb-4 sm:-mt-24 lg:mt-0 lg:flex lg:min-h-144 lg:flex-col lg:justify-center lg:py-16">

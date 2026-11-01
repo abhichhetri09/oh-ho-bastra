@@ -69,6 +69,8 @@
 :root,
 [data-theme="editorial"] {
   color-scheme: light;
+  /* Softens the hero photo against a light page; dark themes reset it. */
+  --hero-tone: contrast(0.9) brightness(1.04) saturate(0.95);
   --heading-font: var(--font-instrument-serif);
   --heading-weight: 400;
   --heading-tracking: -0.02em;
@@ -293,6 +295,9 @@
 [data-theme="ember"],
 [data-theme="volt"] {
   color-scheme: dark;
+  /* The footer's big store name takes the accent (site-footer). */
+  --wordmark: var(--primary);
+  --hero-tone: none;
   --heading-font: var(--font-archivo);
   --heading-weight: 800;
   --heading-tracking: -0.025em;

@@ -36,8 +36,8 @@ export const site = {
     title: ["Tees. And the", "ones we print", "for you."],
     body: "Heavyweight cotton tees, custom printing and streetwear essentials.",
     cta: { label: "Shop all", href: "/shop" },
-    image: `${IMG}/rack-colours.jpg`,
-    imageAlt: "Tees in assorted colours hanging on a rail",
+    image: `${IMG}/hero-model.jpg`,
+    imageAlt: "A man in sunglasses and an oversized black OH : HO !! Bastra tee against a sunlit concrete wall",
   },
   // The category tiles come from the store's own categories (the three
   // biggest with products); these photos stand in for one without any.

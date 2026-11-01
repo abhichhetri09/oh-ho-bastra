@@ -104,7 +104,7 @@ export async function SiteFooter() {
         {/* The wordmark, one line, scaled to the page width. */}
         <p
           aria-hidden
-          className="font-serif text-[clamp(2rem,5vw,4.5rem)] leading-[0.85] tracking-[-0.03em] whitespace-nowrap text-foreground select-none"
+          className="font-serif text-[clamp(2rem,5vw,4.5rem)] leading-[0.85] tracking-[-0.03em] whitespace-nowrap text-[color:var(--wordmark,var(--foreground))] select-none"
         >
           {site.name}
         </p>
