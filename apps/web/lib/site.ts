@@ -5,7 +5,7 @@
 // → Delivery): the copy that names it takes the store's rule.
 
 import type { ShippingRule } from "@repo/types";
-import { shippingPerk, shippingSentence } from "./shipping";
+import { shippingSentence } from "./shipping";
 
 const IMG = "/editorial";
 
@@ -30,42 +30,46 @@ export const site = {
     "30-day returns on plain tees",
     "Custom prints: send your art or a line of type",
   ],
+  // The landing page, top to bottom (app/(shop)/page.tsx). The hero's last
+  // title line is the theme's emphasis.
   hero: {
-    eyebrow: "Oh Ho Bastra",
-    title: ["Tees. And the ones", "we print for you."],
-    body: "Heavyweight cotton, a few colours. Custom prints and text when you want something that isn't on the rack.",
+    title: ["Tees. And the", "ones we print", "for you."],
+    body: "Heavyweight cotton tees, custom printing and streetwear essentials.",
+    primary: { label: "Shop tees", href: "/categories/tees" },
+    secondary: { label: "Design your own", href: "/categories/custom" },
     image: `${IMG}/rack-colours.jpg`,
     imageAlt: "Tees in assorted colours hanging on a rail",
-    secondaryImage: `${IMG}/custom-text.jpg`,
-    secondaryAlt: "Two tees printed with custom text",
   },
-  story: {
-    eyebrow: "Custom",
-    title: "Your art. Our tee.",
-    body: "Custom is the same heavyweight tee with your artwork or a line of type. Pick a colour and a size, then send the file or the words after you order.",
-    image: `${IMG}/sage-rack.jpg`,
-    imageAlt: "A row of sage green tees on wooden hangers",
-    href: "/shop",
-    cta: "Shop tees",
-  },
-  values: (shipping: ShippingRule) => [
+  tiles: [
     {
-      title: shippingPerk(shipping),
-      body: "Dispatched in two to four working days.",
+      title: "Tees",
+      body: "Heavyweight everyday staples.",
+      href: "/categories/tees",
+      image: `${IMG}/white-hanger.jpg`,
     },
     {
-      title: "30-day returns",
-      body: "Wrong size? Send plain tees back within 30 days.",
+      title: "Custom",
+      body: "Your design, on our tees.",
+      href: "/categories/custom",
+      image: `${IMG}/custom-text.jpg`,
     },
     {
-      title: "Secure checkout",
-      body: "Payments handled by Stripe. We never see your card.",
-    },
-    {
-      title: "Heavyweight cotton",
-      body: "Regular and boxy cuts that keep their shape wash after wash.",
+      // No category of its own yet: the newest pieces across the shop.
+      title: "Streetwear",
+      body: "Limited pieces and bold essentials.",
+      href: "/shop",
+      image: `${IMG}/black-mint-folded.jpg`,
     },
   ],
+  picks: { title: "Editor's picks", href: "/shop?featured=true" },
+  custom: {
+    title: "Custom printed tees.",
+    body: "Your design, logo or idea, printed on our heavyweight tees.",
+    cta: "Create your custom tee",
+    href: "/categories/custom",
+    image: `${IMG}/sage-rack.jpg`,
+    imageAlt: "A row of sage green tees on wooden hangers, ready to print",
+  },
   shippingCopy: (shipping: ShippingRule) =>
     `${shippingSentence(shipping)} Orders ship in two to four working days. Plain tees can be returned within 30 days of delivery (return postage is yours); custom prints are made for you and can't be returned unless faulty.`,
   authImage: `${IMG}/white-hanger.jpg`,

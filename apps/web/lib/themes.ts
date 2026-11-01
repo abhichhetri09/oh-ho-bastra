@@ -41,6 +41,22 @@ export const THEMES = [
     preview: ["#ffffff", "#0a0a0a", "#f46b10"],
     themeColor: "#ffffff",
   },
+  {
+    id: "ember",
+    name: "Ember",
+    description: "Black with a glowing orange, heavy sans, square corners.",
+    font: "archivo",
+    preview: ["#0b0b0b", "#f5f5f5", "#ff6a13"],
+    themeColor: "#0b0b0b",
+  },
+  {
+    id: "volt",
+    name: "Volt",
+    description: "Black and electric yellow, heavy sans, slanted shapes.",
+    font: "archivo",
+    preview: ["#0b0b0b", "#f5f5f5", "#ffd21f"],
+    themeColor: "#0b0b0b",
+  },
 ] as const satisfies readonly {
   id: StoreTheme;
   name: string;

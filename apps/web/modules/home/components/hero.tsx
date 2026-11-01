@@ -5,18 +5,31 @@ import { buttonVariants } from "@/components/ui/button";
 import { site } from "@/lib/site";
 
 /**
- * The landing hero: an asymmetric split with the serif headline rising in
- * line by line and the photograph settling from a slight zoom. Everything
- * animates with CSS so it plays on first paint, before hydration; the image
- * only animates transform, so it doesn't delay the LCP.
+ * The landing hero: the headline rising in line by line on the left, the
+ * photograph bleeding off the right edge and fading into the page behind
+ * the text. Phones stack them: the photo, then the copy over its faded
+ * foot. Everything animates with CSS so it plays on first paint, before
+ * hydration; the image only animates transform, so it doesn't delay the
+ * LCP.
  */
 export function Hero() {
   const { hero } = site;
   return (
-    <section className="container-page grid items-center gap-10 pt-6 pb-16 lg:min-h-[calc(100svh-6.25rem)] lg:grid-cols-12 lg:gap-8 lg:pt-0 lg:pb-12">
-      <div className="order-2 space-y-8 lg:order-1 lg:col-span-5 lg:pr-6">
-        <p className="eyebrow animate-rise">{hero.eyebrow}</p>
-        <h1 className="display text-[clamp(3.5rem,8.5vw,8.5rem)]">
+    <section className="relative overflow-hidden lg:min-h-144">
+      <div className="relative aspect-4/3 bg-surface sm:aspect-video lg:absolute lg:inset-y-0 lg:right-0 lg:left-[38%] lg:aspect-auto">
+        <Image
+          src={hero.image}
+          alt={hero.imageAlt}
+          fill
+          preload
+          sizes="(min-width: 1024px) 62vw, 100vw"
+          className="animate-[hero-settle_2.2s_var(--ease-out-expo)_both] object-cover"
+        />
+        <div className="absolute inset-0 bg-linear-to-t from-background via-transparent to-transparent lg:bg-linear-to-r lg:from-background lg:via-background/40" />
+      </div>
+
+      <div className="relative container-page -mt-16 space-y-7 pb-4 sm:-mt-24 lg:mt-0 lg:flex lg:min-h-144 lg:flex-col lg:justify-center lg:py-16">
+        <h1 className="display max-w-[10ch] text-[clamp(2.75rem,6.5vw,6.5rem)]">
           {hero.title.map((line, i) => (
             <span key={line} className="block overflow-hidden pb-[0.08em]">
               <span
@@ -29,55 +42,33 @@ export function Hero() {
           ))}
         </h1>
         <p
-          className="animate-rise max-w-md text-base leading-relaxed text-muted-foreground"
-          style={{ "--i": 3 } as React.CSSProperties}
+          className="animate-rise max-w-sm text-base leading-relaxed text-muted-foreground"
+          style={{ "--i": 4 } as React.CSSProperties}
         >
           {hero.body}
         </p>
         <div
-          className="animate-rise flex flex-wrap items-center gap-6"
-          style={{ "--i": 4 } as React.CSSProperties}
+          className="animate-rise flex flex-wrap items-center gap-3"
+          style={{ "--i": 5 } as React.CSSProperties}
         >
           <Link
-            href="/shop"
+            href={hero.primary.href}
             className={buttonVariants({ size: "lg", className: "group" })}
           >
-            Shop the collection
+            {hero.primary.label}
             <ArrowRightIcon className="transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
           <Link
-            href="/shop?featured=true"
-            className="link-underline text-[0.8125rem]"
+            href={hero.secondary.href}
+            className={buttonVariants({
+              size: "lg",
+              variant: "outline",
+              className: "group bg-transparent",
+            })}
           >
-            Editor&apos;s picks
+            {hero.secondary.label}
+            <ArrowRightIcon className="transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
-        </div>
-      </div>
-
-      <div className="relative order-1 lg:order-2 lg:col-span-7 lg:pl-10">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-media bg-surface sm:aspect-[5/4] lg:aspect-auto lg:h-[calc(100svh-10rem)] lg:min-h-[32rem]">
-          <Image
-            src={hero.image}
-            alt={hero.imageAlt}
-            fill
-            preload
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            className="animate-[hero-settle_2.2s_var(--ease-out-expo)_both] object-cover"
-          />
-        </div>
-        <div
-          className="animate-rise absolute -bottom-8 left-0 hidden w-[34%] overflow-hidden rounded-media border-[6px] border-background bg-surface shadow-xl md:block lg:-left-6"
-          style={{ "--i": 6 } as React.CSSProperties}
-        >
-          <div className="relative aspect-square">
-            <Image
-              src={hero.secondaryImage}
-              alt={hero.secondaryAlt}
-              fill
-              sizes="20vw"
-              className="object-cover"
-            />
-          </div>
         </div>
       </div>
     </section>

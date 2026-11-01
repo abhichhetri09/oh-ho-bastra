@@ -1,74 +1,60 @@
 import type { Metadata } from "next";
 import { Reveal } from "@/components/motion/reveal";
 import { JsonLd } from "@/components/seo/json-ld";
+import { site } from "@/lib/site";
 import { storeLd } from "@/lib/seo/structured-data";
 import { siteUrl } from "@/lib/site-url";
-import { getCollections, getListing } from "@/modules/catalog/api";
+import { getListing } from "@/modules/catalog/api";
 import { ProductGrid } from "@/modules/catalog/components/product-grid";
-import { ProductRail } from "@/modules/catalog/components/product-rail";
 import { DEFAULT_FILTERS } from "@/modules/catalog/lib/filters";
-import { ClosingCta } from "@/modules/home/components/closing-cta";
-import { CollectionTiles } from "@/modules/home/components/collection-tiles";
+import { CategoryTiles } from "@/modules/home/components/category-tiles";
+import { CustomBanner } from "@/modules/home/components/custom-banner";
 import { Hero } from "@/modules/home/components/hero";
 import { SectionHeading } from "@/modules/home/components/section-heading";
-import { StoryBand } from "@/modules/home/components/story-band";
-import { ValueProps } from "@/modules/home/components/value-props";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
+/** How many editor's picks the landing page shows: one row on desktop. */
+const PICKS = 4;
+
 export default async function LandingPage() {
-  const [collections, featured, newest] = await Promise.all([
-    getCollections(),
+  const [featured, newest] = await Promise.all([
     getListing(null, { ...DEFAULT_FILTERS, featured: true }),
     getListing(null, DEFAULT_FILTERS),
   ]);
-  const picks = featured?.data.products ?? [];
-  const arrivals = newest?.data.products.slice(0, 8) ?? [];
+  // Topped up with the newest tees while fewer than four are featured.
+  const picks = [
+    ...new Map(
+      [
+        ...(featured?.data.products ?? []),
+        ...(newest?.data.products ?? []),
+      ].map((product) => [product.id, product] as const),
+    ).values(),
+  ].slice(0, PICKS);
 
   return (
-    <div className="space-y-28 sm:space-y-36">
+    <div className="space-y-16 sm:space-y-24">
       <JsonLd data={storeLd(siteUrl())} />
       <Hero />
 
-      {collections.length > 0 && (
-        <section className="container-page">
-          <SectionHeading eyebrow="Collections" title="Find your tee." />
-          <Reveal delay={0.1}>
-            <CollectionTiles collections={collections} />
-          </Reveal>
-        </section>
-      )}
+      <section className="container-page" aria-label="Shop by category">
+        <CategoryTiles />
+      </section>
 
       {picks.length > 0 && (
         <section className="container-page">
-          <SectionHeading
-            eyebrow="Editor's picks"
-            title="Chosen with care."
-            href="/shop?featured=true"
-          />
+          <SectionHeading title={site.picks.title} href={site.picks.href} />
           <Reveal delay={0.1}>
-            <ProductRail products={picks} label="Editor's picks" />
+            <ProductGrid
+              products={picks}
+              eagerCount={0}
+              className="md:grid-cols-4"
+            />
           </Reveal>
         </section>
       )}
 
-      <StoryBand />
-
-      {arrivals.length > 0 && (
-        <section className="container-page">
-          <SectionHeading
-            eyebrow="Just in"
-            title="New arrivals."
-            href="/shop"
-          />
-          <Reveal>
-            <ProductGrid products={arrivals} eagerCount={0} />
-          </Reveal>
-        </section>
-      )}
-
-      <ValueProps />
-      <ClosingCta />
+      <CustomBanner />
     </div>
   );
 }
