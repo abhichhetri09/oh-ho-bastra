@@ -5,6 +5,7 @@ import {
   SHIPPING_COUNTRIES,
   type ValidationCode,
 } from "@repo/types";
+import { refundsOf } from "../admin/order-detail";
 import { EmailField } from "../auth/schemas";
 import { Refusal, type CheckoutService } from "../checkout/service";
 import {
@@ -392,9 +393,22 @@ export function checkoutRoutes(api: Group, deps: Deps) {
           user_id: order.user_id,
         })
       : [];
+    const refunds = (await refundsOf(db, order.id)).map((r) => ({
+      id: r.id,
+      status: r.status,
+      amount_card: r.amount_card,
+      amount_credit: r.amount_credit,
+      shipping: r.shipping,
+      created_at: r.created_at,
+      lines: r.lines.map((l) => ({
+        order_item_id: l.order_item_id,
+        quantity: l.quantity,
+      })),
+    }));
     ok(res, 200, "Order fetched", {
       ...order,
       items,
+      refunds,
       reviewed_product_ids: reviewed.map((r) => r.product_id),
     });
   }

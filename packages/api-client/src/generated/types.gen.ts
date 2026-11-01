@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'REFERRALS_DISABLED' | 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL' | 'CREDIT_NOT_ENOUGH' | 'CREDIT_OVER_LIMIT' | 'CREDIT_CODE_INVALID' | 'CREDIT_CODE_EXPIRED' | 'INVALID_REDEMPTION_ID' | 'REDEMPTION_NOT_FOUND';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_REFUND' | 'REFUND_TOO_LARGE' | 'REFUND_REQUEST_REUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'REFERRALS_DISABLED' | 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL' | 'CREDIT_NOT_ENOUGH' | 'CREDIT_OVER_LIMIT' | 'CREDIT_CODE_INVALID' | 'CREDIT_CODE_EXPIRED' | 'INVALID_REDEMPTION_ID' | 'REDEMPTION_NOT_FOUND';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -904,14 +904,31 @@ export type OrderDetail = {
      * Store credit the order paid with
      */
     credit: number;
+    /**
+     * Given back so far, by card and store credit (counting refunds Stripe is still processing)
+     */
+    refunded_total: number;
+    /**
+     * The part of refunded_total given as store credit
+     */
+    refunded_credit: number;
+    /**
+     * Stripe's status of a chargeback on the payment, if any
+     */
+    dispute_status: string | null;
+    disputed_at: string | null;
     items: Array<OrderItem>;
+    /**
+     * Oldest first
+     */
+    refunds: Array<OrderRefundSummary>;
     /**
      * Products of this order you've reviewed
      */
     reviewed_product_ids: Array<string>;
 };
 
-export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'partially_refunded' | 'refunded';
 
 export type AddressSnapshot = {
     full_name: string;
@@ -946,6 +963,22 @@ export type OrderItem = {
     unit_price: number;
     quantity: number;
     line_total: number;
+};
+
+/**
+ * A refund, as the customer sees it.
+ */
+export type OrderRefundSummary = {
+    id: string;
+    status: 'pending' | 'requires_action' | 'succeeded' | 'failed' | 'canceled';
+    amount_card: number;
+    amount_credit: number;
+    shipping: boolean;
+    created_at: string;
+    lines: Array<{
+        order_item_id: string;
+        quantity: number;
+    }>;
 };
 
 export type OrderListResponse = {
@@ -1356,6 +1389,7 @@ export type AdminStats = {
         shipped: number;
         delivered: number;
         cancelled: number;
+        partially_refunded: number;
         refunded: number;
     };
     /**
@@ -1524,6 +1558,7 @@ export type OrderStatusCounts = {
     shipped: number;
     delivered: number;
     cancelled: number;
+    partially_refunded: number;
     refunded: number;
 };
 
@@ -1749,7 +1784,24 @@ export type AdminOrderDetail = {
      * Store credit the order paid with
      */
     credit: number;
+    /**
+     * Given back so far, by card and store credit (counting refunds Stripe is still processing)
+     */
+    refunded_total: number;
+    /**
+     * The part of refunded_total given as store credit
+     */
+    refunded_credit: number;
+    /**
+     * Stripe's status of a chargeback on the payment, if any
+     */
+    dispute_status: string | null;
+    disputed_at: string | null;
     items: Array<AdminOrderItem>;
+    /**
+     * Oldest first
+     */
+    refunds: Array<AdminOrderRefund>;
     customer: {
         id: string;
         name: string;
@@ -1803,6 +1855,63 @@ export type AdminOrderItem = {
     stock_shortfall: number;
 };
 
+/**
+ * One refund of an order.
+ */
+export type AdminOrderRefund = {
+    id: string;
+    /**
+     * null when nothing went back by card
+     */
+    stripe_refund_id: string | null;
+    status: RefundStatus;
+    amount_card: number;
+    /**
+     * Given back as store credit
+     */
+    amount_credit: number;
+    amount_items: number;
+    amount_shipping: number;
+    /**
+     * Goodwill, or a Dashboard refund
+     */
+    amount_extra: number;
+    shipping: boolean;
+    /**
+     * stripe: made in the Stripe Dashboard
+     */
+    source: 'admin' | 'stripe';
+    note: string;
+    /**
+     * The admin who made it
+     */
+    created_by: {
+        id: string;
+        name: string;
+    } | null;
+    failure_reason: string | null;
+    created_at: string;
+    lines: Array<OrderRefundLine>;
+};
+
+/**
+ * Stripe's status of the card part; pending and requires_action count as refunded until they fail
+ */
+export type RefundStatus = 'pending' | 'requires_action' | 'succeeded' | 'failed' | 'canceled';
+
+export type OrderRefundLine = {
+    order_item_id: string;
+    quantity: number;
+    /**
+     * What these units came to, after the discount
+     */
+    amount: number;
+    /**
+     * Units returned to stock
+     */
+    restocked: number;
+};
+
 export type ShipOrderBody = {
     tracking_number?: string;
 };
@@ -1814,11 +1923,41 @@ export type OrderTrackingBody = {
     tracking_number: string;
 };
 
+/**
+ * Without items, shipping or extra, everything left is refunded. Each refund is split between card and store credit in the shares the order was paid.
+ */
 export type RefundOrderBody = {
     /**
-     * Return the items to stock: yes for an order that never shipped, or came back
+     * A new id per refund the admin means to make: a retry with it refunds once. Required with items, shipping or extra.
+     */
+    request_id?: string;
+    /**
+     * Return the refunded units to stock: yes for units that never shipped, or came back
      */
     restock: boolean;
+    /**
+     * Lines and how many of each, at most what is left of each
+     */
+    items?: Array<{
+        item_id: string;
+        quantity: number;
+        /**
+         * This line's restock, overriding the refund's
+         */
+        restock?: boolean;
+    }>;
+    /**
+     * Refund the shipping (once)
+     */
+    shipping?: boolean;
+    /**
+     * A goodwill amount on top, cents
+     */
+    extra?: number;
+    /**
+     * Why: kept with the refund
+     */
+    note?: string;
 };
 
 export type AdminReviewListResponse = {
@@ -5413,7 +5552,7 @@ export type AdminRefundOrderErrors = {
      */
     404: ApiError;
     /**
-     * Not refundable in its status, no payment recorded, or Stripe declined it (INVALID_ORDER_TRANSITION, REFUND_REFUSED)
+     * Not refundable in its status, no payment recorded, Stripe declined it, the request id is another order's, lines or shipping that can't be refunded, or more than is left (INVALID_ORDER_TRANSITION, REFUND_REFUSED, REFUND_REQUEST_REUSED, INVALID_REFUND, REFUND_TOO_LARGE)
      */
     409: ApiError;
     /**

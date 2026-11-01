@@ -13,10 +13,18 @@ const tone: Record<OrderStatus, { pill: string; dot: string }> = {
     pill: "bg-muted text-muted-foreground",
     dot: "bg-muted-foreground/40",
   },
+  partially_refunded: {
+    pill: "bg-destructive/[0.06] text-destructive",
+    dot: "bg-destructive/60",
+  },
   refunded: {
     pill: "bg-destructive/10 text-destructive",
     dot: "bg-destructive",
   },
+};
+
+const label: Partial<Record<OrderStatus, string>> = {
+  partially_refunded: "Partly refunded",
 };
 
 /** An order's status as a soft pill with a coloured dot. */
@@ -33,7 +41,7 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
         aria-hidden
         className={cn("size-1.5 rounded-full", tone[status].dot)}
       />
-      {status}
+      {label[status] ?? status}
     </span>
   );
 }

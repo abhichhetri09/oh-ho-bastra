@@ -35,6 +35,7 @@ import { evaluateReferral, loadReferralRule } from "../referrals/referrals";
 import type {
   PaymentEvent,
   PaymentProvider,
+  RefundInfo,
   SessionRequest,
 } from "../services/payments";
 import {
@@ -56,6 +57,12 @@ import {
   Refusal,
 } from "./refusal";
 import { CURRENCY, loadShippingRule, shippingFor } from "./shipping";
+import {
+  refundOrder,
+  syncDispute,
+  syncStripeRefund,
+  type RefundRequest,
+} from "./refunds";
 import { fulfil, release, sessionOrderId } from "./settle";
 
 // Turns a cart into an order and a hosted Stripe Checkout page, and settles
@@ -450,12 +457,31 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
    */
   async handleEvent(event: PaymentEvent): Promise<void> {
     if (event.kind === "other") return;
+    // charge.refunded doesn't list its refunds: ask Stripe (before the
+    // transaction, so no row is locked across the call). A failure makes
+    // Stripe send the event again.
+    let refunds: RefundInfo[] = [];
+    if (event.kind === "charge_refunded") {
+      if (!event.paymentIntentId) return;
+      refunds = await this.stripe.listRefunds(event.paymentIntentId);
+    }
     await withTx(this.db, async (tx) => {
       if (
         (await recordStripeEvent(tx, { id: event.id, type: event.type })) === 0
       )
         return;
       switch (event.kind) {
+        case "refund":
+          if (event.refund) await syncStripeRefund(tx, event.refund);
+          return;
+        case "charge_refunded":
+          // Oldest first, as they were made.
+          for (const refund of refunds.reverse())
+            await syncStripeRefund(tx, refund);
+          return;
+        case "dispute":
+          if (event.dispute) await syncDispute(tx, event.dispute);
+          return;
         case "completed":
           // Delayed payment methods complete unpaid and pay later ("paid").
           if (!event.session.paid) return;
@@ -510,9 +536,18 @@ export class CheckoutService implements fulfilment.FulfilmentContext {
     return fulfilment.cancelPending(this, number);
   }
 
-  /** Refunds a paid order in full through Stripe, returning its stock when restock is set. */
+  /** Refunds what is left of a paid order, returning its stock when restock is set. */
   refundPaid(number: number, restock: boolean): Promise<Order> {
-    return fulfilment.refundPaid(this, number, restock);
+    return refundOrder(this, number, { restock }, null);
+  }
+
+  /** Refunds part (or the rest) of a paid order; see refunds.ts. */
+  refund(
+    number: number,
+    req: RefundRequest,
+    adminId: string | null,
+  ): Promise<Order> {
+    return refundOrder(this, number, req, adminId);
   }
 }
 

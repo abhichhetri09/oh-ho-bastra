@@ -21,6 +21,7 @@ import { optionSummary } from "@/modules/cart/lib/cart-math";
 import { countryName } from "../lib/countries";
 import {
   formatOrderDate,
+  fulfilmentStatus,
   orderLabel,
   STATUS_LABELS,
   timelineStep,
@@ -257,7 +258,19 @@ export function OrderDetails({
   back: React.ReactNode;
   reviews?: boolean;
 }) {
-  const step = timelineStep(order.status);
+  // A partly refunded order is still on its way.
+  const stage = fulfilmentStatus(order);
+  const step = timelineStep(stage);
+  const refunds = order.refunds.filter(
+    (r) => r.status !== "failed" && r.status !== "canceled",
+  );
+  const refundedUnits = new Map<string, number>();
+  for (const r of refunds)
+    for (const l of r.lines)
+      refundedUnits.set(
+        l.order_item_id,
+        (refundedUnits.get(l.order_item_id) ?? 0) + l.quantity,
+      );
   // Paid (or later) orders make their buyer a verified reviewer.
   const reviewable = reviews && step >= 0;
   const reviewed = new Set(order.reviewed_product_ids);
@@ -279,16 +292,16 @@ export function OrderDetails({
       {step >= 0 ? (
         <section className="space-y-6 rounded-panel border border-border bg-card p-6 sm:p-8">
           <OrderProgress order={order} />
-          {(order.status === "shipped" || order.status === "delivered") && (
+          {(stage === "shipped" || stage === "delivered") && (
             <div className="flex flex-col gap-3 rounded-panel bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <span
                   className={cn(
                     "flex size-9 shrink-0 items-center justify-center rounded-full bg-background",
-                    order.status === "delivered" ? "text-success" : "text-clay",
+                    stage === "delivered" ? "text-success" : "text-clay",
                   )}
                 >
-                  {order.status === "delivered" ? (
+                  {stage === "delivered" ? (
                     <HouseLineIcon weight="bold" className="size-4" />
                   ) : (
                     <TruckIcon weight="bold" className="size-4" />
@@ -296,12 +309,12 @@ export function OrderDetails({
                 </span>
                 <div>
                   <p className="text-sm font-medium">
-                    {order.status === "delivered"
+                    {stage === "delivered"
                       ? `Delivered${order.delivered_at ? ` on ${formatOrderDate(order.delivered_at)}` : ""}`
                       : "Your parcel is on its way"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {order.status === "delivered"
+                    {stage === "delivered"
                       ? order.tracking_number
                         ? "Its tracking number, kept here for your records."
                         : "We hope you enjoy it."
@@ -325,10 +338,12 @@ export function OrderDetails({
           {order.status === "cancelled"
             ? "This order was cancelled before payment. Nothing was charged."
             : order.status === "refunded"
-              ? `This order was refunded${order.refunded_at ? ` on ${formatOrderDate(order.refunded_at)}` : ""}. The money goes back to the card it was paid with.`
+              ? `This order was refunded${order.refunded_at ? ` on ${formatOrderDate(order.refunded_at)}` : ""}. The money goes back the way you paid: to your card${order.credit > 0 ? ", and as store credit" : ""}.`
               : "Waiting for payment to be confirmed."}
         </p>
       )}
+
+      {refunds.length > 0 && <Refunds order={order} refunds={refunds} />}
 
       <div className="grid gap-10 lg:grid-cols-[1fr_18rem]">
         <ul className="divide-y divide-border border-y border-border">
@@ -363,6 +378,8 @@ export function OrderDetails({
                 )}
                 <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                   {item.quantity} × {formatPrice(item.unit_price)}
+                  {(refundedUnits.get(item.id) ?? 0) > 0 &&
+                    ` · ${refundedUnits.get(item.id) === item.quantity ? "refunded" : `${refundedUnits.get(item.id)} refunded`}`}
                 </p>
                 {reviewable &&
                   item.product_id &&
@@ -417,5 +434,72 @@ export function OrderDetails({
         </aside>
       </div>
     </div>
+  );
+}
+
+/** What has gone back to the customer, refund by refund. */
+function Refunds({
+  order,
+  refunds,
+}: {
+  order: OrderDetail;
+  refunds: OrderDetail["refunds"];
+}) {
+  const names = new Map(order.items.map((i) => [i.id, i.product_name]));
+  const total = refunds.reduce(
+    (s, r) => s + r.amount_card + r.amount_credit,
+    0,
+  );
+  return (
+    <section
+      aria-label="Refunds"
+      className="space-y-3 rounded-panel border border-border p-4 text-sm sm:p-6"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="font-medium">
+          {order.status === "refunded" ? "Refunded" : "Refunded in part"}
+        </p>
+        <p className="tabular-nums">{formatPrice(total)}</p>
+      </div>
+      <ul className="divide-y divide-border">
+        {refunds.map((r) => {
+          const what = [
+            ...r.lines.map(
+              (l) => `${l.quantity} × ${names.get(l.order_item_id) ?? "item"}`,
+            ),
+            ...(r.shipping ? ["shipping"] : []),
+          ];
+          return (
+            <li key={r.id} className="space-y-0.5 py-2.5 first:pt-0 last:pb-0">
+              <div className="flex items-baseline justify-between gap-3">
+                <span>{formatOrderDate(r.created_at)}</span>
+                <span className="tabular-nums">
+                  {formatPrice(r.amount_card + r.amount_credit)}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {[
+                  what.length > 0 ? what.join(", ") : null,
+                  r.amount_card > 0
+                    ? `${formatPrice(r.amount_card)} to your card`
+                    : null,
+                  r.amount_credit > 0
+                    ? `${formatPrice(r.amount_credit)} as store credit`
+                    : null,
+                  r.status === "pending" || r.status === "requires_action"
+                    ? "processing"
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-xs text-muted-foreground">
+        Card refunds can take 5–10 business days to show on your statement.
+      </p>
+    </section>
   );
 }

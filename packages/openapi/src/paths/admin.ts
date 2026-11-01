@@ -359,9 +359,9 @@ export function registerAdminPaths() {
     path: "/api/v1/admin/orders/{number}/refund",
     operationId: "adminRefundOrder",
     tag: "Admin",
-    summary: "Refund an order",
+    summary: "Refund an order, in part or in full",
     description:
-      "A paid, shipped or delivered order is refunded in full through Stripe (once: the refund is keyed by the order) and becomes refunded.",
+      "Refunds chosen lines (quantities up to what is left of each), the shipping (once) and/or a goodwill amount of a paid, shipped, delivered or partly refunded order; without any of them, everything left. Lines are worth what was paid for them (the order's discount shared out over the lines, rounded to the cent so the parts add up). The money goes back by card (a Stripe refund) and store credit in the shares the order was paid. Each refund is keyed by request_id, so a retry refunds once. The order becomes partially_refunded, then refunded once nothing is left.",
     auth: "admin",
     request: { params: number, ...body(schemas.RefundOrderBodySchema) },
     success: {
@@ -372,7 +372,7 @@ export function registerAdminPaths() {
     errors: {
       400: "Invalid order number or body (INVALID_ORDER_NUMBER, VALIDATION_FAILED)",
       404: orderErrors[404],
-      409: "Not refundable in its status, no payment recorded, or Stripe declined it (INVALID_ORDER_TRANSITION, REFUND_REFUSED)",
+      409: "Not refundable in its status, no payment recorded, Stripe declined it, the request id is another order's, lines or shipping that can't be refunded, or more than is left (INVALID_ORDER_TRANSITION, REFUND_REFUSED, REFUND_REQUEST_REUSED, INVALID_REFUND, REFUND_TOO_LARGE)",
       502: "Stripe didn't answer; nothing changed (PAYMENT_PROVIDER_ERROR)",
       503: "Payments aren't set up (PAYMENTS_UNAVAILABLE)",
     },

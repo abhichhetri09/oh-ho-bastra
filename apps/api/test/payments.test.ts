@@ -261,19 +261,45 @@ describe("StripePayments", () => {
     );
   });
 
-  it("refunds keyed by the caller", async () => {
+  const refundReq = (key = "refund-abc") => ({
+    paymentIntentId: "pi_1",
+    amount: 1250,
+    idempotencyKey: key,
+    metadata: { order_id: "o1", refund_id: "r1" },
+  });
+
+  it("refunds an amount keyed by the caller", async () => {
     answers["POST /v1/refunds"] = {
       status: 200,
-      body: { id: "re_1", object: "refund", status: "succeeded" },
+      body: {
+        id: "re_1",
+        object: "refund",
+        status: "pending",
+        amount: 1250,
+        currency: "eur",
+        payment_intent: "pi_1",
+      },
     };
-    expect(await stripe().refund("pi_1", "refund-abc")).toBe("re_1");
+    expect(await stripe().refund(refundReq())).toEqual({
+      id: "re_1",
+      paymentIntentId: "pi_1",
+      amount: 1250,
+      currency: "eur",
+      status: "pending",
+      failureReason: "",
+    });
     expect(seen[0]).toMatchObject({
       idempotencyKey: "refund-abc",
-      form: { payment_intent: "pi_1" },
+      form: {
+        payment_intent: "pi_1",
+        amount: "1250",
+        "metadata[order_id]": "o1",
+        "metadata[refund_id]": "r1",
+      },
     });
   });
 
-  it("gives the existing refund of a payment refunded already", async () => {
+  it("refuses a payment refunded already instead of handing back another refund", async () => {
     answers["POST /v1/refunds"] = {
       status: 400,
       body: {
@@ -284,6 +310,13 @@ describe("StripePayments", () => {
         },
       },
     };
+    const err = await stripe()
+      .refund(refundReq())
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RefusedError);
+  });
+
+  it("lists a payment's refunds", async () => {
     answers["GET /v1/refunds"] = {
       status: 200,
       body: {
@@ -291,12 +324,28 @@ describe("StripePayments", () => {
         url: "/v1/refunds",
         has_more: false,
         data: [
-          { id: "re_failed", object: "refund", status: "failed" },
-          { id: "re_ok", object: "refund", status: "pending" },
+          {
+            id: "re_failed",
+            object: "refund",
+            status: "failed",
+            amount: 100,
+            currency: "eur",
+            payment_intent: "pi_1",
+            failure_reason: "expired_or_canceled_card",
+          },
         ],
       },
     };
-    expect(await stripe().refund("pi_1", "refund-abc")).toBe("re_ok");
+    expect(await stripe().listRefunds("pi_1")).toEqual([
+      {
+        id: "re_failed",
+        paymentIntentId: "pi_1",
+        amount: 100,
+        currency: "eur",
+        status: "failed",
+        failureReason: "expired_or_canceled_card",
+      },
+    ]);
   });
 
   it("turns a 4xx into a RefusedError, and anything else into an error", async () => {
@@ -311,7 +360,7 @@ describe("StripePayments", () => {
       },
     };
     const err = await stripe()
-      .refund("pi_1", "k")
+      .refund(refundReq("k"))
       .catch((e: unknown) => e);
     expect(err).toBeInstanceOf(RefusedError);
     expect((err as RefusedError).reason).toBe("Charge ch_1 has been disputed.");
@@ -321,7 +370,7 @@ describe("StripePayments", () => {
       body: { error: { type: "api_error", message: "Boom" } },
     };
     const err2 = await stripe()
-      .refund("pi_1", "k")
+      .refund(refundReq("k"))
       .catch((e: unknown) => e);
     expect(err2).not.toBeInstanceOf(RefusedError);
     expect((err2 as Error).message).toBe("stripe: refund: Boom");
@@ -373,6 +422,62 @@ describe("StripePayments.parseEvent", () => {
         paymentIntentId: "pi_9",
         amountTotal: 5490,
         currency: "eur",
+      },
+    });
+  });
+
+  it("reads refund, charge.refunded and dispute events", () => {
+    const refund = {
+      id: "re_1",
+      object: "refund",
+      amount: 500,
+      currency: "eur",
+      status: "failed",
+      failure_reason: "lost_or_stolen_card",
+      payment_intent: "pi_9",
+    };
+    for (const type of ["refund.created", "refund.updated", "refund.failed"]) {
+      const { payload, header } = signed(event(type, refund));
+      expect(stripe().parseEvent(payload, header)).toMatchObject({
+        kind: "refund",
+        refund: {
+          id: "re_1",
+          paymentIntentId: "pi_9",
+          amount: 500,
+          status: "failed",
+          failureReason: "lost_or_stolen_card",
+        },
+      });
+    }
+    const charge = signed(
+      event("charge.refunded", {
+        id: "ch_1",
+        object: "charge",
+        payment_intent: "pi_9",
+      }),
+    );
+    expect(stripe().parseEvent(charge.payload, charge.header)).toMatchObject({
+      kind: "charge_refunded",
+      paymentIntentId: "pi_9",
+    });
+    const dispute = signed(
+      event("charge.dispute.created", {
+        id: "dp_1",
+        object: "dispute",
+        payment_intent: "pi_9",
+        status: "needs_response",
+        amount: 2000,
+        reason: "fraudulent",
+      }),
+    );
+    expect(stripe().parseEvent(dispute.payload, dispute.header)).toMatchObject({
+      kind: "dispute",
+      dispute: {
+        id: "dp_1",
+        paymentIntentId: "pi_9",
+        status: "needs_response",
+        amount: 2000,
+        reason: "fraudulent",
       },
     });
   });

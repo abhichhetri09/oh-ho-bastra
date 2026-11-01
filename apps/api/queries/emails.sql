@@ -1,6 +1,11 @@
 -- name: EnqueueEmail :exec
 INSERT INTO email_outbox (kind, order_id) VALUES (@kind, @order_id)
-ON CONFLICT (order_id, kind) DO NOTHING;
+ON CONFLICT DO NOTHING;
+
+-- name: EnqueueRefundEmail :exec
+-- One refund email per refund (an order can have several).
+INSERT INTO email_outbox (kind, order_id, refund_id) VALUES ('order_refunded', @order_id, @refund_id)
+ON CONFLICT DO NOTHING;
 
 -- name: ClaimDueEmails :many
 -- Leases a batch of due emails: each is skipped by other senders for

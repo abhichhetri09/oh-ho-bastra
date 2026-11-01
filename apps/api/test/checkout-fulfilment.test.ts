@@ -43,13 +43,14 @@ describe("canApply", () => {
     "shipped",
     "delivered",
     "cancelled",
+    "partially_refunded",
     "refunded",
   ];
   const allowed: Record<Action, string[]> = {
-    ship: ["paid"],
-    deliver: ["shipped"],
+    ship: ["paid", "partially_refunded"],
+    deliver: ["shipped", "partially_refunded"],
     cancel: ["pending"],
-    refund: ["paid", "shipped", "delivered"],
+    refund: ["paid", "shipped", "delivered", "partially_refunded"],
   };
   it("follows the transition table", () => {
     for (const [action, ok] of Object.entries(allowed)) {
@@ -202,12 +203,16 @@ describe("refundPaid", () => {
     expect(refunded.status).toBe("refunded");
     expect(refunded.refunded_at).toBeInstanceOf(Date);
     expect(payments.refunds).toEqual([
-      { paymentIntentId: "pi_" + order.sessionId, key: "refund-" + order.id },
+      {
+        paymentIntentId: "pi_" + order.sessionId,
+        key: `refund-${order.id}-0`,
+        amount: 5490, // 2 × 2500 and 490 shipping
+      },
     ]);
     const { rows } = await db.query(
       "SELECT stripe_refund_id, refunded_at FROM payments",
     );
-    expect(rows[0].stripe_refund_id).toBe("re_refund-" + order.id);
+    expect(rows[0].stripe_refund_id).toBe(`re_refund-${order.id}-0`);
     expect(rows[0].refunded_at).toBeInstanceOf(Date);
     expect(await stockOf(db, order.variant.id)).toBe(3);
     expect(await outbox()).toEqual(["order_confirmed", "order_refunded"]);

@@ -15,6 +15,8 @@ import {
   InvalidSignatureError,
   type PaymentEvent,
   type PaymentProvider,
+  type RefundInfo,
+  type RefundRequest,
   type Session,
   type SessionRequest,
 } from "../src/services/payments";
@@ -31,7 +33,14 @@ export class FakePayments implements PaymentProvider {
   sessions = new Map<string, Session>();
   created: SessionRequest[] = [];
   expired: string[] = [];
-  refunds: { paymentIntentId: string; key: string }[] = [];
+  /** Refund calls, in order (a retry with a known key is listed again). */
+  refunds: { paymentIntentId: string; key: string; amount: number }[] = [];
+  /** Refunds as Stripe holds them, by id (Dashboard ones can be added). */
+  stripeRefunds = new Map<string, RefundInfo>();
+  /** The status a new refund gets. */
+  refundStatus = "succeeded";
+  /** Makes the refund and then throws (a timeout after Stripe made it). */
+  failAfterRefund = false;
   failCreate = false;
   failGet = false;
   /** Thrown by expireSession (Stripe refuses to expire a complete page). */
@@ -46,6 +55,9 @@ export class FakePayments implements PaymentProvider {
     this.created = [];
     this.expired = [];
     this.refunds = [];
+    this.stripeRefunds.clear();
+    this.refundStatus = "succeeded";
+    this.failAfterRefund = false;
     this.failCreate = false;
     this.failGet = false;
     this.expireError = null;
@@ -88,10 +100,37 @@ export class FakePayments implements PaymentProvider {
     if (s) s.expired = true;
   }
 
-  async refund(paymentIntentId: string, key: string): Promise<string> {
+  /** Keyed like Stripe: the same key gives back the same refund. */
+  async refund(req: RefundRequest): Promise<RefundInfo> {
     if (this.refundError) throw this.refundError;
-    this.refunds.push({ paymentIntentId, key });
-    return `re_${key}`;
+    this.refunds.push({
+      paymentIntentId: req.paymentIntentId,
+      key: req.idempotencyKey,
+      amount: req.amount,
+    });
+    const id = `re_${req.idempotencyKey}`;
+    let refund = this.stripeRefunds.get(id);
+    if (!refund) {
+      refund = {
+        id,
+        paymentIntentId: req.paymentIntentId,
+        amount: req.amount,
+        currency: "eur",
+        status: this.refundStatus,
+        failureReason: "",
+      };
+      this.stripeRefunds.set(id, refund);
+    }
+    if (this.failAfterRefund) throw new Error("timed out after 45000ms");
+    return { ...refund };
+  }
+
+  async listRefunds(paymentIntentId: string): Promise<RefundInfo[]> {
+    // Stripe lists the newest first.
+    return [...this.stripeRefunds.values()]
+      .filter((r) => r.paymentIntentId === paymentIntentId)
+      .reverse()
+      .map((r) => ({ ...r }));
   }
 
   /** The payload is a PaymentEvent as JSON. */

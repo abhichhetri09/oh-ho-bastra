@@ -30,7 +30,7 @@ SELECT EXISTS (
     JOIN orders o ON o.id = oi.order_id
     WHERE o.user_id = @user_id
     AND oi.product_id = @product_id
-    AND o.status IN ('paid', 'shipped', 'delivered')
+    AND o.status IN ('paid', 'shipped', 'delivered', 'partially_refunded')
 );
 
 -- name: ListReviewedProductIDs :many

@@ -3,7 +3,11 @@ import {
   getOrderItems,
   getOrderPayment,
   getUserByID,
+  listOrderRefundItems,
+  listOrderRefunds,
   type Order,
+  type OrderRefund,
+  type OrderRefundItem,
 } from "../db/gen";
 import type { Queryable } from "../db/queryable";
 import { internal } from "../http/response";
@@ -44,6 +48,7 @@ export async function respondOrder(
     return;
   }
   const payment = await getOrderPayment(db, order.id);
+  const refunds = await refundsOf(db, order.id);
   // A guest has no email of its own: the order's is the one to write to.
   const guest = user.role === "guest";
   sendAdminJson(res, 200, {
@@ -59,6 +64,45 @@ export async function respondOrder(
         guest,
       },
       payment,
+      refunds,
     },
   });
+}
+
+/** An order's refunds, oldest first, each with its lines and its admin. */
+export async function refundsOf(db: Queryable, orderId: string) {
+  const rows = await listOrderRefunds(db, orderId);
+  const lines = await listOrderRefundItems(db, orderId);
+  const names = new Map<string, string>();
+  for (const id of new Set(rows.map((r) => r.created_by))) {
+    if (id === null) continue;
+    names.set(id, (await getUserByID(db, id))?.name ?? "");
+  }
+  return rows.map((r: OrderRefund) => ({
+    id: r.id,
+    stripe_refund_id: r.stripe_refund_id,
+    status: r.status,
+    amount_card: r.amount_card,
+    amount_credit: r.amount_credit,
+    amount_items: r.amount_items,
+    amount_shipping: r.amount_shipping,
+    amount_extra: r.amount_extra,
+    shipping: r.shipping,
+    source: r.source,
+    note: r.note,
+    created_by:
+      r.created_by === null
+        ? null
+        : { id: r.created_by, name: names.get(r.created_by) ?? "" },
+    failure_reason: r.failure_reason,
+    created_at: r.created_at,
+    lines: lines
+      .filter((l: OrderRefundItem) => l.refund_id === r.id)
+      .map((l) => ({
+        order_item_id: l.order_item_id,
+        quantity: l.quantity,
+        amount: l.amount,
+        restocked: l.restocked,
+      })),
+  }));
 }

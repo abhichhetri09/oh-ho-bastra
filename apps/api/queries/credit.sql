@@ -9,9 +9,9 @@ SELECT * FROM credit_ledger WHERE user_id = $1 ORDER BY created_at, id;
 
 -- name: AddCreditEntry :one
 INSERT INTO credit_ledger (
-    user_id, amount, kind, order_id, referral_id, lot_id, expires_at, note, created_by
+    user_id, amount, kind, order_id, referral_id, lot_id, expires_at, note, created_by, refund_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: ListUsersWithLapsedCredit :many

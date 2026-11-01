@@ -125,7 +125,15 @@ export const CheckoutResponseSchema = successResponse(CheckoutSchema).meta({
 export type CheckoutResponse = z.infer<typeof CheckoutResponseSchema>;
 
 export const OrderStatusSchema = z
-  .enum(["pending", "paid", "shipped", "delivered", "cancelled", "refunded"])
+  .enum([
+    "pending",
+    "paid",
+    "shipped",
+    "delivered",
+    "cancelled",
+    "partially_refunded",
+    "refunded",
+  ])
   .meta({ id: "OrderStatus" });
 export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 
@@ -176,6 +184,17 @@ export const OrderSchema = z
       .nullable()
       .describe("The discount code used, as it was then"),
     credit: Cents.describe("Store credit the order paid with"),
+    refunded_total: Cents.describe(
+      "Given back so far, by card and store credit (counting refunds Stripe is still processing)",
+    ),
+    refunded_credit: Cents.describe(
+      "The part of refunded_total given as store credit",
+    ),
+    dispute_status: z
+      .string()
+      .nullable()
+      .describe("Stripe's status of a chargeback on the payment, if any"),
+    disputed_at: Timestamp.nullable(),
   })
   .meta({ id: "Order" });
 export type Order = z.infer<typeof OrderSchema>;
@@ -198,8 +217,32 @@ export const OrderItemSchema = z
   .meta({ id: "OrderItem", description: "What was bought, as it was then." });
 export type OrderItem = z.infer<typeof OrderItemSchema>;
 
+export const OrderRefundSummarySchema = z
+  .object({
+    id: Uuid,
+    status: z.enum([
+      "pending",
+      "requires_action",
+      "succeeded",
+      "failed",
+      "canceled",
+    ]),
+    amount_card: Cents,
+    amount_credit: Cents,
+    shipping: z.boolean(),
+    created_at: Timestamp,
+    lines: z.array(
+      z.object({ order_item_id: Uuid, quantity: z.int().positive() }),
+    ),
+  })
+  .meta({
+    id: "OrderRefundSummary",
+    description: "A refund, as the customer sees it.",
+  });
+
 export const OrderDetailSchema = OrderSchema.extend({
   items: z.array(OrderItemSchema),
+  refunds: z.array(OrderRefundSummarySchema).describe("Oldest first"),
   reviewed_product_ids: z
     .array(Uuid)
     .describe("Products of this order you've reviewed"),

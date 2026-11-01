@@ -27,6 +27,11 @@ export interface OrderView {
   total: string;
   tracking: string;
   address: string[] | null; // the shipping address, one line each
+  /**
+   * A refund email's money: rows ("Refunded to your card", "€5.00") and
+   * the total, shown instead of the order's totals. Absent otherwise.
+   */
+  refund?: { rows: { label: string; amount: string }[]; total: string };
 }
 
 export interface ItemView {
@@ -147,21 +152,7 @@ export function orderHtml(v: OrderView): string {
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid #e6e1d8;">${items}
 </table>
 
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:16px 0 0;font-size:14px;">
-<tr><td style="padding:3px 0;color:#4a423a;">Subtotal</td><td align="right" style="padding:3px 0;">${h(v.subtotal)}</td></tr>${
-      v.discount
-        ? `
-<tr><td style="padding:3px 0;color:#4a423a;">${h(v.discount.label)}</td><td align="right" style="padding:3px 0;">${h(v.discount.amount)}</td></tr>`
-        : ""
-    }
-<tr><td style="padding:3px 0;color:#4a423a;">Shipping</td><td align="right" style="padding:3px 0;">${h(v.shipping)}</td></tr>${
-      v.credit
-        ? `
-<tr><td style="padding:3px 0;color:#4a423a;">Store credit</td><td align="right" style="padding:3px 0;">${h(v.credit)}</td></tr>`
-        : ""
-    }
-<tr><td style="padding:10px 0 0;font-size:15px;color:#24201c;"><strong>Total</strong></td><td align="right" style="padding:10px 0 0;font-size:15px;"><strong>${h(v.total)}</strong></td></tr>
-</table>${address}
+${v.refund ? refundTotalsHtml(v.refund) : totalsHtml(v)}${address}
 </td></tr>
 
 <tr><td style="padding:24px 4px 0;font-size:12px;line-height:1.6;color:#7a6f63;">
@@ -170,6 +161,35 @@ You're receiving this email because you placed an order at ${h(v.storeName)}. Yo
 ` +
     LAYOUT_BOTTOM
   );
+}
+
+function refundTotalsHtml(r: NonNullable<OrderView["refund"]>): string {
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:16px 0 0;font-size:14px;">${r.rows
+    .map(
+      (row) => `
+<tr><td style="padding:3px 0;color:#4a423a;">${h(row.label)}</td><td align="right" style="padding:3px 0;">${h(row.amount)}</td></tr>`,
+    )
+    .join("")}
+<tr><td style="padding:10px 0 0;font-size:15px;color:#24201c;"><strong>Total refunded</strong></td><td align="right" style="padding:10px 0 0;font-size:15px;"><strong>${h(r.total)}</strong></td></tr>
+</table>`;
+}
+
+function totalsHtml(v: OrderView): string {
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:16px 0 0;font-size:14px;">
+<tr><td style="padding:3px 0;color:#4a423a;">Subtotal</td><td align="right" style="padding:3px 0;">${h(v.subtotal)}</td></tr>${
+    v.discount
+      ? `
+<tr><td style="padding:3px 0;color:#4a423a;">${h(v.discount.label)}</td><td align="right" style="padding:3px 0;">${h(v.discount.amount)}</td></tr>`
+      : ""
+  }
+<tr><td style="padding:3px 0;color:#4a423a;">Shipping</td><td align="right" style="padding:3px 0;">${h(v.shipping)}</td></tr>${
+    v.credit
+      ? `
+<tr><td style="padding:3px 0;color:#4a423a;">Store credit</td><td align="right" style="padding:3px 0;">${h(v.credit)}</td></tr>`
+      : ""
+  }
+<tr><td style="padding:10px 0 0;font-size:15px;color:#24201c;"><strong>Total</strong></td><td align="right" style="padding:10px 0 0;font-size:15px;"><strong>${h(v.total)}</strong></td></tr>
+</table>`;
 }
 
 /** email.txt.tmpl */
@@ -184,10 +204,14 @@ ${v.tracking ? `\nTracking number: ${v.tracking}\n` : ""}
 ${v.cta}: ${v.url}
 
 ${v.items.map((it) => `${it.quantity} × ${it.name}${it.options ? ` (${it.options})` : ""}  ${it.lineTotal}\n`).join("")}
-Subtotal  ${v.subtotal}
+${
+  v.refund
+    ? `${v.refund.rows.map((r) => `${r.label}  ${r.amount}\n`).join("")}Total refunded  ${v.refund.total}\n`
+    : `Subtotal  ${v.subtotal}
 ${v.discount ? `${v.discount.label}  ${v.discount.amount}\n` : ""}Shipping  ${v.shipping}
 ${v.credit ? `Store credit  ${v.credit}\n` : ""}Total     ${v.total}
-${v.address?.length ? `\nShipping to:\n${v.address.map((line) => line + "\n").join("")}` : ""}
+`
+}${v.address?.length ? `\nShipping to:\n${v.address.map((line) => line + "\n").join("")}` : ""}
 --
 ${v.storeName}
 ${v.shopUrl}

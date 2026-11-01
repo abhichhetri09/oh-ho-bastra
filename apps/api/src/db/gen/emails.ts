@@ -3,7 +3,7 @@
 import type { Queryable } from "../queryable";
 import type { EmailOutbox, Order } from "./models";
 
-export const enqueueEmailSql = "INSERT INTO email_outbox (kind, order_id) VALUES ($1, $2)\nON CONFLICT (order_id, kind) DO NOTHING";
+export const enqueueEmailSql = "INSERT INTO email_outbox (kind, order_id) VALUES ($1, $2)\nON CONFLICT DO NOTHING";
 
 export interface EnqueueEmailParams {
   kind: string;
@@ -14,10 +14,22 @@ export async function enqueueEmail(db: Queryable, p: EnqueueEmailParams): Promis
   await db.query(enqueueEmailSql, [p["kind"], p["order_id"]]);
 }
 
+// One refund email per refund (an order can have several).
+export const enqueueRefundEmailSql = "INSERT INTO email_outbox (kind, order_id, refund_id) VALUES ('order_refunded', $1, $2)\nON CONFLICT DO NOTHING";
+
+export interface EnqueueRefundEmailParams {
+  order_id: string;
+  refund_id: string | null;
+}
+
+export async function enqueueRefundEmail(db: Queryable, p: EnqueueRefundEmailParams): Promise<void> {
+  await db.query(enqueueRefundEmailSql, [p["order_id"], p["refund_id"]]);
+}
+
 // Leases a batch of due emails: each is skipped by other senders for
 // lease_seconds, so no transaction stays open while it is sent, and one
 // whose send never finished (a crash) is taken again after that.
-export const claimDueEmailsSql = "UPDATE email_outbox\nSET next_attempt_at = now() + make_interval(secs => $1::int),\n    attempts = attempts + 1\nWHERE id IN (\n    SELECT id FROM email_outbox\n    WHERE status = 'pending' AND next_attempt_at <= now()\n    ORDER BY next_attempt_at\n    LIMIT $2\n    FOR UPDATE SKIP LOCKED\n)\nRETURNING id, kind, order_id, status, attempts, next_attempt_at, last_error, sent_at, created_at, requeued_at";
+export const claimDueEmailsSql = "UPDATE email_outbox\nSET next_attempt_at = now() + make_interval(secs => $1::int),\n    attempts = attempts + 1\nWHERE id IN (\n    SELECT id FROM email_outbox\n    WHERE status = 'pending' AND next_attempt_at <= now()\n    ORDER BY next_attempt_at\n    LIMIT $2\n    FOR UPDATE SKIP LOCKED\n)\nRETURNING id, kind, order_id, status, attempts, next_attempt_at, last_error, sent_at, created_at, requeued_at, refund_id";
 
 export interface ClaimDueEmailsParams {
   lease_seconds: number;
@@ -60,7 +72,7 @@ export async function failEmail(db: Queryable, p: FailEmailParams): Promise<void
 
 // The order an email is about, with the customer's name for the greeting
 // and whether it was placed without an account.
-export const getEmailOrderSql = "SELECT orders.id, orders.number, orders.user_id, orders.status, orders.subtotal, orders.shipping, orders.total, orders.currency, orders.email, orders.shipping_address, orders.stripe_session_id, orders.expires_at, orders.paid_at, orders.cancelled_at, orders.created_at, orders.updated_at, orders.shipped_at, orders.delivered_at, orders.refunded_at, orders.tracking_number, orders.discount, orders.coupon_code, orders.credit, users.name AS customer_name, (users.role = 'guest')::bool AS guest\nFROM orders JOIN users ON users.id = orders.user_id\nWHERE orders.id = $1";
+export const getEmailOrderSql = "SELECT orders.id, orders.number, orders.user_id, orders.status, orders.subtotal, orders.shipping, orders.total, orders.currency, orders.email, orders.shipping_address, orders.stripe_session_id, orders.expires_at, orders.paid_at, orders.cancelled_at, orders.created_at, orders.updated_at, orders.shipped_at, orders.delivered_at, orders.refunded_at, orders.tracking_number, orders.discount, orders.coupon_code, orders.credit, orders.refunded_total, orders.refunded_credit, orders.dispute_status, orders.disputed_at, users.name AS customer_name, (users.role = 'guest')::bool AS guest\nFROM orders JOIN users ON users.id = orders.user_id\nWHERE orders.id = $1";
 
 export interface GetEmailOrderRow {
   order: Order;
@@ -70,7 +82,7 @@ export interface GetEmailOrderRow {
 
 export async function getEmailOrder(db: Queryable, id: string): Promise<GetEmailOrderRow | null> {
   const { rows } = await db.query({ text: getEmailOrderSql, values: [id], rowMode: "array" });
-  return rows[0] ? ((r: unknown[]) => ({ order: { id: r[0], number: r[1], user_id: r[2], status: r[3], subtotal: r[4], shipping: r[5], total: r[6], currency: r[7], email: r[8], shipping_address: r[9], stripe_session_id: r[10], expires_at: r[11], paid_at: r[12], cancelled_at: r[13], created_at: r[14], updated_at: r[15], shipped_at: r[16], delivered_at: r[17], refunded_at: r[18], tracking_number: r[19], discount: r[20], coupon_code: r[21], credit: r[22] }, customer_name: r[23], guest: r[24] }) as GetEmailOrderRow)(rows[0]) : null;
+  return rows[0] ? ((r: unknown[]) => ({ order: { id: r[0], number: r[1], user_id: r[2], status: r[3], subtotal: r[4], shipping: r[5], total: r[6], currency: r[7], email: r[8], shipping_address: r[9], stripe_session_id: r[10], expires_at: r[11], paid_at: r[12], cancelled_at: r[13], created_at: r[14], updated_at: r[15], shipped_at: r[16], delivered_at: r[17], refunded_at: r[18], tracking_number: r[19], discount: r[20], coupon_code: r[21], credit: r[22], refunded_total: r[23], refunded_credit: r[24], dispute_status: r[25], disputed_at: r[26] }, customer_name: r[27], guest: r[28] }) as GetEmailOrderRow)(rows[0]) : null;
 }
 
 // Admin: the outbox, newest first, by status.

@@ -76,6 +76,73 @@ export type EmailItem = Pick<
   "product_name" | "options" | "quantity" | "line_total" | "image"
 >;
 
+/** One refund, for its "refund issued" email. */
+export interface EmailRefund {
+  amount_card: number;
+  amount_credit: number;
+  amount_shipping: number;
+  /** The lines it covered: how many units, and what they came to. */
+  lines: { item: EmailItem; quantity: number; amount: number }[];
+  /** Nothing is left to refund after it (the order is refunded in full). */
+  full: boolean;
+}
+
+/** The copy and money of a refund email. */
+function refundCopy(
+  refund: EmailRefund,
+  currency: string,
+): Copy & { rows: { label: string; amount: string }[]; total: string } {
+  const money = (c: number) => formatMoney(c, currency);
+  const total = refund.amount_card + refund.amount_credit;
+  const parts = [
+    refund.amount_card > 0
+      ? `${money(refund.amount_card)} to your original payment method`
+      : "",
+    refund.amount_credit > 0
+      ? `${money(refund.amount_credit)} as store credit`
+      : "",
+  ].filter((p) => p !== "");
+  const where = parts.length > 0 ? ` (${parts.join(" and ")})` : "";
+  const timing =
+    refund.amount_card > 0
+      ? " Depending on your bank, it can take 5–10 business days to appear."
+      : "";
+  const credit =
+    refund.amount_credit > 0
+      ? " Your store credit is ready to use on your next order."
+      : "";
+  const rows: { label: string; amount: string }[] = [];
+  if (refund.amount_shipping > 0)
+    rows.push({ label: "Shipping", amount: money(refund.amount_shipping) });
+  if (refund.amount_card > 0)
+    rows.push({
+      label: "To your payment method",
+      amount: money(refund.amount_card),
+    });
+  if (refund.amount_credit > 0)
+    rows.push({
+      label: "As store credit",
+      amount: money(refund.amount_credit),
+    });
+  return refund.full
+    ? {
+        subject: (label) => `Your order ${label} has been refunded`,
+        preheader: "Your refund is on its way back to you.",
+        heading: "Your order has been refunded",
+        intro: `We've refunded the rest of your order, ${money(total)}${where}.${timing}${credit}`,
+        rows,
+        total: money(total),
+      }
+    : {
+        subject: (label) => `A refund for your order ${label}`,
+        preheader: `We've refunded ${money(total)} of your order.`,
+        heading: "We've refunded part of your order",
+        intro: `We've refunded ${money(total)} of your order${where}.${timing}${credit}`,
+        rows,
+        total: money(total),
+      };
+}
+
 const MONTHS = [
   "January",
   "February",
@@ -103,11 +170,24 @@ export function render(
   customerName: string,
   items: EmailItem[] | null,
   frontendUrl: string,
-  { guest = false }: { guest?: boolean } = {},
+  { guest = false, refund }: { guest?: boolean; refund?: EmailRefund } = {},
 ): Rendered {
   if (!isEmailKind(kind))
     throw new Error(`unknown email kind ${JSON.stringify(kind)}`);
-  const c = COPIES[kind];
+  const r =
+    kind === "order_refunded" && refund
+      ? refundCopy(refund, order.currency)
+      : null;
+  const c = r ?? COPIES[kind];
+  // A refund email lists what it refunded (units and their amount).
+  const shown: EmailItem[] | null =
+    refund && r
+      ? refund.lines.map((l) => ({
+          ...l.item,
+          quantity: l.quantity,
+          line_total: l.amount,
+        }))
+      : items;
 
   const label = orderLabel(order.number);
   const placed = order.created_at;
@@ -128,7 +208,7 @@ export function render(
       : frontendUrl + "/account/orders/" + label,
     cta: guest ? "Track your order" : "View your order",
     shopUrl: frontendUrl,
-    items: (items ?? []).map((it) => ({
+    items: (shown ?? []).map((it) => ({
       name: it.product_name,
       options: optionValues(it.options),
       quantity: it.quantity,
@@ -157,6 +237,7 @@ export function render(
         ? order.tracking_number
         : "",
     address: addressLines(order.shipping_address),
+    ...(r ? { refund: { rows: r.rows, total: r.total } } : {}),
   };
   return {
     subject: c.subject(label),

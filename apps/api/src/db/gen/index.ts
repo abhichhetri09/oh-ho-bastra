@@ -18,6 +18,7 @@ export * from "./product_options";
 export * from "./product_variants";
 export * from "./products";
 export * from "./referrals";
+export * from "./refunds";
 export * from "./reviews";
 export * from "./sessions";
 export * from "./settings";

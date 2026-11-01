@@ -137,6 +137,13 @@ export async function cancelOrderReferral(db: Queryable, order_id: string): Prom
   return rowCount ?? 0;
 }
 
+export const getPendingOrderReferralSql = "SELECT id, referrer_id, order_id, friend_email, status, friend_kind, friend_value, friend_min, reward, pay_after_days, custom_prints, discount, settled_at, created_at, updated_at FROM referrals WHERE order_id = $1 AND status = 'pending' FOR UPDATE";
+
+export async function getPendingOrderReferral(db: Queryable, order_id: string): Promise<Referral | null> {
+  const { rows } = await db.query(getPendingOrderReferralSql, [order_id]);
+  return (rows[0] as Referral | undefined) ?? null;
+}
+
 // An order paid after it was released takes its referral back, unless the
 // friend has been referred again since.
 export const restoreOrderReferralSql = "UPDATE referrals r SET status = 'pending', settled_at = NULL\nWHERE r.order_id = $1 AND r.status = 'cancelled'\n  AND NOT EXISTS (\n      SELECT 1 FROM referrals o\n      WHERE o.friend_email = r.friend_email AND o.status <> 'cancelled'\n  )";
@@ -146,8 +153,11 @@ export async function restoreOrderReferral(db: Queryable, order_id: string): Pro
 }
 
 // Pending referrals whose order was delivered pay_after_days before now,
-// oldest first, locked (skipping any another run holds).
-export const listDueReferralsSql = "SELECT r.id, r.referrer_id, r.order_id, r.friend_email, r.status, r.friend_kind, r.friend_value, r.friend_min, r.reward, r.pay_after_days, r.custom_prints, r.discount, r.settled_at, r.created_at, r.updated_at\nFROM referrals r\nJOIN orders o ON o.id = r.order_id\nWHERE r.status = 'pending'\n  AND o.status = 'delivered'\n  AND o.delivered_at + make_interval(days => r.pay_after_days) <= $1::timestamptz\nORDER BY o.delivered_at, r.id\nLIMIT $2\nFOR UPDATE OF r SKIP LOCKED";
+// oldest first, locked (skipping any another run holds). A partly refunded
+// order that was delivered counts (a refund that took it below the
+// referral's minimum cancelled the referral already); one with an open or
+// lost chargeback waits.
+export const listDueReferralsSql = "SELECT r.id, r.referrer_id, r.order_id, r.friend_email, r.status, r.friend_kind, r.friend_value, r.friend_min, r.reward, r.pay_after_days, r.custom_prints, r.discount, r.settled_at, r.created_at, r.updated_at\nFROM referrals r\nJOIN orders o ON o.id = r.order_id\nWHERE r.status = 'pending'\n  AND o.status IN ('delivered', 'partially_refunded')\n  AND o.delivered_at IS NOT NULL\n  AND (o.dispute_status IS NULL OR o.dispute_status = 'won')\n  AND o.delivered_at + make_interval(days => r.pay_after_days) <= $1::timestamptz\nORDER BY o.delivered_at, r.id\nLIMIT $2\nFOR UPDATE OF r SKIP LOCKED";
 
 export interface ListDueReferralsParams {
   now: Date | string;

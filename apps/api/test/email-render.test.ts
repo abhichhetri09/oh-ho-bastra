@@ -211,7 +211,7 @@ http://localhost:3000
 `);
     // The HTML as Go's html/template rendered it.
     expect(sha256(r.html)).toBe(
-      "ef97a007aaa6eea86b9ef82393cb7c2b677e462bc82ef85d0354a6d9a78a51fc",
+      "a7ada96262abd57f22b4e9abea96f0f228e6d2b69d5fbc6755c2a54b14f5ca84",
     );
 
     // Escaping in text, attributes and URLs (javascript: is filtered,
@@ -278,10 +278,10 @@ http://localhost:3000
       "https://shop.example/x?a=1&b='2'",
     );
     expect(sha256(odd.html)).toBe(
-      "16d9779772a46fd9eab2d79bf9fb250e47d4f6d7177e512d0d59f58fbe0f361d",
+      "8359a3311777bfc8f8e1a02c681d311fc6c0ee8e3fbc66045f42520845275853",
     );
     expect(sha256(odd.text)).toBe(
-      "9132889ca633b5a3d1f8b171f7a59ea1a7b2f59d475e9a7a0457333dd9d6e9e7",
+      "2241caf69c71d6313c697ccfbbdff78ff817fb8394eb5ff1dcddd7ec88acb7ca",
     );
     expect(odd.html).toContain(`src="#ZgotmplZ"`);
     expect(odd.html).toContain(
@@ -360,10 +360,10 @@ describe("renderPasswordReset", () => {
     expect(r.subject).toBe("Reset your OH : HO !! Bastra password");
     // As the Go templates rendered it.
     expect(sha256(r.html)).toBe(
-      "dbeb1a17fcc94eeabf3bef359034644504ac0b15b6ba706a42f3030a8a9d66e8",
+      "8ee7c84f5f4c2f6f7335970827750e92f0712bf8858e719e81a22f2f0d463c57",
     );
     expect(sha256(r.text)).toBe(
-      "de13786c346edb3cb82c138478d507889e2f5f640e92433702fb63fba210f13e",
+      "7948b312fabb73b7a0f67eb25544b625a5ba67274d2968287d2e335e02f14f83",
     );
 
     const odd = renderPasswordReset(
@@ -375,10 +375,10 @@ describe("renderPasswordReset", () => {
       "http://x.test/a&b/auth/reset?token=a+b~c%2A%21%27%28%29%C3%A9_-.",
     );
     expect(sha256(odd.html)).toBe(
-      "064593f6cbc255024e114aaa162e46ce0477b8816564cdc150e961b84ba29f68",
+      "fa521f45f652e69670a0fb994bb66f75af4ea45721764e1a174773a4ec7cb98c",
     );
     expect(sha256(odd.text)).toBe(
-      "3847ef33fc7d21253c47b115eed6dd6bcba220a85475fbcef749402661a18f65",
+      "8d4d5b0190ff895400c6d283488b73d677dc18a4dd54ba4ff771f480aad0c851",
     );
   });
 });

@@ -60,6 +60,7 @@ export const AdminStatsSchema = z
         shipped: z.int().nonnegative(),
         delivered: z.int().nonnegative(),
         cancelled: z.int().nonnegative(),
+        partially_refunded: z.int().nonnegative(),
         refunded: z.int().nonnegative(),
       })
       .describe("Every order by status, all time"),
@@ -203,8 +204,55 @@ export const AdminOrderItemSchema = OrderItemSchema.extend({
     .describe("How many weren't in stock when it was paid for"),
 }).meta({ id: "AdminOrderItem" });
 
+export const RefundStatusSchema = z
+  .enum(["pending", "requires_action", "succeeded", "failed", "canceled"])
+  .describe(
+    "Stripe's status of the card part; pending and requires_action count as refunded until they fail",
+  )
+  .meta({ id: "RefundStatus" });
+export type RefundStatus = z.infer<typeof RefundStatusSchema>;
+
+export const OrderRefundLineSchema = z
+  .object({
+    order_item_id: Uuid,
+    quantity: z.int().positive(),
+    amount: Cents.describe("What these units came to, after the discount"),
+    restocked: z.int().nonnegative().describe("Units returned to stock"),
+  })
+  .meta({ id: "OrderRefundLine" });
+
+export const AdminOrderRefundSchema = z
+  .object({
+    id: Uuid,
+    stripe_refund_id: z
+      .string()
+      .nullable()
+      .describe("null when nothing went back by card"),
+    status: RefundStatusSchema,
+    amount_card: Cents,
+    amount_credit: Cents.describe("Given back as store credit"),
+    amount_items: Cents,
+    amount_shipping: Cents,
+    amount_extra: Cents.describe("Goodwill, or a Dashboard refund"),
+    shipping: z.boolean(),
+    source: z
+      .enum(["admin", "stripe"])
+      .describe("stripe: made in the Stripe Dashboard"),
+    note: z.string(),
+    created_by: z
+      .object({ id: Uuid, name: z.string() })
+      .nullable()
+      .describe("The admin who made it"),
+    failure_reason: z.string().nullable(),
+    created_at: Timestamp,
+    lines: z.array(OrderRefundLineSchema),
+  })
+  .meta({ id: "AdminOrderRefund", description: "One refund of an order." });
+export type AdminOrderRefund = z.infer<typeof AdminOrderRefundSchema>;
+
 export const AdminOrderDetailSchema = OrderSchema.extend({
   items: z.array(AdminOrderItemSchema),
+  refunds: z.array(AdminOrderRefundSchema).describe("Oldest first"),
   customer: z.object({
     id: Uuid,
     name: z.string(),
@@ -242,13 +290,55 @@ export type OrderTrackingBody = z.infer<typeof OrderTrackingBodySchema>;
 
 export const RefundOrderBodySchema = z
   .object({
+    request_id: Uuid.optional().describe(
+      "A new id per refund the admin means to make: a retry with it refunds once. Required with items, shipping or extra.",
+    ),
     restock: z
       .boolean()
       .describe(
-        "Return the items to stock: yes for an order that never shipped, or came back",
+        "Return the refunded units to stock: yes for units that never shipped, or came back",
       ),
+    items: z
+      .array(
+        z.object({
+          item_id: Uuid,
+          quantity: z.int().positive(),
+          restock: z
+            .boolean()
+            .optional()
+            .describe("This line's restock, overriding the refund's"),
+        }),
+      )
+      .max(100)
+      .optional()
+      .describe("Lines and how many of each, at most what is left of each"),
+    shipping: z.boolean().optional().describe("Refund the shipping (once)"),
+    extra: Cents.max(100_000_000)
+      .optional()
+      .describe("A goodwill amount on top, cents"),
+    note: z
+      .string()
+      .trim()
+      .max(500, "The note cannot exceed 500 characters")
+      .optional()
+      .describe("Why: kept with the refund"),
   })
-  .meta({ id: "RefundOrderBody" });
+  .refine(
+    (b) =>
+      b.request_id !== undefined ||
+      (b.items === undefined &&
+        b.shipping === undefined &&
+        (b.extra ?? 0) === 0),
+    {
+      message: "request_id is required for a partial refund",
+      path: ["request_id"],
+    },
+  )
+  .meta({
+    id: "RefundOrderBody",
+    description:
+      "Without items, shipping or extra, everything left is refunded. Each refund is split between card and store credit in the shares the order was paid.",
+  });
 export type RefundOrderBody = z.infer<typeof RefundOrderBodySchema>;
 
 export const ReviewStatusBodySchema = z
@@ -349,6 +439,7 @@ const OrderStatusCountsSchema = z
     shipped: z.int().nonnegative(),
     delivered: z.int().nonnegative(),
     cancelled: z.int().nonnegative(),
+    partially_refunded: z.int().nonnegative(),
     refunded: z.int().nonnegative(),
   })
   .meta({ id: "OrderStatusCounts", description: "Every order by status" });

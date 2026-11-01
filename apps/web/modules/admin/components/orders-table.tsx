@@ -52,6 +52,7 @@ const tabs: { label: string; status: OrderStatus | "" }[] = [
   { label: "Delivered", status: "delivered" },
   { label: "Awaiting payment", status: "pending" },
   { label: "Cancelled", status: "cancelled" },
+  { label: "Partly refunded", status: "partially_refunded" },
   { label: "Refunded", status: "refunded" },
 ];
 

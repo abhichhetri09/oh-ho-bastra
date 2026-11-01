@@ -54,6 +54,7 @@ const ORDER_STATUSES: OrderStatus[] = [
   "shipped",
   "delivered",
   "cancelled",
+  "partially_refunded",
   "refunded",
 ];
 

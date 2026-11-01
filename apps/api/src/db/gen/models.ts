@@ -151,6 +151,10 @@ export interface Order {
   discount: number;
   coupon_code: string | null;
   credit: number;
+  refunded_total: number;
+  refunded_credit: number;
+  dispute_status: string | null;
+  disputed_at: Date | null;
 }
 
 export interface OrderItem {
@@ -281,6 +285,7 @@ export interface EmailOutbox {
   sent_at: Date | null;
   created_at: Date;
   requeued_at: Date | null;
+  refund_id: string | null;
 }
 
 export interface PasswordResetToken {
@@ -351,6 +356,7 @@ export interface CreditLedger {
   note: string;
   created_by: string | null;
   created_at: Date;
+  refund_id: string | null;
 }
 
 export interface CreditRedemption {
@@ -364,4 +370,32 @@ export interface CreditRedemption {
   confirmed_at: Date | null;
   created_by: string | null;
   created_at: Date;
+}
+
+export interface OrderRefund {
+  id: string;
+  order_id: string;
+  request_id: string | null;
+  stripe_refund_id: string | null;
+  status: string;
+  amount_card: number;
+  amount_credit: number;
+  amount_items: number;
+  amount_shipping: number;
+  amount_extra: number;
+  shipping: boolean;
+  source: string;
+  note: string;
+  created_by: string | null;
+  failure_reason: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface OrderRefundItem {
+  refund_id: string;
+  order_item_id: string;
+  quantity: number;
+  amount: number;
+  restocked: number;
 }

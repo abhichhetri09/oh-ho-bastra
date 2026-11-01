@@ -3,14 +3,18 @@ import {
   failEmail,
   getEmailOrder,
   getOrderItems,
+  listOrderRefundItems,
+  listOrderRefunds,
   markEmailSent,
   retryEmail,
   type EmailOutbox,
+  type Order,
+  type OrderItem,
 } from "../db/gen";
 import type { Queryable } from "../db/queryable";
 import { log } from "../log";
 import { PermanentError, type Mailer, type Message } from "./mailer";
-import { render } from "./render";
+import { render, type EmailRefund } from "./render";
 
 // BATCH_SIZE emails are claimed per round, each leased for LEASE: long
 // enough to send them all even if every send takes the mailer's timeouts.
@@ -155,6 +159,14 @@ export class EmailWorker {
     } catch (err) {
       throw new Error(`get items: ${errorMessage(err)}`, { cause: err });
     }
+    let refund: EmailRefund | undefined;
+    if (row.refund_id !== null) {
+      try {
+        refund = await this.refundOf(order.order, items, row.refund_id);
+      } catch (err) {
+        throw new Error(`get refund: ${errorMessage(err)}`, { cause: err });
+      }
+    }
     let r;
     try {
       r = render(
@@ -163,7 +175,7 @@ export class EmailWorker {
         order.customer_name,
         items,
         this.frontendUrl,
-        { guest: order.guest },
+        { guest: order.guest, refund },
       );
     } catch (err) {
       // A template or kind error fails the same way every time.
@@ -177,6 +189,42 @@ export class EmailWorker {
         text: r.text,
       },
       number: order.order.number,
+    };
+  }
+
+  /**
+   * The refund an email is about, with its lines; full when the refunds up
+   * to it (still counting) gave back everything the order was paid.
+   */
+  private async refundOf(
+    order: Order,
+    items: OrderItem[],
+    refundId: string,
+  ): Promise<EmailRefund> {
+    const refunds = await listOrderRefunds(this.db, order.id);
+    const lines = await listOrderRefundItems(this.db, order.id);
+    const at = refunds.findIndex((x) => x.id === refundId);
+    if (at < 0) throw new Error("no rows in result set");
+    const refund = refunds[at]!;
+    const counted = (s: string) =>
+      s === "pending" || s === "requires_action" || s === "succeeded";
+    const upTo = refunds
+      .slice(0, at + 1)
+      .filter((x) => counted(x.status))
+      .reduce((s, x) => s + x.amount_card + x.amount_credit, 0);
+    const byId = new Map(items.map((i) => [i.id, i]));
+    return {
+      amount_card: refund.amount_card,
+      amount_credit: refund.amount_credit,
+      amount_shipping: refund.amount_shipping,
+      lines: lines
+        .filter((l) => l.refund_id === refundId && byId.has(l.order_item_id))
+        .map((l) => ({
+          item: byId.get(l.order_item_id)!,
+          quantity: l.quantity,
+          amount: l.amount,
+        })),
+      full: upTo >= order.total + order.credit,
     };
   }
 

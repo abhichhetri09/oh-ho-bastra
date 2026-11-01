@@ -135,6 +135,9 @@
           "INVALID_ORDER_TRANSITION",
           "ORDER_ALREADY_PAID",
           "REFUND_REFUSED",
+          "INVALID_REFUND",
+          "REFUND_TOO_LARGE",
+          "REFUND_REQUEST_REUSED",
           "INVALID_ORDER_NUMBER",
           "ADDRESS_NOT_FOUND",
           "INVALID_ADDRESS_ID",
@@ -2598,11 +2601,42 @@
             "minimum": 0,
             "description": "Store credit the order paid with"
           },
+          "refunded_total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Given back so far, by card and store credit (counting refunds Stripe is still processing)"
+          },
+          "refunded_credit": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The part of refunded_total given as store credit"
+          },
+          "dispute_status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Stripe's status of a chargeback on the payment, if any"
+          },
+          "disputed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "items": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/OrderItem"
             }
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderRefundSummary"
+            },
+            "description": "Oldest first"
           },
           "reviewed_product_ids": {
             "type": "array",
@@ -2637,7 +2671,12 @@
           "discount",
           "coupon_code",
           "credit",
+          "refunded_total",
+          "refunded_credit",
+          "dispute_status",
+          "disputed_at",
           "items",
+          "refunds",
           "reviewed_product_ids"
         ]
       },
@@ -2649,6 +2688,7 @@
           "shipped",
           "delivered",
           "cancelled",
+          "partially_refunded",
           "refunded"
         ]
       },
@@ -2767,6 +2807,70 @@
           "line_total"
         ],
         "description": "What was bought, as it was then."
+      },
+      "OrderRefundSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "requires_action",
+              "succeeded",
+              "failed",
+              "canceled"
+            ]
+          },
+          "amount_card": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "amount_credit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "shipping": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "order_item_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "order_item_id",
+                "quantity"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "amount_card",
+          "amount_credit",
+          "shipping",
+          "created_at",
+          "lines"
+        ],
+        "description": "A refund, as the customer sees it."
       },
       "OrderListResponse": {
         "type": "object",
@@ -3861,6 +3965,10 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "partially_refunded": {
+                "type": "integer",
+                "minimum": 0
+              },
               "refunded": {
                 "type": "integer",
                 "minimum": 0
@@ -3872,6 +3980,7 @@
               "shipped",
               "delivered",
               "cancelled",
+              "partially_refunded",
               "refunded"
             ],
             "description": "Every order by status, all time"
@@ -4350,6 +4459,10 @@
             "type": "integer",
             "minimum": 0
           },
+          "partially_refunded": {
+            "type": "integer",
+            "minimum": 0
+          },
           "refunded": {
             "type": "integer",
             "minimum": 0
@@ -4361,6 +4474,7 @@
           "shipped",
           "delivered",
           "cancelled",
+          "partially_refunded",
           "refunded"
         ],
         "description": "Every order by status"
@@ -5100,11 +5214,42 @@
             "minimum": 0,
             "description": "Store credit the order paid with"
           },
+          "refunded_total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Given back so far, by card and store credit (counting refunds Stripe is still processing)"
+          },
+          "refunded_credit": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The part of refunded_total given as store credit"
+          },
+          "dispute_status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Stripe's status of a chargeback on the payment, if any"
+          },
+          "disputed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "items": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AdminOrderItem"
             }
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderRefund"
+            },
+            "description": "Oldest first"
           },
           "customer": {
             "type": "object",
@@ -5218,7 +5363,12 @@
           "discount",
           "coupon_code",
           "credit",
+          "refunded_total",
+          "refunded_credit",
+          "dispute_status",
+          "disputed_at",
           "items",
+          "refunds",
           "customer",
           "payment"
         ]
@@ -5305,6 +5455,155 @@
           "stock_shortfall"
         ]
       },
+      "AdminOrderRefund": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stripe_refund_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "null when nothing went back by card"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RefundStatus"
+          },
+          "amount_card": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "amount_credit": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Given back as store credit"
+          },
+          "amount_items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "amount_shipping": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "amount_extra": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Goodwill, or a Dashboard refund"
+          },
+          "shipping": {
+            "type": "boolean"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "stripe"
+            ],
+            "description": "stripe: made in the Stripe Dashboard"
+          },
+          "note": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "description": "The admin who made it"
+          },
+          "failure_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderRefundLine"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "stripe_refund_id",
+          "status",
+          "amount_card",
+          "amount_credit",
+          "amount_items",
+          "amount_shipping",
+          "amount_extra",
+          "shipping",
+          "source",
+          "note",
+          "created_by",
+          "failure_reason",
+          "created_at",
+          "lines"
+        ],
+        "description": "One refund of an order."
+      },
+      "RefundStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "requires_action",
+          "succeeded",
+          "failed",
+          "canceled"
+        ],
+        "description": "Stripe's status of the card part; pending and requires_action count as refunded until they fail"
+      },
+      "OrderRefundLine": {
+        "type": "object",
+        "properties": {
+          "order_item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What these units came to, after the discount"
+          },
+          "restocked": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Units returned to stock"
+          }
+        },
+        "required": [
+          "order_item_id",
+          "quantity",
+          "amount",
+          "restocked"
+        ]
+      },
       "ShipOrderBody": {
         "type": "object",
         "properties": {
@@ -5330,14 +5629,61 @@
       "RefundOrderBody": {
         "type": "object",
         "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A new id per refund the admin means to make: a retry with it refunds once. Required with items, shipping or extra."
+          },
           "restock": {
             "type": "boolean",
-            "description": "Return the items to stock: yes for an order that never shipped, or came back"
+            "description": "Return the refunded units to stock: yes for units that never shipped, or came back"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "item_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "restock": {
+                  "type": "boolean",
+                  "description": "This line's restock, overriding the refund's"
+                }
+              },
+              "required": [
+                "item_id",
+                "quantity"
+              ]
+            },
+            "maxItems": 100,
+            "description": "Lines and how many of each, at most what is left of each"
+          },
+          "shipping": {
+            "type": "boolean",
+            "description": "Refund the shipping (once)"
+          },
+          "extra": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "A goodwill amount on top, cents"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Why: kept with the refund"
           }
         },
         "required": [
           "restock"
-        ]
+        ],
+        "description": "Without items, shipping or extra, everything left is refunded. Each refund is split between card and store credit in the shares the order was paid."
       },
       "AdminReviewListResponse": {
         "type": "object",
@@ -10150,7 +10496,7 @@
           "Checkout"
         ],
         "summary": "Stripe webhook",
-        "description": "Called by Stripe, authenticated by the Stripe-Signature header. Handles checkout.session.completed, async_payment_succeeded, expired and async_payment_failed; each event id is applied once. A 500 makes Stripe retry.",
+        "description": "Called by Stripe, authenticated by the Stripe-Signature header. Handles checkout.session.completed, async_payment_succeeded, expired and async_payment_failed; refund.created, refund.updated, refund.failed and charge.refunded (refunds made in the Dashboard are recorded, matched by refund id; failed ones are undone); and charge.dispute.created, updated and closed. Each event id is applied once. A 500 makes Stripe retry.",
         "parameters": [
           {
             "schema": {
@@ -12944,8 +13290,8 @@
         "tags": [
           "Admin"
         ],
-        "summary": "Refund an order",
-        "description": "A paid, shipped or delivered order is refunded in full through Stripe (once: the refund is keyed by the order) and becomes refunded.",
+        "summary": "Refund an order, in part or in full",
+        "description": "Refunds chosen lines (quantities up to what is left of each), the shipping (once) and/or a goodwill amount of a paid, shipped, delivered or partly refunded order; without any of them, everything left. Lines are worth what was paid for them (the order's discount shared out over the lines, rounded to the cent so the parts add up). The money goes back by card (a Stripe refund) and store credit in the shares the order was paid. Each refund is keyed by request_id, so a retry refunds once. The order becomes partially_refunded, then refunded once nothing is left.",
         "security": [
           {
             "accessTokenCookie": []
@@ -13024,7 +13370,7 @@
             }
           },
           "409": {
-            "description": "Not refundable in its status, no payment recorded, or Stripe declined it (INVALID_ORDER_TRANSITION, REFUND_REFUSED)",
+            "description": "Not refundable in its status, no payment recorded, Stripe declined it, the request id is another order's, lines or shipping that can't be refunded, or more than is left (INVALID_ORDER_TRANSITION, REFUND_REFUSED, REFUND_REQUEST_REUSED, INVALID_REFUND, REFUND_TOO_LARGE)",
             "content": {
               "application/json": {
                 "schema": {

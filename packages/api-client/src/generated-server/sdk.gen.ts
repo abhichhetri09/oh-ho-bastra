@@ -682,7 +682,7 @@ export const getCheckoutSession = <ThrowOnError extends boolean = false>(options
 /**
  * Stripe webhook
  *
- * Called by Stripe, authenticated by the Stripe-Signature header. Handles checkout.session.completed, async_payment_succeeded, expired and async_payment_failed; each event id is applied once. A 500 makes Stripe retry.
+ * Called by Stripe, authenticated by the Stripe-Signature header. Handles checkout.session.completed, async_payment_succeeded, expired and async_payment_failed; refund.created, refund.updated, refund.failed and charge.refunded (refunds made in the Dashboard are recorded, matched by refund id; failed ones are undone); and charge.dispute.created, updated and closed. Each event id is applied once. A 500 makes Stripe retry.
  */
 export const stripeWebhook = <ThrowOnError extends boolean = false>(options: Options<StripeWebhookData, ThrowOnError>): RequestResult<StripeWebhookResponses, StripeWebhookErrors, ThrowOnError> => (options.client ?? client).post<StripeWebhookResponses, StripeWebhookErrors, ThrowOnError>({ url: '/api/v1/webhooks/stripe', ...options });
 
@@ -1157,9 +1157,9 @@ export const adminCancelOrder = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
- * Refund an order
+ * Refund an order, in part or in full
  *
- * A paid, shipped or delivered order is refunded in full through Stripe (once: the refund is keyed by the order) and becomes refunded.
+ * Refunds chosen lines (quantities up to what is left of each), the shipping (once) and/or a goodwill amount of a paid, shipped, delivered or partly refunded order; without any of them, everything left. Lines are worth what was paid for them (the order's discount shared out over the lines, rounded to the cent so the parts add up). The money goes back by card (a Stripe refund) and store credit in the shares the order was paid. Each refund is keyed by request_id, so a retry refunds once. The order becomes partially_refunded, then refunded once nothing is left.
  */
 export const adminRefundOrder = <ThrowOnError extends boolean = false>(options: Options<AdminRefundOrderData, ThrowOnError>): RequestResult<AdminRefundOrderResponses, AdminRefundOrderErrors, ThrowOnError> => (options.client ?? client).post<AdminRefundOrderResponses, AdminRefundOrderErrors, ThrowOnError>({
     security: [{

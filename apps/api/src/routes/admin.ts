@@ -75,6 +75,7 @@ import {
   parseSort,
   pathUuid,
   query,
+  userId,
 } from "../http/params";
 import { Refusal } from "../checkout/refusal";
 import { fail, internal, ok, paginationMeta } from "../http/response";
@@ -472,7 +473,10 @@ export function adminRoutes(api: Group, deps: Deps) {
     );
   });
 
-  /** RefundOrder refunds a paid order in full through Stripe. */
+  /**
+   * RefundOrder refunds part of a paid order (lines, shipping, a goodwill
+   * amount) or everything left, by card and store credit as it was paid.
+   */
   admin.post("/orders/:number/refund", async (req, res) => {
     if (!deps.checkout.enabled()) {
       fail(
@@ -490,7 +494,7 @@ export function adminRoutes(api: Group, deps: Deps) {
     await changed(
       req,
       res,
-      deps.checkout.refundPaid(number, body.restock),
+      deps.checkout.refund(number, body, userId(req)),
       "Order refunded",
     );
   });

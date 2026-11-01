@@ -105,6 +105,7 @@ const EMPTY_STATUSES = {
   cancelled: 0,
   delivered: 0,
   paid: 0,
+  partially_refunded: 0,
   pending: 0,
   refunded: 0,
   shipped: 0,
@@ -137,6 +138,7 @@ describe("dashboard helpers", () => {
       "cancelled",
       "delivered",
       "paid",
+      "partially_refunded",
       "pending",
       "refunded",
       "shipped",
@@ -403,7 +405,7 @@ describe("order filters", () => {
     for (const [path, message] of [
       [
         "/orders?status=lost",
-        "status must be pending, paid, shipped, delivered, cancelled or refunded",
+        "status must be pending, paid, shipped, delivered, cancelled, partially_refunded or refunded",
       ],
       [`/orders?q=${"a".repeat(101)}`, "q must be at most 100 characters"],
       ["/orders?customer=nope", "customer must be a user ID"],
@@ -651,9 +653,14 @@ describe("GET /admin/orders/:number", () => {
       "discount",
       "coupon_code",
       "credit",
+      "refunded_total",
+      "refunded_credit",
+      "dispute_status",
+      "disputed_at",
       "items",
       "customer",
       "payment",
+      "refunds",
     ]);
     expect(d.shipping_address).toEqual({
       full_name: "Ada Lovelace",

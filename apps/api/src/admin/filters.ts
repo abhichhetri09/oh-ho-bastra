@@ -11,6 +11,7 @@ export const ORDER_STATUSES = [
   "shipped",
   "delivered",
   "cancelled",
+  "partially_refunded",
   "refunded",
 ] as const;
 
@@ -122,7 +123,7 @@ export function orderFilters(req: Request, res: Response): OrderFilter | null {
         res,
         400,
         "INVALID_QUERY_PARAMETER",
-        "status must be pending, paid, shipped, delivered, cancelled or refunded",
+        "status must be pending, paid, shipped, delivered, cancelled, partially_refunded or refunded",
       );
       return null;
     }

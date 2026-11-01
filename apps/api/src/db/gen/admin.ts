@@ -2,10 +2,11 @@
 
 import type { Queryable } from "../queryable";
 
-// Admin dashboard. "Sales" are orders that were paid (paid, shipped or
-// delivered); abandoned checkouts and cancellations don't count.
+// Admin dashboard. "Sales" are orders that were paid (paid, shipped,
+// delivered or partly refunded), net of what went back by card; abandoned
+// checkouts, cancellations and full refunds don't count.
 // Sales paid in [from, to).
-export const adminPeriodTotalsSql = "\nSELECT\n    COALESCE(SUM(total), 0)::bigint AS revenue,\n    COUNT(*)::bigint AS orders\nFROM orders\nWHERE status IN ('paid', 'shipped', 'delivered')\n  AND paid_at >= $1::timestamptz AND paid_at < $2::timestamptz";
+export const adminPeriodTotalsSql = "\nSELECT\n    COALESCE(SUM(total - (refunded_total - refunded_credit)), 0)::bigint AS revenue,\n    COUNT(*)::bigint AS orders\nFROM orders\nWHERE status IN ('paid', 'shipped', 'delivered', 'partially_refunded')\n  AND paid_at >= $1::timestamptz AND paid_at < $2::timestamptz";
 
 export interface AdminPeriodTotalsParams {
   from_time: Date | string;
@@ -51,7 +52,7 @@ export async function adminNewCustomers(db: Queryable, p: AdminNewCustomersParam
 }
 
 // The last @days days (UTC), every day present, oldest first.
-export const adminSalesByDaySql = "SELECT\n    d.day::date AS day,\n    COALESCE(SUM(o.total), 0)::bigint AS revenue,\n    COUNT(o.id)::int AS orders\nFROM generate_series(\n    (now() AT TIME ZONE 'UTC')::date - ($1::int - 1),\n    (now() AT TIME ZONE 'UTC')::date,\n    interval '1 day'\n) AS d(day)\nLEFT JOIN orders o\n    ON (o.paid_at AT TIME ZONE 'UTC')::date = d.day::date\n    AND o.status IN ('paid', 'shipped', 'delivered')\nGROUP BY d.day\nORDER BY d.day";
+export const adminSalesByDaySql = "SELECT\n    d.day::date AS day,\n    COALESCE(SUM(o.total - (o.refunded_total - o.refunded_credit)), 0)::bigint AS revenue,\n    COUNT(o.id)::int AS orders\nFROM generate_series(\n    (now() AT TIME ZONE 'UTC')::date - ($1::int - 1),\n    (now() AT TIME ZONE 'UTC')::date,\n    interval '1 day'\n) AS d(day)\nLEFT JOIN orders o\n    ON (o.paid_at AT TIME ZONE 'UTC')::date = d.day::date\n    AND o.status IN ('paid', 'shipped', 'delivered', 'partially_refunded')\nGROUP BY d.day\nORDER BY d.day";
 
 export interface AdminSalesByDayRow {
   day: string;
@@ -78,7 +79,7 @@ export async function adminOrdersByStatus(db: Queryable): Promise<AdminOrdersByS
 }
 
 // Best sellers by revenue among sales paid in [from, to).
-export const adminTopProductsSql = "SELECT\n    p.id AS product_id,\n    p.name AS product_name,\n    COALESCE(p.images[1], MAX(oi.image), '')::text AS image,\n    SUM(oi.quantity)::bigint AS units,\n    SUM(oi.line_total)::bigint AS revenue\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE o.status IN ('paid', 'shipped', 'delivered')\n  AND o.paid_at >= $1::timestamptz AND o.paid_at < $2::timestamptz\nGROUP BY p.id\nORDER BY revenue DESC, units DESC, p.name\nLIMIT 5";
+export const adminTopProductsSql = "SELECT\n    p.id AS product_id,\n    p.name AS product_name,\n    COALESCE(p.images[1], MAX(oi.image), '')::text AS image,\n    SUM(oi.quantity)::bigint AS units,\n    SUM(oi.line_total)::bigint AS revenue\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE o.status IN ('paid', 'shipped', 'delivered', 'partially_refunded')\n  AND o.paid_at >= $1::timestamptz AND o.paid_at < $2::timestamptz\nGROUP BY p.id\nORDER BY revenue DESC, units DESC, p.name\nLIMIT 5";
 
 export interface AdminTopProductsParams {
   from_time: Date | string;
@@ -100,7 +101,7 @@ export async function adminTopProducts(db: Queryable, p: AdminTopProductsParams)
 
 // What needs the admin: paid orders to ship (and those short of stock),
 // emails given up on, and active variants that are sold out.
-export const adminAttentionSql = "SELECT\n    (SELECT COUNT(*) FROM orders WHERE status = 'paid')::bigint AS to_ship,\n    (\n        SELECT COUNT(DISTINCT o.id) FROM orders o\n        JOIN order_items oi ON oi.order_id = o.id\n        WHERE o.status = 'paid' AND oi.stock_shortfall > 0\n    )::bigint AS oversold,\n    (SELECT COUNT(*) FROM email_outbox WHERE status = 'failed')::bigint AS failed_emails,\n    (\n        SELECT COUNT(*) FROM product_variants pv\n        JOIN products p ON p.id = pv.product_id\n        WHERE pv.is_active AND p.is_active AND pv.stock = 0\n    )::bigint AS out_of_stock";
+export const adminAttentionSql = "SELECT\n    (\n        SELECT COUNT(*) FROM orders\n        WHERE status = 'paid' OR (status = 'partially_refunded' AND shipped_at IS NULL)\n    )::bigint AS to_ship,\n    (\n        SELECT COUNT(DISTINCT o.id) FROM orders o\n        JOIN order_items oi ON oi.order_id = o.id\n        WHERE o.status = 'paid' AND oi.stock_shortfall > 0\n    )::bigint AS oversold,\n    (SELECT COUNT(*) FROM email_outbox WHERE status = 'failed')::bigint AS failed_emails,\n    (\n        SELECT COUNT(*) FROM product_variants pv\n        JOIN products p ON p.id = pv.product_id\n        WHERE pv.is_active AND p.is_active AND pv.stock = 0\n    )::bigint AS out_of_stock";
 
 export interface AdminAttentionRow {
   to_ship: number;
@@ -147,7 +148,7 @@ export async function adminLowStock(db: Queryable, threshold: number): Promise<A
   return rows as AdminLowStockRow[];
 }
 
-export const adminRecentOrdersSql = "SELECT id, number, status, total, currency, email, created_at, paid_at\nFROM orders\nWHERE status IN ('paid', 'shipped', 'delivered', 'refunded')\nORDER BY created_at DESC, id DESC\nLIMIT 5";
+export const adminRecentOrdersSql = "SELECT id, number, status, total, currency, email, created_at, paid_at\nFROM orders\nWHERE status IN ('paid', 'shipped', 'delivered', 'partially_refunded', 'refunded')\nORDER BY created_at DESC, id DESC\nLIMIT 5";
 
 export interface AdminRecentOrdersRow {
   id: string;

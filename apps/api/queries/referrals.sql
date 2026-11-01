@@ -53,6 +53,9 @@ RETURNING *;
 UPDATE referrals SET status = 'cancelled', settled_at = now()
 WHERE order_id = $1 AND status = 'pending';
 
+-- name: GetPendingOrderReferral :one
+SELECT * FROM referrals WHERE order_id = $1 AND status = 'pending' FOR UPDATE;
+
 -- name: RestoreOrderReferral :exec
 -- An order paid after it was released takes its referral back, unless the
 -- friend has been referred again since.
@@ -65,12 +68,17 @@ WHERE r.order_id = $1 AND r.status = 'cancelled'
 
 -- name: ListDueReferrals :many
 -- Pending referrals whose order was delivered pay_after_days before now,
--- oldest first, locked (skipping any another run holds).
+-- oldest first, locked (skipping any another run holds). A partly refunded
+-- order that was delivered counts (a refund that took it below the
+-- referral's minimum cancelled the referral already); one with an open or
+-- lost chargeback waits.
 SELECT r.*
 FROM referrals r
 JOIN orders o ON o.id = r.order_id
 WHERE r.status = 'pending'
-  AND o.status = 'delivered'
+  AND o.status IN ('delivered', 'partially_refunded')
+  AND o.delivered_at IS NOT NULL
+  AND (o.dispute_status IS NULL OR o.dispute_status = 'won')
   AND o.delivered_at + make_interval(days => r.pay_after_days) <= @now::timestamptz
 ORDER BY o.delivered_at, r.id
 LIMIT @max_rows

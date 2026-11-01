@@ -19,7 +19,7 @@ FROM users u
 CROSS JOIN LATERAL (
     SELECT
         COUNT(*) AS orders,
-        COALESCE(SUM(o.total) FILTER (WHERE o.status IN ('paid', 'shipped', 'delivered')), 0) AS spend,
+        COALESCE(SUM(o.total - (o.refunded_total - o.refunded_credit)) FILTER (WHERE o.status IN ('paid', 'shipped', 'delivered', 'partially_refunded')), 0) AS spend,
         MAX(o.created_at) AS last_order_at
     FROM orders o
     WHERE o.user_id = u.id
@@ -52,8 +52,8 @@ FROM users u
 CROSS JOIN LATERAL (
     SELECT
         COUNT(*) AS orders,
-        COALESCE(SUM(o.total) FILTER (WHERE o.status IN ('paid', 'shipped', 'delivered')), 0) AS spend,
-        COUNT(*) FILTER (WHERE o.status IN ('paid', 'shipped', 'delivered')) AS paid_orders,
+        COALESCE(SUM(o.total - (o.refunded_total - o.refunded_credit)) FILTER (WHERE o.status IN ('paid', 'shipped', 'delivered', 'partially_refunded')), 0) AS spend,
+        COUNT(*) FILTER (WHERE o.status IN ('paid', 'shipped', 'delivered', 'partially_refunded')) AS paid_orders,
         MIN(o.created_at) AS first_order_at,
         MAX(o.created_at) AS last_order_at
     FROM orders o

@@ -17,14 +17,14 @@ export async function lockCreditUser(db: Queryable, id: string): Promise<LockCre
 }
 
 // A customer's ledger, oldest first (its balance is worked out from it).
-export const listCreditLedgerSql = "SELECT id, user_id, amount, kind, order_id, referral_id, lot_id, expires_at, note, created_by, created_at FROM credit_ledger WHERE user_id = $1 ORDER BY created_at, id";
+export const listCreditLedgerSql = "SELECT id, user_id, amount, kind, order_id, referral_id, lot_id, expires_at, note, created_by, created_at, refund_id FROM credit_ledger WHERE user_id = $1 ORDER BY created_at, id";
 
 export async function listCreditLedger(db: Queryable, user_id: string): Promise<CreditLedger[]> {
   const { rows } = await db.query(listCreditLedgerSql, [user_id]);
   return rows as CreditLedger[];
 }
 
-export const addCreditEntrySql = "INSERT INTO credit_ledger (\n    user_id, amount, kind, order_id, referral_id, lot_id, expires_at, note, created_by\n)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\nRETURNING id, user_id, amount, kind, order_id, referral_id, lot_id, expires_at, note, created_by, created_at";
+export const addCreditEntrySql = "INSERT INTO credit_ledger (\n    user_id, amount, kind, order_id, referral_id, lot_id, expires_at, note, created_by, refund_id\n)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\nRETURNING id, user_id, amount, kind, order_id, referral_id, lot_id, expires_at, note, created_by, created_at, refund_id";
 
 export interface AddCreditEntryParams {
   user_id: string;
@@ -36,10 +36,11 @@ export interface AddCreditEntryParams {
   expires_at: Date | string | null;
   note: string;
   created_by: string | null;
+  refund_id: string | null;
 }
 
 export async function addCreditEntry(db: Queryable, p: AddCreditEntryParams): Promise<CreditLedger | null> {
-  const { rows } = await db.query(addCreditEntrySql, [p["user_id"], p["amount"], p["kind"], p["order_id"], p["referral_id"], p["lot_id"], p["expires_at"], p["note"], p["created_by"]]);
+  const { rows } = await db.query(addCreditEntrySql, [p["user_id"], p["amount"], p["kind"], p["order_id"], p["referral_id"], p["lot_id"], p["expires_at"], p["note"], p["created_by"], p["refund_id"]]);
   return (rows[0] as CreditLedger | undefined) ?? null;
 }
 

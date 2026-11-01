@@ -76,6 +76,41 @@ export interface Session {
   currency: string;
 }
 
+/** A refund of a payment, as Stripe reports it. */
+export interface RefundInfo {
+  id: string;
+  /** "" when the refund isn't of a payment intent. */
+  paymentIntentId: string;
+  /** cents */
+  amount: number;
+  currency: string;
+  /** pending, requires_action, succeeded, failed or canceled. */
+  status: string;
+  /** Stripe's reason for a failed refund, or "". */
+  failureReason: string;
+}
+
+/** A chargeback on a payment. */
+export interface DisputeInfo {
+  id: string;
+  paymentIntentId: string;
+  /** needs_response, under_review, won, lost, warning_* ... */
+  status: string;
+  amount: number;
+  reason: string;
+}
+
+/** What a refund request asks of the provider. */
+export interface RefundRequest {
+  paymentIntentId: string;
+  /** cents, at most what is left of the payment */
+  amount: number;
+  /** A retry with the same key gets the same refund, never a second one. */
+  idempotencyKey: string;
+  /** Stored on the refund (our order and refund ids), to match it up later. */
+  metadata: Record<string, string>;
+}
+
 /** The part of a webhook event checkout reacts to. */
 export type EventKind =
   | "other"
@@ -86,7 +121,13 @@ export type EventKind =
   /** The page expired unpaid. */
   | "expired"
   /** A delayed payment failed. */
-  | "failed";
+  | "failed"
+  /** A refund was made or changed (refund.created/updated/failed): event.refund. */
+  | "refund"
+  /** A charge was refunded (charge.refunded, maybe in the Dashboard): event.paymentIntentId. */
+  | "charge_refunded"
+  /** A chargeback opened or changed (charge.dispute.*): event.dispute. */
+  | "dispute";
 
 /** A verified webhook event. */
 export interface PaymentEvent {
@@ -95,6 +136,12 @@ export interface PaymentEvent {
   kind: EventKind;
   /** Only set for the checkout.session.* kinds. */
   session: Session;
+  /** Only set for the refund kind. */
+  refund?: RefundInfo;
+  /** Only set for the dispute kind. */
+  dispute?: DisputeInfo;
+  /** The charge's payment intent, for charge_refunded. */
+  paymentIntentId?: string;
 }
 
 /** An empty session, as Go's zero value. */
@@ -115,12 +162,15 @@ export interface PaymentProvider {
   getSession(id: string): Promise<Session>;
   expireSession(id: string): Promise<void>;
   /**
-   * Returns a payment in full and gives the refund's id. The idempotency
-   * key makes a retry return the same refund, not a second one; a payment
-   * refunded already (a retry after the key expired) gives the existing
-   * refund. A refusal is a RefusedError.
+   * Returns amount of a payment and gives the refund as Stripe has it
+   * (pending until the money is on its way, for some methods). The
+   * idempotency key makes a retry return the same refund, not a second
+   * one. A refusal (more than is left, a disputed charge, a payment
+   * refunded in full already) is a RefusedError.
    */
-  refund(paymentIntentId: string, idempotencyKey: string): Promise<string>;
+  refund(req: RefundRequest): Promise<RefundInfo>;
+  /** Every refund of a payment (to sync refunds made in the Dashboard). */
+  listRefunds(paymentIntentId: string): Promise<RefundInfo[]>;
   /** Throws InvalidSignatureError when the signature doesn't verify. */
   parseEvent(payload: Buffer, signature: string): PaymentEvent;
 }
@@ -130,7 +180,17 @@ const EVENT_KINDS: Record<string, EventKind> = {
   "checkout.session.async_payment_succeeded": "paid",
   "checkout.session.expired": "expired",
   "checkout.session.async_payment_failed": "failed",
+  "refund.created": "refund",
+  "refund.updated": "refund",
+  "refund.failed": "refund",
+  "charge.refunded": "charge_refunded",
+  "charge.dispute.created": "dispute",
+  "charge.dispute.updated": "dispute",
+  "charge.dispute.closed": "dispute",
 };
+
+/** The Stripe events the webhook endpoint must be subscribed to. */
+export const WEBHOOK_EVENTS = Object.keys(EVENT_KINDS);
 
 /** The provider for Stripe Checkout. */
 export class StripePayments implements PaymentProvider {
@@ -260,22 +320,21 @@ export class StripePayments implements PaymentProvider {
     }
   }
 
-  async refund(
-    paymentIntentId: string,
-    idempotencyKey: string,
-  ): Promise<string> {
+  async refund(req: RefundRequest): Promise<RefundInfo> {
     try {
       const refund = await this.client.refunds.create(
-        { payment_intent: paymentIntentId },
-        { idempotencyKey },
+        {
+          payment_intent: req.paymentIntentId,
+          amount: req.amount,
+          metadata: req.metadata,
+        },
+        { idempotencyKey: req.idempotencyKey },
       );
-      return refund.id;
+      return refundInfo(refund);
     } catch (err) {
       if (err instanceof Stripe.errors.StripeError) {
-        if (err.code === "charge_already_refunded") {
-          const existing = await this.existingRefund(paymentIntentId);
-          if (existing !== null) return existing;
-        }
+        // 4xx: declined (charge_already_refunded, amount_too_large, a
+        // disputed charge, an idempotency key reused with other values).
         const status = err.statusCode ?? 0;
         if (status >= 400 && status < 500) throw new RefusedError(err.message);
       }
@@ -283,21 +342,19 @@ export class StripePayments implements PaymentProvider {
     }
   }
 
-  /** The payment's refund that went through (or is going), or null. */
-  private async existingRefund(
-    paymentIntentId: string,
-  ): Promise<string | null> {
+  async listRefunds(paymentIntentId: string): Promise<RefundInfo[]> {
+    const out: RefundInfo[] = [];
     try {
       for await (const refund of this.client.refunds.list({
         payment_intent: paymentIntentId,
+        limit: 100,
       })) {
-        if (refund.status === "succeeded" || refund.status === "pending")
-          return refund.id;
+        out.push(refundInfo(refund));
       }
-    } catch {
-      return null;
+    } catch (err) {
+      throw wrap("stripe: list refunds", err);
     }
-    return null;
+    return out;
   }
 
   parseEvent(payload: Buffer, signature: string): PaymentEvent {
@@ -321,10 +378,48 @@ export class StripePayments implements PaymentProvider {
       kind,
       session: emptySession(),
     };
-    if (kind === "other") return out;
-    out.session = fromStripe(event.data.object as Stripe.Checkout.Session);
-    return out;
+    switch (kind) {
+      case "other":
+        return out;
+      case "refund":
+        out.refund = refundInfo(event.data.object as Stripe.Refund);
+        return out;
+      case "charge_refunded":
+        out.paymentIntentId = idOf(
+          (event.data.object as Stripe.Charge).payment_intent,
+        );
+        return out;
+      case "dispute": {
+        const d = event.data.object as Stripe.Dispute;
+        out.dispute = {
+          id: d.id,
+          paymentIntentId: idOf(d.payment_intent),
+          status: d.status,
+          amount: d.amount,
+          reason: d.reason ?? "",
+        };
+        return out;
+      }
+      default:
+        out.session = fromStripe(event.data.object as Stripe.Checkout.Session);
+        return out;
+    }
   }
+}
+
+/** An expandable field's id ("" when unset). */
+const idOf = (v: string | { id: string } | null | undefined) =>
+  typeof v === "string" ? v : (v?.id ?? "");
+
+function refundInfo(r: Stripe.Refund): RefundInfo {
+  return {
+    id: r.id,
+    paymentIntentId: idOf(r.payment_intent),
+    amount: r.amount,
+    currency: r.currency,
+    status: r.status ?? "pending",
+    failureReason: r.failure_reason ?? "",
+  };
 }
 
 function fromStripe(s: Stripe.Checkout.Session): Session {

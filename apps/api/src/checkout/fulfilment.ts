@@ -1,25 +1,19 @@
 import {
   adminGetOrder,
-  cancelOrderReferral,
   adminGetOrderForUpdate,
   deliverOrder,
-  getOrderPayment,
-  recordRefund,
-  refundOrder,
-  restoreStock,
   shipOrder,
   type Order,
 } from "../db/gen";
 import { withTx, type Pool, type Tx } from "../db/pool";
 import { enqueue } from "../emails/outbox";
 import { log } from "../log";
-import { reverseOrderCredit } from "../referrals/credit";
-import { RefusedError, type PaymentProvider } from "../services/payments";
+import type { PaymentProvider } from "../services/payments";
 import { Refusal } from "./refusal";
 import { fulfil, release } from "./settle";
 
 // What an admin does to an order after checkout: ship, deliver, cancel an
-// unpaid one, refund a paid one. Each throws a Refusal for the admin
+// unpaid one, refund a paid one (refunds.ts). Each throws a Refusal for the admin
 // handler to send as is (an unknown order, a move the status doesn't
 // allow, Stripe declining), anything else is a 500.
 
@@ -29,13 +23,23 @@ export type Action = "ship" | "deliver" | "cancel" | "refund";
 /**
  * The statuses each action applies to: an order moves pending → paid
  * (checkout) → shipped → delivered, an unpaid one can be cancelled, and a
- * paid one refunded at any later step.
+ * paid one refunded, in parts (partially_refunded) or whole (refunded), at
+ * any later step. A partly refunded order still ships and is delivered
+ * (keeping its status; shipped_at and delivered_at tell how far it got).
  */
 const FROM: Record<Action, readonly string[]> = {
-  ship: ["paid"],
-  deliver: ["shipped"],
+  ship: ["paid", "partially_refunded"],
+  deliver: ["shipped", "partially_refunded"],
   cancel: ["pending"],
-  refund: ["paid", "shipped", "delivered"],
+  refund: ["paid", "shipped", "delivered", "partially_refunded"],
+};
+
+/** Whether a partly refunded order is at the step the action needs. */
+const READY: Partial<Record<Action, (o: Order) => boolean>> = {
+  ship: (o) => o.status !== "partially_refunded" || o.shipped_at === null,
+  deliver: (o) =>
+    o.status !== "partially_refunded" ||
+    (o.shipped_at !== null && o.delivered_at === null),
 };
 
 const DONE: Record<Action, string> = {
@@ -61,7 +65,7 @@ export function transitionRefusal(action: Action, status: string): Refusal {
   return new Refusal(
     409,
     "INVALID_ORDER_TRANSITION",
-    `This order is ${status}, so it can't be ${DONE[action]}`,
+    `This order is ${status.replace("_", " ")}, so it can't be ${DONE[action]}`,
   );
 }
 
@@ -113,7 +117,7 @@ function change(
   return withTx(ctx.db, async (tx) => {
     const order = await adminGetOrderForUpdate(tx, number);
     if (!order) throw errOrderNotFound;
-    if (!canApply(action, order.status))
+    if (!canApply(action, order.status) || READY[action]?.(order) === false)
       throw transitionRefusal(action, order.status);
     return apply(tx, order);
   });
@@ -209,65 +213,4 @@ export async function cancelPending(
     await release(tx, order.id);
     return must(await adminGetOrder(tx, number), "get order");
   });
-}
-
-/**
- * Refunds a paid order in full through Stripe (cancelling its referral if
- * it hasn't paid out, and giving its store credit back), and returns its
- * stock when restock is set (an order that never shipped, or came back). The order
- * stays locked across the Stripe call, and the refund is keyed by the
- * order, so a retry after a failure here can't refund twice. Once Stripe
- * is asked, the answer is recorded even if the admin's request goes away
- * (nothing here is tied to the request).
- */
-export function refundPaid(
-  ctx: FulfilmentContext,
-  number: number,
-  restock: boolean,
-): Promise<Order> {
-  return change(ctx, number, "refund", async (tx, order) => {
-    const payment = await getOrderPayment(tx, order.id);
-    if (!payment || payment.stripe_payment_intent_id === null)
-      throw errNoPayment;
-    if (!ctx.provider) throw new Error("refund: payments are not configured");
-
-    let refundId: string;
-    try {
-      refundId = await withTimeout(
-        ctx.provider.refund(
-          payment.stripe_payment_intent_id,
-          "refund-" + order.id,
-        ),
-        REFUND_TIMEOUT_MS,
-      );
-    } catch (err) {
-      if (err instanceof RefusedError) {
-        throw new Refusal(
-          409,
-          "REFUND_REFUSED",
-          "Stripe refused the refund: " + err.reason,
-        );
-      }
-      log.error("checkout: refund", err, { order: number });
-      throw errStripe;
-    }
-    await recordRefund(tx, { id: payment.id, stripe_refund_id: refundId });
-    if (restock) await restoreStock(tx, order.id);
-    // Before its payout, a referral goes with the order; the order's store
-    // credit goes back to the customer.
-    await cancelOrderReferral(tx, order.id);
-    await reverseOrderCredit(tx, order, ctx.now());
-    log.info("checkout: order refunded", { order: number, restock });
-    const refunded = must(await refundOrder(tx, order.id), "refund order");
-    await enqueue(tx, "order_refunded", order.id);
-    return refunded;
-  });
-}
-
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
-  });
-  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }

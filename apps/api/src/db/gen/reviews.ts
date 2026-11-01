@@ -74,7 +74,7 @@ export async function getMyReview(db: Queryable, p: GetMyReviewParams): Promise<
 }
 
 // Whether a paid (or later) order of the user's holds the product.
-export const hasBoughtProductSql = "SELECT EXISTS (\n    SELECT 1\n    FROM order_items oi\n    JOIN orders o ON o.id = oi.order_id\n    WHERE o.user_id = $1\n    AND oi.product_id = $2\n    AND o.status IN ('paid', 'shipped', 'delivered')\n)";
+export const hasBoughtProductSql = "SELECT EXISTS (\n    SELECT 1\n    FROM order_items oi\n    JOIN orders o ON o.id = oi.order_id\n    WHERE o.user_id = $1\n    AND oi.product_id = $2\n    AND o.status IN ('paid', 'shipped', 'delivered', 'partially_refunded')\n)";
 
 export interface HasBoughtProductParams {
   user_id: string;

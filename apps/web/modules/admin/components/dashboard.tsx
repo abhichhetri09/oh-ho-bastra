@@ -391,6 +391,11 @@ const statusRows: { status: OrderStatus; label: string; bar: string }[] = [
     bar: "bg-muted-foreground/40",
   },
   { status: "cancelled", label: "Cancelled", bar: "bg-muted-foreground/25" },
+  {
+    status: "partially_refunded",
+    label: "Partly refunded",
+    bar: "bg-destructive/40",
+  },
   { status: "refunded", label: "Refunded", bar: "bg-destructive/70" },
 ];
 

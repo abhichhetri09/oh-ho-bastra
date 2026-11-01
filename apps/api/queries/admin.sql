@@ -1,13 +1,14 @@
--- Admin dashboard. "Sales" are orders that were paid (paid, shipped or
--- delivered); abandoned checkouts and cancellations don't count.
+-- Admin dashboard. "Sales" are orders that were paid (paid, shipped,
+-- delivered or partly refunded), net of what went back by card; abandoned
+-- checkouts, cancellations and full refunds don't count.
 
 -- name: AdminPeriodTotals :one
 -- Sales paid in [from, to).
 SELECT
-    COALESCE(SUM(total), 0)::bigint AS revenue,
+    COALESCE(SUM(total - (refunded_total - refunded_credit)), 0)::bigint AS revenue,
     COUNT(*)::bigint AS orders
 FROM orders
-WHERE status IN ('paid', 'shipped', 'delivered')
+WHERE status IN ('paid', 'shipped', 'delivered', 'partially_refunded')
   AND paid_at >= sqlc.arg(from_time)::timestamptz AND paid_at < sqlc.arg(to_time)::timestamptz;
 
 -- name: AdminCustomerCount :one
@@ -23,7 +24,7 @@ WHERE role = 'customer'
 -- The last @days days (UTC), every day present, oldest first.
 SELECT
     d.day::date AS day,
-    COALESCE(SUM(o.total), 0)::bigint AS revenue,
+    COALESCE(SUM(o.total - (o.refunded_total - o.refunded_credit)), 0)::bigint AS revenue,
     COUNT(o.id)::int AS orders
 FROM generate_series(
     (now() AT TIME ZONE 'UTC')::date - (sqlc.arg(days)::int - 1),
@@ -32,7 +33,7 @@ FROM generate_series(
 ) AS d(day)
 LEFT JOIN orders o
     ON (o.paid_at AT TIME ZONE 'UTC')::date = d.day::date
-    AND o.status IN ('paid', 'shipped', 'delivered')
+    AND o.status IN ('paid', 'shipped', 'delivered', 'partially_refunded')
 GROUP BY d.day
 ORDER BY d.day;
 
@@ -53,7 +54,7 @@ SELECT
 FROM order_items oi
 JOIN orders o ON o.id = oi.order_id
 JOIN products p ON p.id = oi.product_id
-WHERE o.status IN ('paid', 'shipped', 'delivered')
+WHERE o.status IN ('paid', 'shipped', 'delivered', 'partially_refunded')
   AND o.paid_at >= sqlc.arg(from_time)::timestamptz AND o.paid_at < sqlc.arg(to_time)::timestamptz
 GROUP BY p.id
 ORDER BY revenue DESC, units DESC, p.name
@@ -63,7 +64,10 @@ LIMIT 5;
 -- What needs the admin: paid orders to ship (and those short of stock),
 -- emails given up on, and active variants that are sold out.
 SELECT
-    (SELECT COUNT(*) FROM orders WHERE status = 'paid')::bigint AS to_ship,
+    (
+        SELECT COUNT(*) FROM orders
+        WHERE status = 'paid' OR (status = 'partially_refunded' AND shipped_at IS NULL)
+    )::bigint AS to_ship,
     (
         SELECT COUNT(DISTINCT o.id) FROM orders o
         JOIN order_items oi ON oi.order_id = o.id
@@ -101,7 +105,7 @@ LIMIT 10;
 -- name: AdminRecentOrders :many
 SELECT id, number, status, total, currency, email, created_at, paid_at
 FROM orders
-WHERE status IN ('paid', 'shipped', 'delivered', 'refunded')
+WHERE status IN ('paid', 'shipped', 'delivered', 'partially_refunded', 'refunded')
 ORDER BY created_at DESC, id DESC
 LIMIT 5;
 

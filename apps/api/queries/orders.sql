@@ -225,23 +225,44 @@ SELECT * FROM payments WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1;
 
 -- name: SetOrderTracking :one
 -- Sets or clears (NULL) the tracking number of a shipped or delivered
--- order; no row when the order isn't one.
+-- order (or a partly refunded one that shipped); no row when the order
+-- isn't one.
 UPDATE orders SET tracking_number = sqlc.narg(tracking_number)
-WHERE number = sqlc.arg(number) AND status IN ('shipped', 'delivered')
+WHERE number = sqlc.arg(number)
+  AND (status IN ('shipped', 'delivered')
+       OR (status = 'partially_refunded' AND shipped_at IS NOT NULL))
 RETURNING *;
 
 -- name: ShipOrder :one
-UPDATE orders SET status = 'shipped', shipped_at = now(), tracking_number = sqlc.narg(tracking_number)
+-- A partly refunded order keeps that status; shipped_at says it shipped.
+UPDATE orders SET status = CASE WHEN status = 'partially_refunded' THEN status ELSE 'shipped' END, shipped_at = now(), tracking_number = sqlc.narg(tracking_number)
 WHERE id = @id RETURNING *;
 
 -- name: DeliverOrder :one
-UPDATE orders SET status = 'delivered', delivered_at = now()
+UPDATE orders SET status = CASE WHEN status = 'partially_refunded' THEN status ELSE 'delivered' END, delivered_at = now()
 WHERE id = @id RETURNING *;
 
--- name: RefundOrder :one
-UPDATE orders SET status = 'refunded', refunded_at = now()
+-- name: SetOrderRefunds :one
+-- An order's refund totals and the status they give it (refunded_at is
+-- when it was last refunded).
+UPDATE orders
+SET refunded_total = @refunded_total, refunded_credit = @refunded_credit,
+    status = @status, refunded_at = CASE WHEN @touch::bool THEN now() ELSE refunded_at END
 WHERE id = @id RETURNING *;
 
 -- name: RecordRefund :exec
+-- The payment's latest card refund.
 UPDATE payments SET stripe_refund_id = @stripe_refund_id, refunded_at = now()
+WHERE id = @id;
+
+-- name: GetPaymentByIntent :one
+SELECT * FROM payments WHERE stripe_payment_intent_id = $1;
+
+-- name: AddVariantStock :exec
+-- Returns refunded units to stock (a deleted variant is skipped).
+UPDATE product_variants SET stock = stock + @quantity WHERE id = @id;
+
+-- name: SetOrderDispute :exec
+UPDATE orders
+SET dispute_status = @dispute_status, disputed_at = COALESCE(disputed_at, now())
 WHERE id = @id;

@@ -121,7 +121,12 @@ describe("GET /orders/:number", () => {
       "discount",
       "coupon_code",
       "credit",
+      "refunded_total",
+      "refunded_credit",
+      "dispute_status",
+      "disputed_at",
       "items",
+      "refunds",
       "reviewed_product_ids",
     ]);
     expect(data).toMatchObject({

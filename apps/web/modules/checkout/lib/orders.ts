@@ -22,8 +22,22 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   shipped: "Shipped",
   delivered: "Delivered",
   cancelled: "Cancelled",
+  partially_refunded: "Partly refunded",
   refunded: "Refunded",
 };
+
+/**
+ * Where the order is on its way: a partly refunded order still ships, so
+ * its step comes from its dates; any other status is its own step.
+ */
+export function fulfilmentStatus(
+  order: Pick<Order, "status" | "shipped_at" | "delivered_at">,
+): OrderStatus {
+  if (order.status !== "partially_refunded") return order.status;
+  if (order.delivered_at) return "delivered";
+  if (order.shipped_at) return "shipped";
+  return "paid";
+}
 
 /** The steps of a fulfilled order, in order. */
 export const TIMELINE: OrderStatus[] = ["paid", "shipped", "delivered"];

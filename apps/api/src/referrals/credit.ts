@@ -165,6 +165,7 @@ export async function addEntry(
     expires_at: null,
     note: "",
     created_by: null,
+    refund_id: null,
     ...entry,
   });
   if (!row) throw new Error("add credit entry: no rows in result set");
@@ -198,23 +199,50 @@ export async function spendOrderCredit(
 }
 
 /**
- * A refunded order's credit, given back (lapsing as credit earned now
- * would). Nothing for an order that used none.
+ * The store credit part of a refund, given back (lapsing as credit earned
+ * now would). Nothing when the refund took none.
  */
-export async function reverseOrderCredit(
+export async function reverseRefundCredit(
   tx: Queryable,
-  order: Pick<Order, "id" | "user_id" | "credit">,
+  order: Pick<Order, "id" | "user_id">,
+  refundId: string,
+  amount: number,
   now: Date,
 ): Promise<void> {
-  if (order.credit <= 0) return;
+  if (amount <= 0) return;
   const rule = await loadReferralRule(tx);
   await lockCredit(tx, order.user_id);
   await addEntry(tx, {
     user_id: order.user_id,
-    amount: order.credit,
+    amount,
     kind: "reversed",
     order_id: order.id,
+    refund_id: refundId,
     expires_at: expiryFrom(now, rule.credit_expiry_months),
+  });
+}
+
+/**
+ * Takes back the credit a refund gave when the refund failed at Stripe
+ * (the card part never went back, so the refund as a whole is undone).
+ * Taken as an adjustment: if it was spent since, the customer owes it out
+ * of their next credit.
+ */
+export async function takeBackRefundCredit(
+  tx: Queryable,
+  order: Pick<Order, "id" | "user_id">,
+  refundId: string,
+  amount: number,
+): Promise<void> {
+  if (amount <= 0) return;
+  await lockCredit(tx, order.user_id);
+  await addEntry(tx, {
+    user_id: order.user_id,
+    amount: -amount,
+    kind: "adjusted",
+    order_id: order.id,
+    refund_id: refundId,
+    note: "Refund failed at the bank: credit taken back",
   });
 }
 

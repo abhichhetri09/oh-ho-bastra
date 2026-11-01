@@ -61,7 +61,7 @@ export function registerCheckoutPaths() {
     tag: "Checkout",
     summary: "Stripe webhook",
     description:
-      "Called by Stripe, authenticated by the Stripe-Signature header. Handles checkout.session.completed, async_payment_succeeded, expired and async_payment_failed; each event id is applied once. A 500 makes Stripe retry.",
+      "Called by Stripe, authenticated by the Stripe-Signature header. Handles checkout.session.completed, async_payment_succeeded, expired and async_payment_failed; refund.created, refund.updated, refund.failed and charge.refunded (refunds made in the Dashboard are recorded, matched by refund id; failed ones are undone); and charge.dispute.created, updated and closed. Each event id is applied once. A 500 makes Stripe retry.",
     request: {
       headers: z.object({ "stripe-signature": z.string() }),
     },

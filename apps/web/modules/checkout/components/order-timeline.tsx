@@ -14,7 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import type { Order, OrderStatus } from "@repo/types";
 import { cn } from "@/lib/utils";
-import { formatShortDate } from "../lib/orders";
+import { formatShortDate, fulfilmentStatus } from "../lib/orders";
 
 // An order's history as steps: what happened (with when), and for an order
 // still on its way, what comes next. Two looks share it: a vertical
@@ -79,6 +79,14 @@ const STEP: Record<
     soft: "bg-muted text-muted-foreground",
     at: (o) => o.cancelled_at,
   },
+  // Its refunds show as the refunded step (refunded_at is the latest).
+  partially_refunded: {
+    label: "Refunded in part",
+    icon: ArrowCounterClockwiseIcon,
+    tone: "bg-destructive text-white",
+    soft: "bg-destructive/10 text-destructive",
+    at: () => null,
+  },
   refunded: {
     label: "Refunded",
     icon: ArrowCounterClockwiseIcon,
@@ -125,7 +133,7 @@ function events(order: Dates) {
  */
 export function OrderTimeline({ order }: { order: Dates }) {
   const done = events(order);
-  const upcoming = NEXT[order.status] ?? [];
+  const upcoming = NEXT[fulfilmentStatus(order)] ?? [];
   const rows = [
     ...done.map((e, i) => ({
       ...e,
@@ -182,7 +190,10 @@ export function OrderTimeline({ order }: { order: Dates }) {
                     : "font-medium",
                 )}
               >
-                {s.label}
+                {row.step === "refunded" &&
+                order.status === "partially_refunded"
+                  ? "Refunded in part"
+                  : s.label}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
                 {row.time ? timeFormat.format(new Date(row.time)) : "Not yet"}
@@ -220,9 +231,8 @@ export function OrderProgress({
     ? ADMIN_PROGRESS
     : PROGRESS;
   // An unpaid order is at "placed"; the customer's stepper doesn't show it.
-  const at = steps.indexOf(
-    order.status === "pending" ? "placed" : order.status,
-  );
+  const status = fulfilmentStatus(order);
+  const at = steps.indexOf(status === "pending" ? "placed" : status);
   return (
     <ol
       className={cn("grid", admin ? "grid-cols-4" : "grid-cols-3")}
