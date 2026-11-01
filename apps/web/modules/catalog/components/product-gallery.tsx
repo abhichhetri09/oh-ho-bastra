@@ -203,7 +203,7 @@ function MobileStrip({
             type="button"
             onClick={() => onOpen(i)}
             aria-label={`View photo ${i + 1} of ${images.length} full screen`}
-            className="relative aspect-[4/5] w-full shrink-0 snap-center overflow-hidden rounded-media bg-surface"
+            className="carousel-item relative aspect-[4/5] w-full shrink-0 snap-center overflow-hidden rounded-media bg-surface transition-transform duration-200 active:scale-[0.985]"
           >
             <Image
               src={src}

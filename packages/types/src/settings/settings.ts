@@ -110,6 +110,10 @@ export const StoreSettingsSchema = z
       .describe("Where customers can reach the seller."),
     business_phone: z.string().describe("The seller's phone number; optional."),
     shipping: ShippingRuleSchema,
+    logo_url: z
+      .url()
+      .nullable()
+      .describe("The store's uploaded logo; null shows the built-in mark."),
     updated_at: Timestamp,
   })
   .meta({ id: "StoreSettings", description: "Store-wide settings." });
@@ -131,6 +135,22 @@ export const StoreThemeBodySchema = z
       "Replaces the store's look: its theme, and the headline font and corners it uses in place of the theme's.",
   });
 export type StoreThemeBody = z.infer<typeof StoreThemeBodySchema>;
+
+export const StoreLogoBodySchema = z
+  .object({
+    logo_url: z
+      .url({ protocol: /^https$/, error: "Upload the logo again" })
+      .max(500, "Upload the logo again")
+      .nullish()
+      .describe(
+        "An uploaded image's https URL; null or left out goes back to the built-in mark.",
+      ),
+  })
+  .meta({
+    id: "StoreLogoBody",
+    description: "Replaces the logo in the store's header.",
+  });
+export type StoreLogoBody = z.infer<typeof StoreLogoBodySchema>;
 
 export const AnnouncementsBodySchema = z
   .object({

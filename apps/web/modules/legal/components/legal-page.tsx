@@ -5,6 +5,7 @@ import {
   EnvelopeSimpleIcon,
   PhoneIcon,
 } from "@phosphor-icons/react/ssr";
+import { Reveal } from "@/components/motion/reveal";
 import { site } from "@/lib/site";
 import { storeBusiness } from "@/lib/theme-server";
 import { cn } from "@/lib/utils";
@@ -112,19 +113,24 @@ export function PolicyPage({
               <li
                 key={section.id}
                 id={section.id}
-                className="grid scroll-mt-28 gap-3 py-8 first:pt-0 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-6"
+                className="scroll-mt-28 py-8 first:pt-0"
               >
-                <span className="font-mono text-xs text-muted-foreground tabular-nums sm:pt-2">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <section className="space-y-4">
-                  <h2 className="font-serif text-2xl sm:text-[1.75rem]">
-                    {section.title}
-                  </h2>
-                  <div className="space-y-3 text-[0.9375rem] leading-relaxed text-muted-foreground [&_a]:text-foreground [&_a]:underline [&_a]:decoration-border [&_a]:underline-offset-4 [&_a:hover]:decoration-current [&_strong]:font-medium [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ul]:marker:text-border">
-                    {section.body}
-                  </div>
-                </section>
+                <Reveal
+                  className="grid gap-3 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-6"
+                  y={16}
+                >
+                  <span className="font-mono text-xs text-muted-foreground tabular-nums sm:pt-2">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <section className="space-y-4">
+                    <h2 className="font-serif text-2xl sm:text-[1.75rem]">
+                      {section.title}
+                    </h2>
+                    <div className="space-y-3 text-[0.9375rem] leading-relaxed text-muted-foreground [&_a]:text-foreground [&_a]:underline [&_a]:decoration-border [&_a]:underline-offset-4 [&_a:hover]:decoration-current [&_strong]:font-medium [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ul]:marker:text-border">
+                      {section.body}
+                    </div>
+                  </section>
+                </Reveal>
               </li>
             ))}
           </ol>

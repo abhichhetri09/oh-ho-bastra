@@ -1,7 +1,9 @@
 import { TruckIcon } from "@phosphor-icons/react";
+import { AnimatePresence, m } from "motion/react";
 import type { Cart } from "@repo/types";
 import { formatDiscount, formatPrice } from "@/lib/money";
 import { freeShippingProgress } from "@/lib/shipping";
+import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { useShippingRule } from "@/providers/shipping-provider";
 
@@ -91,7 +93,9 @@ export function CartTotals({ cart }: { cart: Cart }) {
     <dl className="space-y-2.5 text-sm">
       <div className="flex justify-between">
         <dt className="text-muted-foreground">Subtotal</dt>
-        <dd className="tabular-nums">{formatPrice(cart.subtotal)}</dd>
+        <dd className="tabular-nums">
+          <Amount value={formatPrice(cart.subtotal)} />
+        </dd>
       </div>
       {cart.coupon && cart.discount > 0 && (
         <div className="flex justify-between gap-3">
@@ -107,17 +111,43 @@ export function CartTotals({ cart }: { cart: Cart }) {
       <div className="flex justify-between">
         <dt className="text-muted-foreground">Shipping</dt>
         <dd className="tabular-nums">
-          {cart.item_count === 0
-            ? "—"
-            : cart.shipping === 0
-              ? "Free"
-              : formatPrice(cart.shipping)}
+          <Amount
+            value={
+              cart.item_count === 0
+                ? "—"
+                : cart.shipping === 0
+                  ? "Free"
+                  : formatPrice(cart.shipping)
+            }
+          />
         </dd>
       </div>
       <div className="flex justify-between border-t border-border pt-3 text-base">
         <dt>Total</dt>
-        <dd className="tabular-nums">{formatPrice(cart.total)}</dd>
+        <dd className="tabular-nums">
+          <Amount value={formatPrice(cart.total)} />
+        </dd>
       </div>
     </dl>
+  );
+}
+
+/** An amount that rolls to its new value when it changes. */
+function Amount({ value }: { value: string }) {
+  return (
+    <span className="relative inline-flex overflow-hidden">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <m.span
+          key={value}
+          initial={{ y: "70%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "-70%", opacity: 0 }}
+          transition={{ duration: 0.35, ease: EASE_OUT }}
+          className="inline-block"
+        >
+          {value}
+        </m.span>
+      </AnimatePresence>
+    </span>
   );
 }

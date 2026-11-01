@@ -77,7 +77,7 @@ function PickCard({
   onNavigate?: () => void;
 }) {
   return (
-    <li className="w-32 shrink-0 snap-start">
+    <li className="carousel-item w-32 shrink-0 snap-start">
       <Link
         href={`/products/${product.slug}`}
         onClick={onNavigate}

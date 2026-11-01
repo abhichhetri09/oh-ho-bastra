@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { HandbagIcon } from "@phosphor-icons/react";
+import { AnimatePresence } from "motion/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
@@ -178,9 +179,11 @@ function BagContents({ close }: { close: () => void }) {
           />
         </div>
         <ul className="divide-y divide-border px-5">
-          {lines.map((line) => (
-            <CartLine key={line.variant_id} line={line} onNavigate={close} />
-          ))}
+          <AnimatePresence initial={false}>
+            {lines.map((line) => (
+              <CartLine key={line.variant_id} line={line} onNavigate={close} />
+            ))}
+          </AnimatePresence>
         </ul>
         <YouMayAlsoLike
           inBag={lines.map((line) => line.product_id)}

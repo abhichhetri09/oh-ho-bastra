@@ -4,7 +4,7 @@ import { ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
 import { site } from "@/lib/site";
 import { AdminMobileNav } from "@/modules/admin/components/admin-mobile-nav";
 import { AdminAccount, AdminNav } from "@/modules/admin/components/admin-nav";
-import { LogoMark } from "@/components/brand/logo-mark";
+import { Brand } from "@/components/brand/brand";
 import { CommandPalette } from "@/modules/admin/components/command-palette";
 
 export const metadata: Metadata = {
@@ -27,8 +27,7 @@ export default function AdminLayout({
         >
           {/* One line with every headline face: the wide ones get a smaller size. */}
           <span className="font-serif text-[1.65rem] leading-none whitespace-nowrap in-data-[headline=wide]:text-[1.25rem]">
-            <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
-            {site.name}
+            <Brand />
           </span>
           <span className="eyebrow">Admin</span>
         </Link>
@@ -44,7 +43,7 @@ export default function AdminLayout({
           <div className="flex items-baseline gap-3">
             <AdminMobileNav />
             <Link href="/admin" className="font-serif text-2xl lg:hidden">
-              {site.name}
+              <Brand />
             </Link>
           </div>
           <div className="-mr-3 flex items-center gap-2">

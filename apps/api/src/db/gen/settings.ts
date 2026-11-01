@@ -2,7 +2,7 @@
 
 import type { Queryable } from "../queryable";
 
-export const getStoreSettingsSql = "SELECT theme, heading_font, corners, announcements, announcements_enabled,\n       business_name, business_id, business_address, business_email, business_phone,\n       shipping_flat, free_shipping_from, free_shipping_items, updated_at\nFROM store_settings WHERE id";
+export const getStoreSettingsSql = "SELECT theme, heading_font, corners, announcements, announcements_enabled,\n       business_name, business_id, business_address, business_email, business_phone,\n       shipping_flat, free_shipping_from, free_shipping_items, logo_url, updated_at\nFROM store_settings WHERE id";
 
 export interface GetStoreSettingsRow {
   theme: string;
@@ -18,6 +18,7 @@ export interface GetStoreSettingsRow {
   shipping_flat: number;
   free_shipping_from: number | null;
   free_shipping_items: number | null;
+  logo_url: string | null;
   updated_at: Date;
 }
 
@@ -26,7 +27,7 @@ export async function getStoreSettings(db: Queryable): Promise<GetStoreSettingsR
   return (rows[0] as GetStoreSettingsRow | undefined) ?? null;
 }
 
-export const updateStoreAppearanceSql = "UPDATE store_settings\nSET theme = $1,\n    heading_font = $2,\n    corners = $3,\n    updated_at = now()\nWHERE id\nRETURNING theme, heading_font, corners, announcements, announcements_enabled,\n          business_name, business_id, business_address, business_email, business_phone,\n          shipping_flat, free_shipping_from, free_shipping_items, updated_at";
+export const updateStoreAppearanceSql = "UPDATE store_settings\nSET theme = $1,\n    heading_font = $2,\n    corners = $3,\n    updated_at = now()\nWHERE id\nRETURNING theme, heading_font, corners, announcements, announcements_enabled,\n          business_name, business_id, business_address, business_email, business_phone,\n          shipping_flat, free_shipping_from, free_shipping_items, logo_url, updated_at";
 
 export interface UpdateStoreAppearanceParams {
   theme: string;
@@ -48,6 +49,7 @@ export interface UpdateStoreAppearanceRow {
   shipping_flat: number;
   free_shipping_from: number | null;
   free_shipping_items: number | null;
+  logo_url: string | null;
   updated_at: Date;
 }
 
@@ -56,7 +58,7 @@ export async function updateStoreAppearance(db: Queryable, p: UpdateStoreAppeara
   return (rows[0] as UpdateStoreAppearanceRow | undefined) ?? null;
 }
 
-export const updateAnnouncementsSql = "UPDATE store_settings\nSET announcements = $1::TEXT[],\n    announcements_enabled = $2,\n    updated_at = now()\nWHERE id\nRETURNING theme, heading_font, corners, announcements, announcements_enabled,\n          business_name, business_id, business_address, business_email, business_phone,\n          shipping_flat, free_shipping_from, free_shipping_items, updated_at";
+export const updateAnnouncementsSql = "UPDATE store_settings\nSET announcements = $1::TEXT[],\n    announcements_enabled = $2,\n    updated_at = now()\nWHERE id\nRETURNING theme, heading_font, corners, announcements, announcements_enabled,\n          business_name, business_id, business_address, business_email, business_phone,\n          shipping_flat, free_shipping_from, free_shipping_items, logo_url, updated_at";
 
 export interface UpdateAnnouncementsParams {
   announcements: string[];
@@ -77,6 +79,7 @@ export interface UpdateAnnouncementsRow {
   shipping_flat: number;
   free_shipping_from: number | null;
   free_shipping_items: number | null;
+  logo_url: string | null;
   updated_at: Date;
 }
 
@@ -85,7 +88,7 @@ export async function updateAnnouncements(db: Queryable, p: UpdateAnnouncementsP
   return (rows[0] as UpdateAnnouncementsRow | undefined) ?? null;
 }
 
-export const updateBusinessDetailsSql = "UPDATE store_settings\nSET business_name = $1,\n    business_id = $2,\n    business_address = $3,\n    business_email = $4,\n    business_phone = $5,\n    updated_at = now()\nWHERE id\nRETURNING theme, heading_font, corners, announcements, announcements_enabled,\n          business_name, business_id, business_address, business_email, business_phone,\n          shipping_flat, free_shipping_from, free_shipping_items, updated_at";
+export const updateBusinessDetailsSql = "UPDATE store_settings\nSET business_name = $1,\n    business_id = $2,\n    business_address = $3,\n    business_email = $4,\n    business_phone = $5,\n    updated_at = now()\nWHERE id\nRETURNING theme, heading_font, corners, announcements, announcements_enabled,\n          business_name, business_id, business_address, business_email, business_phone,\n          shipping_flat, free_shipping_from, free_shipping_items, logo_url, updated_at";
 
 export interface UpdateBusinessDetailsParams {
   business_name: string;
@@ -109,6 +112,7 @@ export interface UpdateBusinessDetailsRow {
   shipping_flat: number;
   free_shipping_from: number | null;
   free_shipping_items: number | null;
+  logo_url: string | null;
   updated_at: Date;
 }
 
@@ -117,7 +121,7 @@ export async function updateBusinessDetails(db: Queryable, p: UpdateBusinessDeta
   return (rows[0] as UpdateBusinessDetailsRow | undefined) ?? null;
 }
 
-export const updateShippingRuleSql = "UPDATE store_settings\nSET shipping_flat = $1,\n    free_shipping_from = $2,\n    free_shipping_items = $3,\n    updated_at = now()\nWHERE id\nRETURNING theme, heading_font, corners, announcements, announcements_enabled,\n          business_name, business_id, business_address, business_email, business_phone,\n          shipping_flat, free_shipping_from, free_shipping_items, updated_at";
+export const updateShippingRuleSql = "UPDATE store_settings\nSET shipping_flat = $1,\n    free_shipping_from = $2,\n    free_shipping_items = $3,\n    updated_at = now()\nWHERE id\nRETURNING theme, heading_font, corners, announcements, announcements_enabled,\n          business_name, business_id, business_address, business_email, business_phone,\n          shipping_flat, free_shipping_from, free_shipping_items, logo_url, updated_at";
 
 export interface UpdateShippingRuleParams {
   shipping_flat: number;
@@ -139,12 +143,38 @@ export interface UpdateShippingRuleRow {
   shipping_flat: number;
   free_shipping_from: number | null;
   free_shipping_items: number | null;
+  logo_url: string | null;
   updated_at: Date;
 }
 
 export async function updateShippingRule(db: Queryable, p: UpdateShippingRuleParams): Promise<UpdateShippingRuleRow | null> {
   const { rows } = await db.query(updateShippingRuleSql, [p["shipping_flat"], p["free_shipping_from"], p["free_shipping_items"]]);
   return (rows[0] as UpdateShippingRuleRow | undefined) ?? null;
+}
+
+export const updateStoreLogoSql = "UPDATE store_settings\nSET logo_url = $1,\n    updated_at = now()\nWHERE id\nRETURNING theme, heading_font, corners, announcements, announcements_enabled,\n          business_name, business_id, business_address, business_email, business_phone,\n          shipping_flat, free_shipping_from, free_shipping_items, logo_url, updated_at";
+
+export interface UpdateStoreLogoRow {
+  theme: string;
+  heading_font: string | null;
+  corners: string | null;
+  announcements: string[];
+  announcements_enabled: boolean;
+  business_name: string;
+  business_id: string;
+  business_address: string;
+  business_email: string;
+  business_phone: string;
+  shipping_flat: number;
+  free_shipping_from: number | null;
+  free_shipping_items: number | null;
+  logo_url: string | null;
+  updated_at: Date;
+}
+
+export async function updateStoreLogo(db: Queryable, logo_url: string | null): Promise<UpdateStoreLogoRow | null> {
+  const { rows } = await db.query(updateStoreLogoSql, [logo_url]);
+  return (rows[0] as UpdateStoreLogoRow | undefined) ?? null;
 }
 
 // What delivery costs now, for the cart and checkout.

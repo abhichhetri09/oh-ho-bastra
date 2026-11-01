@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
+import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 
 export function SectionHeading({
@@ -16,7 +17,7 @@ export function SectionHeading({
   className?: string;
 }) {
   return (
-    <div
+    <Reveal
       className={cn(
         "mb-10 flex items-end justify-between gap-6 sm:mb-14",
         className,
@@ -35,6 +36,6 @@ export function SectionHeading({
           <ArrowRightIcon className="size-3.5 transition-transform duration-300 group-hover:translate-x-1" />
         </Link>
       )}
-    </div>
+    </Reveal>
   );
 }

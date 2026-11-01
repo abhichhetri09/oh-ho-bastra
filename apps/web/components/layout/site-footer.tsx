@@ -4,6 +4,7 @@ import {
   InstagramLogoIcon,
   TiktokLogoIcon,
 } from "@phosphor-icons/react/ssr";
+import { Reveal } from "@/components/motion/reveal";
 import { accountOf } from "@/lib/auth/redirect";
 import { getSessionUser } from "@/lib/auth/session";
 import { site } from "@/lib/site";
@@ -61,7 +62,7 @@ export async function SiteFooter() {
 
   return (
     <footer className="mt-24 border-t border-border bg-secondary/40">
-      <div className="container-page grid gap-12 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <Reveal className="container-page grid gap-12 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div className="max-w-sm space-y-4">
           <p className="display text-3xl">{site.tagline}.</p>
           <p className="text-sm text-muted-foreground">{site.description}</p>
@@ -97,7 +98,7 @@ export async function SiteFooter() {
             </ul>
           </div>
         ))}
-      </div>
+      </Reveal>
 
       <div className="container-page overflow-hidden pb-6">
         {/* The wordmark, one line, scaled to the page width. */}

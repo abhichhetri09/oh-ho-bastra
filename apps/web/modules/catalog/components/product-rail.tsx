@@ -30,6 +30,19 @@ export function ProductRail({
   const [progress, setProgress] = useState(0);
   const [dragging, setDragging] = useState(false);
   const drag = useRef({ x: 0, scrollLeft: 0, moved: false, pointer: -1 });
+  // Set once the rail is on screen: its cards rise in one after another then.
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const element = rail.current;
+    if (!element || shown) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => entry?.isIntersecting && setShown(true),
+      { rootMargin: "0px 0px -15% 0px" },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [shown]);
 
   useEffect(() => {
     const element = rail.current;
@@ -111,6 +124,8 @@ export function ProductRail({
     <div className="relative">
       <div
         ref={rail}
+        data-rail
+        data-shown={shown || undefined}
         role="region"
         aria-label={label}
         aria-roledescription="carousel"
@@ -146,19 +161,19 @@ export function ProductRail({
         )}
       >
         {products.map((product, i) => (
-          <ProductCard
+          <div
             key={product.id}
-            product={product}
-            index={i}
-            className="w-[72%] shrink-0 snap-start sm:w-[42%] md:w-[31%] xl:w-[27%]"
-          />
+            className="carousel-item w-[72%] shrink-0 snap-start sm:w-[42%] md:w-[31%] xl:w-[27%]"
+          >
+            <ProductCard product={product} index={i} />
+          </div>
         ))}
       </div>
       {overflows && (
         <div className="mt-8 flex items-center gap-6">
           <div className="relative h-px flex-1 bg-border" aria-hidden>
             <div
-              className="absolute inset-y-0 left-0 bg-foreground transition-[width] duration-300"
+              className="absolute inset-y-0 left-0 bg-foreground transition-[width] duration-700 ease-out-expo"
               style={{ width: `${Math.max(progress, 0.08) * 100}%` }}
             />
           </div>
@@ -169,8 +184,9 @@ export function ProductRail({
               onClick={() => scroll(-1)}
               disabled={edges.start}
               aria-label={`Scroll ${label} back`}
+              className="group/arrow"
             >
-              <ArrowLeftIcon />
+              <ArrowLeftIcon className="transition-transform duration-300 ease-out-expo group-hover/arrow:-translate-x-0.5" />
             </Button>
             <Button
               variant="outline"
@@ -178,8 +194,9 @@ export function ProductRail({
               onClick={() => scroll(1)}
               disabled={edges.end}
               aria-label={`Scroll ${label} forward`}
+              className="group/arrow"
             >
-              <ArrowRightIcon />
+              <ArrowRightIcon className="transition-transform duration-300 ease-out-expo group-hover/arrow:translate-x-0.5" />
             </Button>
           </div>
         </div>

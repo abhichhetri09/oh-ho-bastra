@@ -297,11 +297,7 @@ function StockLine({ stock, inBag }: { stock: number; inBag: number }) {
         <span
           className={cn(
             "relative inline-flex size-2 rounded-full",
-            left === 0
-              ? "bg-muted-foreground"
-              : low
-                ? "bg-clay"
-                : "bg-success",
+            left === 0 ? "bg-muted-foreground" : low ? "bg-clay" : "bg-success",
           )}
         />
       </span>

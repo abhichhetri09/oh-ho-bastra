@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Request, Response } from "express";
 import {
   AnnouncementsBodySchema,
+  StoreLogoBodySchema,
   BusinessDetailsBodySchema,
   OrderTrackingBodySchema,
   RefundOrderBodySchema,
@@ -58,6 +59,7 @@ import {
   updateAnnouncements,
   updateBusinessDetails,
   updateShippingRule,
+  updateStoreLogo,
   updateStoreAppearance,
 } from "../db/gen";
 import type { Order } from "../db/gen";
@@ -597,6 +599,21 @@ export function adminRoutes(api: Group, deps: Deps) {
           }),
         ),
       ),
+    );
+  });
+
+  /**
+   * SetStoreLogo replaces the logo in the storefront's header with an
+   * uploaded image, or (null) goes back to the built-in mark.
+   */
+  admin.put("/settings/logo", async (req, res) => {
+    const body = parseBody(StoreLogoBodySchema, req, res);
+    if (body === null) return;
+    ok(
+      res,
+      200,
+      "Logo updated",
+      storeSettings(must(await updateStoreLogo(db, body.logo_url ?? null))),
     );
   });
 

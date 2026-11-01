@@ -7,6 +7,7 @@ import { Providers } from "@/providers/providers";
 import {
   currentAppearance,
   currentTheme,
+  storeLogo,
   storeShipping,
 } from "@/lib/theme-server";
 import {
@@ -46,10 +47,11 @@ export async function generateViewport(): Promise<Viewport> {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [user, appearance, shipping] = await Promise.all([
+  const [user, appearance, shipping, logo] = await Promise.all([
     getSessionUser(),
     currentAppearance(),
     storeShipping(),
+    storeLogo(),
   ]);
   const picker = themePickerEnabled();
 
@@ -63,7 +65,7 @@ export default async function RootLayout({
           body to the viewport height, and shrinking would collapse the
           overflow-hidden announcement bar. */}
       <body className="flex min-h-full flex-col *:shrink-0">
-        <Providers user={user} shipping={shipping}>
+        <Providers user={user} shipping={shipping} logo={logo}>
           {children}
           {picker && <ThemePicker initial={appearance} />}
         </Providers>

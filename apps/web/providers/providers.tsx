@@ -4,23 +4,28 @@ import type { PublicUser, ShippingRule } from "@repo/types";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "./auth-provider";
+import { BrandProvider } from "./brand-provider";
 import { ReactQueryProvider } from "./react-query-provider";
 import { ShippingProvider } from "./shipping-provider";
 
 export function Providers({
   user,
   shipping,
+  logo,
   children,
 }: {
   user: PublicUser | null;
   shipping: ShippingRule;
+  logo: string | null;
   children: React.ReactNode;
 }) {
   return (
     <ReactQueryProvider>
       <AuthProvider user={user}>
         <ShippingProvider rule={shipping}>
-          <MotionProvider>{children}</MotionProvider>
+          <BrandProvider logo={logo}>
+            <MotionProvider>{children}</MotionProvider>
+          </BrandProvider>
         </ShippingProvider>
         {/* Bottom right on larger screens; on phones sonner spans the
             width at the bottom, kept clear of the iPhone home bar. */}

@@ -486,6 +486,26 @@ export function registerAdminPaths() {
 
   operation({
     method: "put",
+    path: "/api/v1/admin/settings/logo",
+    operationId: "adminSetStoreLogo",
+    tag: "Admin",
+    summary: "Change the store's logo",
+    description:
+      "Replaces the logo in the storefront's header with an uploaded image's URL, or null for the built-in mark.",
+    auth: "admin",
+    request: body(schemas.StoreLogoBodySchema),
+    success: {
+      status: 200,
+      description: "Logo updated",
+      schema: schemas.StoreSettingsResponseSchema,
+    },
+    errors: {
+      400: "Not an https URL (VALIDATION_FAILED)",
+    },
+  });
+
+  operation({
+    method: "put",
     path: "/api/v1/admin/settings/shipping",
     operationId: "adminSetShipping",
     tag: "Admin",

@@ -803,6 +803,7 @@ describe("PUT /admin/settings", () => {
       "business_address",
       "business_email",
       "business_phone",
+      "logo_url",
       "shipping",
       "updated_at",
     ]);
@@ -1033,6 +1034,7 @@ describe("PUT /admin/settings/announcements", () => {
         business_email: "",
         business_phone: "",
         shipping: { flat: 490, free_from: 6000, free_items: null },
+        logo_url: null,
         updated_at: expect.any(String),
       },
     });
@@ -1215,5 +1217,51 @@ describe("PUT /admin/settings/business", () => {
       (await http().put("/api/v1/admin/settings/business").send(details))
         .status,
     ).toBe(401);
+  });
+});
+
+describe("PUT /admin/settings/logo", () => {
+  beforeEach(async () => {
+    await db.query(
+      "INSERT INTO store_settings DEFAULT VALUES ON CONFLICT DO NOTHING",
+    );
+  });
+
+  const url = "https://res.cloudinary.com/demo/image/upload/v1/logo.png";
+  const put = (body: unknown, cookie = admin) =>
+    http()
+      .put("/api/v1/admin/settings/logo")
+      .set("Cookie", cookie)
+      .send(body as object);
+
+  it("saves the logo, and the storefront sees it", async () => {
+    const res = await put({ logo_url: url });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      message: "Logo updated",
+      data: { logo_url: url },
+    });
+    const settings = await http().get("/api/v1/settings");
+    expect(settings.body.data.logo_url).toBe(url);
+  });
+
+  it("goes back to the built-in mark with null", async () => {
+    await put({ logo_url: url });
+    const res = await put({ logo_url: null });
+    expect(res.status).toBe(200);
+    expect(res.body.data.logo_url).toBeNull();
+  });
+
+  it("refuses anything but an https URL", async () => {
+    for (const logo_url of ["http://example.com/a.png", "not a url", 5]) {
+      const res = await put({ logo_url });
+      expect(res.status).toBe(400);
+      expect(res.body.errors[0].field).toBe("logo_url");
+    }
+  });
+
+  it("is for admins only", async () => {
+    const { cookie } = await signIn(db, cfg);
+    expect((await put({ logo_url: url }, cookie)).status).toBe(403);
   });
 });

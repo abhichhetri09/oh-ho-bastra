@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { LockSimpleIcon } from "@phosphor-icons/react";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -85,14 +86,16 @@ export function CartView({ seeded }: { seeded: boolean }) {
         <div className="grid items-start gap-12 lg:grid-cols-[1fr_24rem] lg:gap-16">
           <div className="space-y-12">
             <ul className="divide-y divide-border border-y border-border">
-              {cart.items.map((line, i) => (
-                <CartLine
-                  key={line.variant_id}
-                  line={line}
-                  size="large"
-                  eager={i === 0}
-                />
-              ))}
+              <AnimatePresence initial={false}>
+                {cart.items.map((line, i) => (
+                  <CartLine
+                    key={line.variant_id}
+                    line={line}
+                    size="large"
+                    eager={i === 0}
+                  />
+                ))}
+              </AnimatePresence>
             </ul>
             <YouMayAlsoLike inBag={cart.items.map((line) => line.product_id)} />
           </div>

@@ -535,6 +535,27 @@
   }
 }
 
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes carousel-edge {
+  from {
+    opacity: 0.45;
+    scale: 0.94;
+  }
+}
+
+@keyframes carousel-edge-out {
+  to {
+    opacity: 0.45;
+    scale: 0.94;
+  }
+}
+
 @keyframes marquee {
   to {
     transform: translateX(-50%);
@@ -545,12 +566,38 @@
   .skeleton-shimmer::after,
   .animate-marquee,
   .animate-rise,
+  .animate-page-in,
+  .carousel-item,
   [class*="animate-[hero-settle"] {
     animation: none;
   }
   .link-underline {
     transition: none;
   }
+}
+
+/* A carousel slide that eases in as it scrolls into the row and out as it
+   leaves (scroll-driven; browsers without it just show the slide). */
+@utility carousel-item {
+  @supports (animation-timeline: view()) {
+    animation:
+      carousel-edge linear both,
+      carousel-edge-out linear both;
+    animation-timeline: view(inline), view(inline);
+    animation-range:
+      entry 0% entry 100%,
+      exit 0% exit 100%;
+  }
+}
+
+/* A rail's cards hold their entrance until the rail scrolls into view. */
+[data-rail]:not([data-shown]) .animate-rise {
+  animation-play-state: paused;
+}
+
+/* Each page fading in as it's navigated to (app/(shop)/template.tsx). */
+@utility animate-page-in {
+  animation: page-in 0.5s var(--ease-out-expo) both;
 }
 
 @utility animate-marquee {

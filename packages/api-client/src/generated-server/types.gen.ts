@@ -1184,6 +1184,10 @@ export type StoreSettings = {
      */
     business_phone: string;
     shipping: ShippingRule;
+    /**
+     * The store's uploaded logo; null shows the built-in mark.
+     */
+    logo_url: string | null;
     updated_at: string;
 };
 
@@ -1791,6 +1795,16 @@ export type BusinessDetailsBody = {
     business_address: string;
     business_email: string;
     business_phone: string;
+};
+
+/**
+ * Replaces the logo in the store's header.
+ */
+export type StoreLogoBody = {
+    /**
+     * An uploaded image's https URL; null or left out goes back to the built-in mark.
+     */
+    logo_url?: string | null;
 };
 
 /**
@@ -5193,6 +5207,43 @@ export type AdminSetBusinessDetailsResponses = {
 };
 
 export type AdminSetBusinessDetailsResponse = AdminSetBusinessDetailsResponses[keyof AdminSetBusinessDetailsResponses];
+
+export type AdminSetStoreLogoData = {
+    body: StoreLogoBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/settings/logo';
+};
+
+export type AdminSetStoreLogoErrors = {
+    /**
+     * Not an https URL (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetStoreLogoError = AdminSetStoreLogoErrors[keyof AdminSetStoreLogoErrors];
+
+export type AdminSetStoreLogoResponses = {
+    /**
+     * Logo updated
+     */
+    200: StoreSettingsResponse;
+};
+
+export type AdminSetStoreLogoResponse = AdminSetStoreLogoResponses[keyof AdminSetStoreLogoResponses];
 
 export type AdminSetShippingData = {
     body: ShippingBody;

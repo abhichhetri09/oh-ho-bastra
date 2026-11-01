@@ -32,11 +32,10 @@ export default async function LandingPage() {
 
       {collections.length > 0 && (
         <section className="container-page">
-          <SectionHeading
-            eyebrow="Collections"
-            title="Find your tee."
-          />
-          <CollectionTiles collections={collections} />
+          <SectionHeading eyebrow="Collections" title="Find your tee." />
+          <Reveal delay={0.1}>
+            <CollectionTiles collections={collections} />
+          </Reveal>
         </section>
       )}
 
@@ -47,7 +46,9 @@ export default async function LandingPage() {
             title="Chosen with care."
             href="/shop?featured=true"
           />
-          <ProductRail products={picks} label="Editor's picks" />
+          <Reveal delay={0.1}>
+            <ProductRail products={picks} label="Editor's picks" />
+          </Reveal>
         </section>
       )}
 

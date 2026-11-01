@@ -21,12 +21,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { site } from "@/lib/site";
 import { useAuth } from "@/providers/auth-provider";
 import type { Collection as NavCategory } from "@/modules/catalog/api";
 import { useSavedCount } from "@/modules/wishlist/hooks";
 import { useWishlistDrawer } from "@/modules/wishlist/store";
-import { LogoMark } from "@/components/brand/logo-mark";
+import { Brand } from "@/components/brand/brand";
 import { cn } from "@/lib/utils";
 import { accountOf } from "@/lib/auth/redirect";
 import { SignInLink } from "@/modules/auth/components/sign-in-link";
@@ -58,8 +57,7 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
       <SheetContent side="left" className="w-full gap-0 p-0 sm:max-w-sm">
         <div className="flex h-16 items-center border-b border-border px-5">
           <SheetTitle className="font-serif text-2xl font-normal">
-            <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
-            {site.name}
+            <Brand />
           </SheetTitle>
         </div>
 

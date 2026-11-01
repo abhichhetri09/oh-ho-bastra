@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { NavigationMenu } from "@base-ui/react/navigation-menu";
 import { ArrowRightIcon } from "@phosphor-icons/react";
-import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { MobileNav } from "./mobile-nav";
 import { useActiveNav } from "./use-active-nav";
@@ -17,7 +16,7 @@ import {
   WishlistHeaderButton,
 } from "@/modules/wishlist/components/wishlist-drawer";
 import { UserMenu } from "./user-menu";
-import { LogoMark } from "@/components/brand/logo-mark";
+import { Brand } from "@/components/brand/brand";
 
 /**
  * The sticky header. It sits flush on the page at the top and gains a
@@ -59,8 +58,7 @@ export function HeaderShell({ categories }: { categories: NavCategory[] }) {
           // (data-headline, see appearanceAttributes).
           className="font-serif text-[1.65rem] leading-none tracking-[-0.02em] whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/40 max-sm:in-data-[headline=wide]:text-[1.4rem]"
         >
-          <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
-          {site.name}
+          <Brand />
         </Link>
 
         <DesktopNav categories={categories} anchor={bar} />

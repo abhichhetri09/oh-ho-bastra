@@ -3468,6 +3468,14 @@
           "shipping": {
             "$ref": "#/components/schemas/ShippingRule"
           },
+          "logo_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "The store's uploaded logo; null shows the built-in mark."
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time"
@@ -3485,6 +3493,7 @@
           "business_email",
           "business_phone",
           "shipping",
+          "logo_url",
           "updated_at"
         ],
         "description": "Store-wide settings."
@@ -5362,6 +5371,21 @@
           "business_phone"
         ],
         "description": "Replaces the seller's details shown in the footer, contact page and legal pages. Empty strings clear a field."
+      },
+      "StoreLogoBody": {
+        "type": "object",
+        "properties": {
+          "logo_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "format": "uri",
+            "description": "An uploaded image's https URL; null or left out goes back to the built-in mark."
+          }
+        },
+        "description": "Replaces the logo in the store's header."
       },
       "ShippingBody": {
         "type": "object",
@@ -12417,6 +12441,83 @@
           },
           "400": {
             "description": "A field too long, or an invalid email (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/settings/logo": {
+      "put": {
+        "operationId": "adminSetStoreLogo",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Change the store's logo",
+        "description": "Replaces the logo in the storefront's header with an uploaded image's URL, or null for the built-in mark.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreLogoBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logo updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreSettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not an https URL (VALIDATION_FAILED)",
             "content": {
               "application/json": {
                 "schema": {

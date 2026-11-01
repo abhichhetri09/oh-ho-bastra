@@ -41,7 +41,7 @@ export function ProductCard({
     >
       <Link
         href={`/products/${product.slug}`}
-        className="group/link flex flex-col gap-3.5 outline-none"
+        className="group/link flex flex-col gap-3.5 transition-transform duration-200 ease-out outline-none active:scale-[0.985]"
       >
         <div className="relative aspect-[4/5] overflow-hidden rounded-media bg-surface ring-ring/40 ring-offset-2 ring-offset-background group-focus-visible/link:ring-2">
           {image && (

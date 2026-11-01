@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ReviewsSection } from "@/modules/reviews/components/reviews-section";
 import { notFound } from "next/navigation";
+import { Reveal } from "@/components/motion/reveal";
 import { JsonLd } from "@/components/seo/json-ld";
 import { formatPriceShort } from "@/lib/money";
 import {
@@ -91,9 +92,9 @@ export default async function ProductPage({ params, searchParams }: Props) {
         />
       </div>
 
-      <div className="container-page">
+      <Reveal className="container-page">
         <ReviewsSection slug={product.slug} productName={product.name} />
-      </div>
+      </Reveal>
 
       {related_products.length > 0 && (
         <section className="container-page">
@@ -101,7 +102,9 @@ export default async function ProductPage({ params, searchParams }: Props) {
             eyebrow="More to discover"
             title="You may also like."
           />
-          <ProductRail products={related_products} label="Related products" />
+          <Reveal delay={0.1}>
+            <ProductRail products={related_products} label="Related products" />
+          </Reveal>
         </section>
       )}
     </div>

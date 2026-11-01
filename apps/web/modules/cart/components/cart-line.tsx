@@ -1,5 +1,7 @@
 "use client";
 
+import { m } from "motion/react";
+import { EASE_OUT } from "@/lib/motion";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -60,7 +62,14 @@ export function CartLine({
   }, [draft, save, variantId]);
 
   return (
-    <li
+    <m.li
+      // Slides in when added and folds away when removed (the bag's lists
+      // wrap their lines in AnimatePresence).
+      layout="position"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -24, transition: { duration: 0.25 } }}
+      transition={{ duration: 0.45, ease: EASE_OUT }}
       className={cn(
         "grid grid-cols-[auto_1fr] gap-4 py-5",
         !line.available && "opacity-70",
@@ -163,6 +172,6 @@ export function CartLine({
           </button>
         </div>
       </div>
-    </li>
+    </m.li>
   );
 }

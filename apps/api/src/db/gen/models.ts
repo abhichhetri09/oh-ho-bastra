@@ -255,6 +255,7 @@ export interface StoreSetting {
   shipping_flat: number;
   free_shipping_from: number | null;
   free_shipping_items: number | null;
+  logo_url: string | null;
 }
 
 export interface EmailOutbox {

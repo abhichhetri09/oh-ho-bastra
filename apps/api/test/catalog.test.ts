@@ -833,6 +833,7 @@ describe("GET /settings", () => {
         business_phone: "",
         // the rule the code hard-coded before it was editable
         shipping: { flat: 490, free_from: 6000, free_items: null },
+        logo_url: null,
         updated_at: expect.any(String),
       },
     });

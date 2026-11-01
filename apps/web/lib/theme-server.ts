@@ -135,3 +135,8 @@ export async function storeBusiness(): Promise<BusinessDetails> {
 export async function storeShipping(): Promise<ShippingRule> {
   return (await storeSettings())?.shipping ?? DEFAULT_SHIPPING;
 }
+
+/** The admin's uploaded logo, or null for the built-in mark. */
+export async function storeLogo(): Promise<string | null> {
+  return (await storeSettings())?.logo_url ?? null;
+}
