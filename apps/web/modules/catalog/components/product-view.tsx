@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, m } from "motion/react";
 import {
@@ -93,8 +93,6 @@ export function ProductView({
   // The size guide shows wherever there's a size to pick.
   const hasSizes = groups.some((g) => g.name.toLowerCase() === "size");
   const preview = productPreview(product, variant);
-  // The page's own buy button; the phone bar shows once it scrolls away.
-  const buyRow = useRef<HTMLDivElement>(null);
   const selection = variant ? selectionOf(variant) : {};
 
   function choose(name: string, value: string) {
@@ -179,8 +177,11 @@ export function ProductView({
         )}
 
         <div className="space-y-4">
-          <div ref={buyRow} className="flex gap-2">
-            <AddToBag preview={preview} stock={stock} inBag={inBag} />
+          <div className="flex gap-2">
+            {/* Phones buy from the StickyBuyBar instead. */}
+            <div className="hidden min-w-0 flex-1 lg:block">
+              <AddToBag preview={preview} stock={stock} inBag={inBag} />
+            </div>
             <WishlistButton
               productId={product.id}
               name={product.name}
@@ -260,15 +261,7 @@ export function ProductView({
         </Accordion>
       </div>
 
-      <StickyBuyBar
-        anchor={buyRow}
-        preview={preview}
-        stock={stock}
-        inBag={inBag}
-        price={price}
-        selling={selling}
-        offer={offer}
-      />
+      <StickyBuyBar preview={preview} stock={stock} inBag={inBag} />
     </div>
   );
 }

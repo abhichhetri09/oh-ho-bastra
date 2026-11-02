@@ -2,13 +2,19 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowRightIcon,
+  ArrowUpIcon,
+  CalendarBlankIcon,
   EnvelopeSimpleIcon,
+  InfoIcon,
+  LinkSimpleIcon,
+  ListNumbersIcon,
   PhoneIcon,
 } from "@phosphor-icons/react/ssr";
 import { Reveal } from "@/components/motion/reveal";
 import { site } from "@/lib/site";
 import { storeBusiness } from "@/lib/theme-server";
-import { cn } from "@/lib/utils";
+import { PolicyNav } from "./policy-nav";
+import { PolicyToc, PolicyTocMobile } from "./policy-toc";
 
 /** The store's policies, in the order the side navigation lists them. */
 export const POLICIES = [
@@ -35,98 +41,121 @@ function formatUpdated(date: string): string {
   });
 }
 
+/** A key fact shown in the "At a glance" strip under the title. */
+export type PolicyHighlight = {
+  value: ReactNode;
+  label: string;
+};
+
 /**
- * A policy page: a header, the other policies beside it, a contents list,
- * numbered sections and a way to reach us at the end.
+ * A policy page: a header band with the key facts, the other policies and a
+ * contents list beside numbered sections, and a way to reach us at the end.
  */
 export function PolicyPage({
   current,
   title,
   intro,
+  highlights,
   sections,
 }: {
   current: PolicyHref;
   title: string;
   intro: ReactNode;
+  highlights?: PolicyHighlight[];
   sections: PolicySection[];
 }) {
+  const toc = sections.map(({ id, title }) => ({ id, title }));
+
   return (
-    <div className="container-page py-14 sm:py-20">
-      <header className="mb-10 max-w-3xl space-y-4 border-b border-border pb-10 sm:mb-14 sm:pb-14">
-        <p className="eyebrow">Policies</p>
-        <h1 className="display text-4xl sm:text-6xl">{title}</h1>
-        <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
-          {intro}
-        </p>
-        <p className="font-mono text-[0.6875rem] tracking-[0.12em] text-muted-foreground uppercase">
-          Last updated {formatUpdated(site.legalUpdated)}
-        </p>
+    <div id="top">
+      <header className="border-b border-border bg-secondary/40">
+        <div className="container-page pt-12 pb-10 sm:pt-20 sm:pb-14">
+          <div className="max-w-3xl space-y-5">
+            <p className="eyebrow">Policies</p>
+            <h1 className="display text-[2.5rem] leading-[1.05] sm:text-6xl">
+              {title}
+            </h1>
+            <p className="max-w-2xl text-base text-pretty text-muted-foreground sm:text-lg">
+              {intro}
+            </p>
+            <dl className="flex flex-wrap gap-x-5 gap-y-2 pt-1 font-mono text-[0.6875rem] tracking-[0.12em] text-muted-foreground uppercase">
+              <div className="flex items-center gap-2">
+                <CalendarBlankIcon className="size-3.5" aria-hidden />
+                <dt className="sr-only">Last updated</dt>
+                <dd>Updated {formatUpdated(site.legalUpdated)}</dd>
+              </div>
+              <div className="flex items-center gap-2">
+                <ListNumbersIcon className="size-3.5" aria-hidden />
+                <dt className="sr-only">Length</dt>
+                <dd>{sections.length} sections</dd>
+              </div>
+            </dl>
+          </div>
+
+          {highlights && highlights.length > 0 && (
+            <div className="mt-10 sm:mt-12">
+              <p className="eyebrow mb-3">At a glance</p>
+              <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-panel border border-border bg-border sm:grid-cols-3">
+                {highlights.map((h) => (
+                  <div
+                    key={h.label}
+                    className="flex flex-col-reverse gap-1 bg-card px-5 py-4 sm:gap-1.5 sm:py-5"
+                  >
+                    <dd className="font-serif text-xl leading-tight sm:text-2xl">
+                      {h.value}
+                    </dd>
+                    <dt className="text-sm text-muted-foreground">{h.label}</dt>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+        </div>
       </header>
 
-      <div className="grid gap-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16">
-        <aside className="lg:sticky lg:top-28 lg:self-start">
-          <nav aria-label="Policies">
-            <p className="eyebrow mb-3 hidden lg:block">All policies</p>
-            <ul className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:gap-0.5 lg:px-0">
-              {POLICIES.map((policy) => (
-                <li key={policy.href} className="shrink-0">
-                  <Link
-                    href={policy.href}
-                    aria-current={policy.href === current ? "page" : undefined}
-                    className={cn(
-                      "block rounded-full border border-border px-4 py-2 text-[0.8125rem] whitespace-nowrap transition-colors lg:rounded-control lg:border-transparent lg:px-3",
-                      policy.href === current
-                        ? "border-foreground bg-foreground text-background lg:border-transparent lg:bg-secondary lg:text-foreground"
-                        : "text-muted-foreground hover:text-foreground lg:hover:bg-secondary/60",
-                    )}
-                  >
-                    {policy.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <nav aria-label="On this page" className="mt-10 hidden lg:block">
-            <p className="eyebrow mb-3">On this page</p>
-            <ol className="space-y-2 border-l border-border text-[0.8125rem]">
-              {sections.map((section, i) => (
-                <li key={section.id}>
-                  <a
-                    href={`#${section.id}`}
-                    className="-ml-px flex gap-2 border-l border-transparent pl-4 text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
-                  >
-                    <span className="font-mono text-[0.6875rem] tabular-nums">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    {section.title}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
+      <div className="container-page grid grid-cols-[minmax(0,1fr)] gap-8 pt-6 pb-16 sm:pb-24 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16 lg:pt-14">
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:self-start lg:overflow-y-auto">
+          <PolicyNav policies={POLICIES} current={current} />
+          <div className="mt-6 lg:hidden">
+            <PolicyTocMobile sections={toc} />
+          </div>
+          <div className="mt-10 hidden lg:block">
+            <PolicyToc sections={toc} />
+          </div>
         </aside>
 
-        <div className="max-w-3xl">
-          <ol className="divide-y divide-border">
+        <div className="min-w-0 max-w-3xl">
+          <ol>
             {sections.map((section, i) => (
               <li
                 key={section.id}
                 id={section.id}
-                className="scroll-mt-28 py-8 first:pt-0"
+                className="scroll-mt-24 border-b border-border py-10 first:pt-2 last:border-b-0 sm:py-12 lg:first:pt-0"
               >
-                <Reveal
-                  className="grid gap-3 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-6"
-                  y={16}
-                >
-                  <span className="font-mono text-xs text-muted-foreground tabular-nums sm:pt-2">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <section className="space-y-4">
-                    <h2 className="font-serif text-2xl sm:text-[1.75rem]">
-                      {section.title}
-                    </h2>
-                    <div className="space-y-3 text-[0.9375rem] leading-relaxed text-muted-foreground [&_a]:text-foreground [&_a]:underline [&_a]:decoration-border [&_a]:underline-offset-4 [&_a:hover]:decoration-current [&_strong]:font-medium [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ul]:marker:text-border">
+                <Reveal y={16}>
+                  <section
+                    aria-labelledby={`${section.id}-title`}
+                    className="space-y-5"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-card font-mono text-[0.6875rem] text-muted-foreground tabular-nums">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <h2
+                        id={`${section.id}-title`}
+                        className="group font-serif text-2xl leading-tight text-balance sm:text-[1.75rem]"
+                      >
+                        {section.title}
+                        <a
+                          href={`#${section.id}`}
+                          aria-label={`Link to ${section.title}`}
+                          className="ml-2 inline-block align-middle text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                        >
+                          <LinkSimpleIcon className="size-4" />
+                        </a>
+                      </h2>
+                    </div>
+                    <div className="space-y-4 text-[0.9375rem] leading-[1.75] text-muted-foreground sm:pl-13 [&_a]:text-foreground [&_a]:underline [&_a]:decoration-border [&_a]:underline-offset-4 [&_a:hover]:decoration-current [&_strong]:font-medium [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ul]:marker:text-muted-foreground/50">
                       {section.body}
                     </div>
                   </section>
@@ -135,6 +164,13 @@ export function PolicyPage({
             ))}
           </ol>
           <PolicyContact />
+          <a
+            href="#top"
+            className="mt-8 inline-flex items-center gap-2 font-mono text-[0.6875rem] tracking-[0.12em] text-muted-foreground uppercase transition-colors hover:text-foreground"
+          >
+            <ArrowUpIcon className="size-3.5" />
+            Back to top
+          </a>
         </div>
       </div>
     </div>
@@ -148,14 +184,14 @@ export function FactTable({
   rows: { label: string; value: ReactNode }[];
 }) {
   return (
-    <dl className="divide-y divide-border overflow-hidden rounded-panel border border-border text-sm">
+    <dl className="divide-y divide-border overflow-hidden rounded-panel border border-border bg-card text-sm">
       {rows.map((row) => (
         <div
           key={row.label}
-          className="flex flex-col gap-1 bg-card px-4 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
+          className="grid gap-1 px-4 py-3.5 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-6 sm:px-5"
         >
-          <dt className="text-foreground">{row.label}</dt>
-          <dd className="text-muted-foreground sm:text-right">{row.value}</dd>
+          <dt className="font-medium text-foreground">{row.label}</dt>
+          <dd className="text-muted-foreground">{row.value}</dd>
         </div>
       ))}
     </dl>
@@ -165,8 +201,9 @@ export function FactTable({
 /** A highlighted note inside a section. */
 export function PolicyNote({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded-panel border border-border bg-secondary/50 px-4 py-3 text-sm">
-      {children}
+    <p className="flex gap-3 rounded-panel border border-border bg-secondary/50 px-4 py-3.5 text-sm leading-relaxed">
+      <InfoIcon className="mt-0.5 size-4 shrink-0 text-foreground" aria-hidden />
+      <span>{children}</span>
     </p>
   );
 }
@@ -174,40 +211,43 @@ export function PolicyNote({ children }: { children: ReactNode }) {
 /** "Questions?" at the end of every policy: the store's email and phone. */
 async function PolicyContact() {
   const b = await storeBusiness();
+  const action =
+    "inline-flex items-center gap-2 rounded-control border border-background/20 px-4 py-2.5 text-sm transition-colors hover:bg-background/10";
   return (
-    <div className="mt-8 rounded-panel border border-border bg-card p-6 sm:p-8">
-      <p className="eyebrow mb-2">Questions?</p>
-      <p className="font-serif text-2xl">We&apos;re happy to help.</p>
-      <p className="mt-2 text-sm text-muted-foreground">
+    <div className="mt-6 overflow-hidden rounded-panel bg-foreground p-6 text-background sm:p-10">
+      <p className="font-mono text-[0.6875rem] tracking-[0.12em] uppercase opacity-60">
+        Questions?
+      </p>
+      <p className="mt-3 font-serif text-3xl leading-tight sm:text-4xl">
+        We&apos;re happy to help.
+      </p>
+      <p className="mt-3 max-w-md text-sm leading-relaxed opacity-70">
         If anything in our policies is unclear, get in touch and we&apos;ll get
         back to you.
       </p>
-      <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <Link
+          href="/contact"
+          className="inline-flex items-center justify-center gap-2 rounded-control bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-opacity hover:opacity-90"
+        >
+          Contact us
+          <ArrowRightIcon className="size-3.5" />
+        </Link>
         {b.business_email && (
-          <a
-            href={`mailto:${b.business_email}`}
-            className="inline-flex items-center gap-2 hover:underline"
-          >
-            <EnvelopeSimpleIcon className="size-4 text-muted-foreground" />
-            {b.business_email}
+          <a href={`mailto:${b.business_email}`} className={action}>
+            <EnvelopeSimpleIcon className="size-4 opacity-70" />
+            <span className="truncate">{b.business_email}</span>
           </a>
         )}
         {b.business_phone && (
           <a
             href={`tel:${b.business_phone.replace(/\s/g, "")}`}
-            className="inline-flex items-center gap-2 hover:underline"
+            className={action}
           >
-            <PhoneIcon className="size-4 text-muted-foreground" />
+            <PhoneIcon className="size-4 opacity-70" />
             {b.business_phone}
           </a>
         )}
-        <Link
-          href="/contact"
-          className="inline-flex items-center gap-2 hover:underline"
-        >
-          Contact form
-          <ArrowRightIcon className="size-3.5" />
-        </Link>
       </div>
     </div>
   );

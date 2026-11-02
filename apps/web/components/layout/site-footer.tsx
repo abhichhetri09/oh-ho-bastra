@@ -61,7 +61,7 @@ export async function SiteFooter() {
   ];
 
   return (
-    <footer className="mt-24 border-t border-border bg-secondary/40">
+    <footer data-site-footer className="mt-24 border-t border-border bg-secondary/40">
       <Reveal className="container-page grid gap-12 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div className="max-w-sm space-y-4">
           <p className="display text-3xl">{site.tagline}.</p>

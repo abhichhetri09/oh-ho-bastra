@@ -605,10 +605,14 @@
   }
 }
 
-/* Room under the page for the product page's phone buy bar. */
+/* Product pages on phones read like an app: the buy bar is pinned to the
+   bottom, the page leaves room for it, and the site footer steps aside. */
 @media (width < 64rem) {
   body:has([data-buy-bar]) {
-    padding-bottom: 4.75rem;
+    padding-bottom: 5.5rem;
+  }
+  body:has([data-buy-bar]) [data-site-footer] {
+    display: none;
   }
 }
 
@@ -640,10 +644,11 @@
   }
 }
 
+/* Opacity only: a transform on the page wrapper would pin fixed children
+   (the product page's phone buy bar) to the page instead of the screen. */
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
 }
 

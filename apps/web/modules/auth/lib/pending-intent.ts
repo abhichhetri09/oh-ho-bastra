@@ -6,7 +6,13 @@ import type { LinePreview } from "@/modules/cart/lib/cart-math";
  * bag (or the wishlist) without a second tap.
  */
 export type PendingIntent =
-  | { kind: "bag"; path: string; preview: LinePreview; at: number }
+  | {
+      kind: "bag";
+      path: string;
+      preview: LinePreview;
+      at: number;
+      quantity?: number;
+    }
   | { kind: "save"; path: string; productId: string; name: string; at: number };
 
 const KEY = "cs-pending-intent";

@@ -30,7 +30,7 @@ export function PendingIntentRunner() {
     if (intent?.kind === "bag") {
       add.mutate({
         variant_id: intent.preview.variant_id,
-        quantity: 1,
+        quantity: intent.quantity ?? 1,
         preview: intent.preview,
         announce: true,
       });

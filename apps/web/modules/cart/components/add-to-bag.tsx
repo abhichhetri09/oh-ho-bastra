@@ -18,7 +18,7 @@ import type { LinePreview } from "../lib/cart-math";
 const ADDED_FOR = 1800;
 
 /**
- * Adds one of the selected variant. The bag count and the label change at
+ * Adds `quantity` (one by default) of the selected variant. The bag count and the label change at
  * once; a toast confirms with "View bag" once the API agrees, or the add
  * rolls back with its reason. A signed-out shopper's first add starts a
  * guest session; the add then runs as a pending intent once the session's
@@ -28,12 +28,15 @@ export function AddToBag({
   preview,
   stock,
   inBag = 0,
+  quantity = 1,
 }: {
   /** The selected variant, shown in the bag before the API answers. */
   preview: LinePreview;
   stock: number;
   /** How many of this variant the bag already holds. */
   inBag?: number;
+  /** How many to add per click. */
+  quantity?: number;
 }) {
   const pathname = usePathname();
   const user = useAuth((s) => s.user);
@@ -66,7 +69,13 @@ export function AddToBag({
     flyToBag(event.currentTarget, preview.image);
     if (!user) {
       // Added for them as soon as the guest session is there.
-      rememberIntent({ kind: "bag", path: pathname, preview, at: Date.now() });
+      rememberIntent({
+        kind: "bag",
+        path: pathname,
+        preview,
+        at: Date.now(),
+        quantity,
+      });
       ensureGuestSession()
         .then(setUser)
         .catch(() => {
@@ -76,7 +85,7 @@ export function AddToBag({
       return;
     }
     add.mutate(
-      { variant_id: preview.variant_id, quantity: 1, preview, announce: true },
+      { variant_id: preview.variant_id, quantity, preview, announce: true },
       // The hook rolls back and says why; the label stops claiming success.
       { onError: () => setAddedAt(0) },
     );

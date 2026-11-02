@@ -1,92 +1,78 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import { MinusIcon, PlusIcon } from "@phosphor-icons/react";
 import { AddToBag } from "@/modules/cart/components/add-to-bag";
-import { type LinePreview, optionSummary } from "@/modules/cart/lib/cart-math";
-import { Price } from "./price";
+import type { LinePreview } from "@/modules/cart/lib/cart-math";
 
-/** How far toasts rise on phones while the bar shows (its height). */
-const TOAST_LIFT = "4.75rem";
+/** How far toasts rise on phones above the bar (its height). */
+const TOAST_LIFT = "5.5rem";
 
 /**
- * On phones, once the product page's own Add to bag has scrolled up out of
- * view, a bar with the price and Add to bag slides up from the bottom, so
- * the shopper can buy from the details, reviews or related products.
- * `anchor` wraps the page's buy button; the bar shows only after it, not
- * before the shopper reaches it.
+ * On phones, the product page buys from here, app style: a quantity stepper
+ * and Add to bag pinned to the bottom of the screen the whole time. The
+ * page's own Add to bag and the site footer hide below lg (globals.css).
  */
 export function StickyBuyBar({
-  anchor,
   preview,
   stock,
   inBag,
-  price,
-  selling,
-  offer,
 }: {
-  anchor: React.RefObject<HTMLElement | null>;
   preview: LinePreview;
   stock: number;
   inBag: number;
-  price: number;
-  selling: number;
-  offer: number | null;
 }) {
-  const [shown, setShown] = useState(false);
-
-  useEffect(() => {
-    const element = anchor.current;
-    if (!element) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry) return;
-      setShown(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [anchor]);
-
   // Toasts sit above the bar instead of on it (see the Toaster's offset).
   useEffect(() => {
-    if (!shown) return;
+    if (!window.matchMedia("(width < 64rem)").matches) return;
     const root = document.documentElement.style;
     root.setProperty("--toast-lift", TOAST_LIFT);
     return () => {
       root.removeProperty("--toast-lift");
     };
-  }, [shown]);
+  }, []);
 
-  const options = optionSummary(preview);
+  // What can still go in the bag; the stepper never offers more.
+  const left = Math.max(stock - inBag, 0);
+  const [quantity, setQuantity] = useState(1);
+  const qty = Math.min(quantity, Math.max(left, 1));
 
   return (
     <div
-      // globals.css pads the page by the bar's height on phones, so it
-      // never covers the footer's last line.
       data-buy-bar
-      inert={!shown}
-      aria-hidden={!shown}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-md transition-transform duration-500 ease-out-expo lg:hidden",
-        shown ? "translate-y-0" : "translate-y-full",
-      )}
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-[0_-8px_24px_rgb(0_0_0/0.2)] lg:hidden"
     >
-      <div className="flex items-center gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[0.8125rem]">
-            {preview.product_name}
-            {options && (
-              <span className="text-muted-foreground"> · {options}</span>
-            )}
-          </p>
-          <Price
-            price={price}
-            selling={selling}
-            offer={offer}
-            className="text-[0.8125rem]"
-          />
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 shrink-0 items-center rounded-xl bg-muted">
+          <button
+            type="button"
+            aria-label="One fewer"
+            disabled={qty <= 1}
+            onClick={() => setQuantity(qty - 1)}
+            className="grid size-12 place-items-center disabled:opacity-40"
+          >
+            <MinusIcon />
+          </button>
+          <span className="w-6 text-center tabular-nums" aria-live="polite">
+            {qty}
+          </span>
+          <button
+            type="button"
+            aria-label="One more"
+            disabled={qty >= left}
+            onClick={() => setQuantity(qty + 1)}
+            className="grid size-12 place-items-center disabled:opacity-40"
+          >
+            <PlusIcon />
+          </button>
         </div>
-        <div className="w-40 shrink-0">
-          <AddToBag preview={preview} stock={stock} inBag={inBag} />
+        <div className="min-w-0 flex-1">
+          <AddToBag
+            preview={preview}
+            stock={stock}
+            inBag={inBag}
+            quantity={qty}
+          />
         </div>
       </div>
     </div>

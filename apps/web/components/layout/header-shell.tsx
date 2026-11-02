@@ -46,7 +46,7 @@ export function HeaderShell({ categories }: { categories: NavCategory[] }) {
     >
       <div
         ref={bar}
-        className="container-page grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-4 lg:grid-cols-[auto_1fr_auto]"
+        className="container-page grid h-16 grid-cols-[minmax(0,1fr)_auto_minmax(min-content,1fr)] items-center gap-2 sm:gap-4 lg:grid-cols-[auto_1fr_auto]"
       >
         <div className="flex items-center lg:hidden">
           <MobileNav categories={categories} />
@@ -56,7 +56,7 @@ export function HeaderShell({ categories }: { categories: NavCategory[] }) {
           href="/"
           // One line on phones too, where the wide headline faces would wrap
           // (data-headline, see appearanceAttributes).
-          className="font-serif text-[1.65rem] leading-none tracking-[-0.02em] whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/40 max-sm:in-data-[headline=wide]:text-[1.4rem]"
+          className="font-serif text-[1.5rem] leading-none sm:text-[1.65rem] tracking-[-0.02em] whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/40 max-sm:in-data-[headline=wide]:text-[1.4rem]"
         >
           <Brand />
         </Link>

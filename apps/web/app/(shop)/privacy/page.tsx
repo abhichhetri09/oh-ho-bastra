@@ -17,6 +17,11 @@ export default function PrivacyPage() {
       current="/privacy"
       title="Privacy policy"
       intro="What personal information we collect, why we collect it and how we keep it safe."
+      highlights={[
+        { value: "Never sold", label: "Your personal data" },
+        { value: "Within a month", label: "We answer data requests" },
+        { value: "Opt out anytime", label: "From marketing emails" },
+      ]}
       sections={[
         {
           id: "controller",

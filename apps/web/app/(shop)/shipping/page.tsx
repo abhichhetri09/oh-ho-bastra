@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { formatPriceShort } from "@/lib/money";
 import { shippingSentence } from "@/lib/shipping";
 import { site } from "@/lib/site";
 import { storeShipping } from "@/lib/theme-server";
@@ -22,6 +23,16 @@ export default async function ShippingPage() {
       current="/shipping"
       title="Shipping policy"
       intro="How we process and ship your order, how long delivery takes and what to do if something goes wrong on the way."
+      highlights={[
+        { value: "1–3 business days", label: "To process your order" },
+        shipping.free_from !== null
+          ? {
+              value: `Free over ${formatPriceShort(shipping.free_from)}`,
+              label: `Otherwise ${formatPriceShort(shipping.flat)} flat`,
+            }
+          : { value: formatPriceShort(shipping.flat), label: "Flat-rate shipping" },
+        { value: "48 hours", label: "To report a damaged parcel" },
+      ]}
       sections={[
         {
           id: "processing",
@@ -122,7 +133,8 @@ export default async function ShippingPage() {
             <>
               <p>
                 If your parcel arrives damaged, please contact us within{" "}
-                <strong>48 hours</strong> of delivery with photos or a video of
+                <strong>48 hours</strong>{" "}
+                of delivery with photos or a video of
                 the product and the packaging. We&apos;ll arrange a replacement
                 or refund, as appropriate.
               </p>

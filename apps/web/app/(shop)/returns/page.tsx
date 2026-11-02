@@ -14,6 +14,11 @@ export default function ReturnsPage() {
       current="/returns"
       title="Returns & exchanges"
       intro="Not quite right? You can return or exchange items within 30 days of delivery. Here's how it works."
+      highlights={[
+        { value: "30 days", label: "To return from delivery" },
+        { value: "Size & colour", label: "Exchanges, while in stock" },
+        { value: "5–10 days", label: "For your refund to arrive" },
+      ]}
       sections={[
         {
           id: "returns",
