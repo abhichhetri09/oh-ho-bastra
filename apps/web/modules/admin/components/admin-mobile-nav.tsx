@@ -35,7 +35,8 @@ export function AdminMobileNav() {
           </SheetTitle>
           <span className="eyebrow">Admin</span>
         </div>
-        <div className="flex flex-1 flex-col justify-between py-6">
+        {/* Scrolls on short screens, like the desktop sidebar. */}
+        <div className="flex min-h-0 flex-1 flex-col justify-between gap-8 overflow-y-auto overscroll-contain py-6">
           <AdminNav onNavigate={() => setOpen(false)} />
           <AdminAccount onNavigate={() => setOpen(false)} />
         </div>
