@@ -62,8 +62,8 @@ export async function SiteFooter() {
 
   return (
     <footer data-site-footer className="mt-24 border-t border-border bg-secondary/40">
-      <Reveal className="container-page grid gap-12 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div className="max-w-sm space-y-4">
+      <Reveal className="container-page grid grid-cols-3 gap-x-4 gap-y-12 py-16 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:gap-12">
+        <div className="col-span-3 max-w-sm space-y-4 md:col-span-1">
           <p className="display text-3xl">{site.tagline}.</p>
           <p className="text-sm text-muted-foreground">{site.description}</p>
           {socialLinks.length > 0 && (
