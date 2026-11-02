@@ -40,20 +40,25 @@ export default function AdminLayout({
 
       <div className="flex min-h-svh min-w-0 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-background/85 px-4 backdrop-blur sm:px-6 lg:px-10">
-          <div className="flex items-baseline gap-3">
+          {/* One line on a phone: the bar is a fixed h-16, and wrapped text
+              spilled over the page's own header. */}
+          <div className="flex min-w-0 items-center gap-3">
             <AdminMobileNav />
-            <Link href="/admin" className="font-serif text-2xl lg:hidden">
+            <Link
+              href="/admin"
+              className="truncate font-serif text-xl whitespace-nowrap sm:text-2xl lg:hidden"
+            >
               <Brand />
             </Link>
           </div>
-          <div className="-mr-3 flex items-center gap-2">
+          <div className="-mr-3 flex shrink-0 items-center gap-2">
             <CommandPalette />
             <Link
               href="/"
               target="_blank"
-              className="group inline-flex h-10 items-center gap-1.5 px-3 text-[0.8125rem] text-muted-foreground transition-colors hover:text-foreground"
+              className="group inline-flex h-10 items-center gap-1.5 px-3 text-[0.8125rem] whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
             >
-              View store
+              <span className="sr-only sm:not-sr-only">View store</span>
               <ArrowUpRightIcon className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
           </div>

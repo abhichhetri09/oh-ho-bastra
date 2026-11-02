@@ -11,6 +11,11 @@ const IMG = "/editorial";
 
 export const site = {
   name: "OH : HO !! Bastra",
+  // How people type the name into a search box; the punctuation gets dropped.
+  alternateNames: ["Oh Ho Bastra", "OhHoBastra", "Ohho Bastra"],
+  // The home page's title: the words people search for, then the name.
+  homeTitle:
+    "Heavyweight Cotton T-Shirts & Custom Printed Tees | OH : HO !! Bastra",
   // When the terms and privacy policy last changed (shown on both pages).
   // The seller's details live in Admin → Settings (storeBusiness).
   legalUpdated: "2026-11-01",

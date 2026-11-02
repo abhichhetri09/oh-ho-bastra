@@ -30,6 +30,7 @@ import { adminKeys } from "../keys";
 import { categoryPath, orderTree } from "../lib/categories";
 import type { StoredImage } from "../lib/upload";
 import { useCategoryTree } from "../queries";
+import { CategoryDialog, type Editing } from "./category-manager";
 import { ImageManager } from "./image-manager";
 import { Panel } from "./panel";
 
@@ -107,15 +108,16 @@ export function ProductForm({ product }: { product?: Product }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
+  const nodes = useMemo(() => tree.data ?? [], [tree.data]);
+  const [newCategory, setNewCategory] = useState<Editing | null>(null);
   const categories = useMemo(() => {
-    const nodes = tree.data ?? [];
     return orderTree(nodes).map((c) => ({
       value: c.id,
       label: categoryPath(nodes, c.id),
       name: c.name,
       depth: c.depth,
     }));
-  }, [tree.data]);
+  }, [nodes]);
 
   const save = useAdminMutation({
     mutationFn: async (next: ProductBody) => {
@@ -340,7 +342,23 @@ export function ProductForm({ product }: { product?: Product }) {
             <FieldError key={errors.category_id} className="animate-rise">
               {errors.category_id}
             </FieldError>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-fit"
+              onClick={() => setNewCategory({ mode: "create", parentId: null })}
+            >
+              <PlusIcon />
+              New category
+            </Button>
           </Field>
+          <CategoryDialog
+            nodes={nodes}
+            editing={newCategory}
+            onClose={() => setNewCategory(null)}
+            onCreated={(id) => set("category_id", id)}
+          />
         </Panel>
 
         <Panel title="Visibility">

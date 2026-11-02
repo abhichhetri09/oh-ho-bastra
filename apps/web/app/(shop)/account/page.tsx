@@ -16,10 +16,6 @@ export default async function AccountPage() {
   const rows = [
     { label: "Name", value: user.name },
     { label: "Email", value: user.email },
-    {
-      label: "Account",
-      value: user.role === "admin" ? "Administrator" : "Customer",
-    },
   ];
 
   return (

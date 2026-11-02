@@ -11,7 +11,10 @@ import { CategoryTiles } from "@/modules/home/components/category-tiles";
 import { Hero } from "@/modules/home/components/hero";
 import { SectionHeading } from "@/modules/home/components/section-heading";
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export const metadata: Metadata = {
+  title: { absolute: site.homeTitle },
+  alternates: { canonical: "/" },
+};
 
 /** How many editor's picks the landing page shows: one row on desktop. */
 const PICKS = 4;

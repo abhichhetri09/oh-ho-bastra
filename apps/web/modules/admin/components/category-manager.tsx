@@ -51,7 +51,7 @@ import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 
 const ROOT = "root";
 
-type Editing =
+export type Editing =
   | { mode: "create"; parentId: string | null }
   | { mode: "edit"; category: CategoryNode };
 
@@ -241,14 +241,17 @@ export function CategoryManager() {
   );
 }
 
-function CategoryDialog({
+export function CategoryDialog({
   nodes,
   editing,
   onClose,
+  onCreated,
 }: {
   nodes: CategoryNode[];
   editing: Editing | null;
   onClose: () => void;
+  /** Called with a newly created category's id (not on edits). */
+  onCreated?: (id: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const key =
@@ -270,6 +273,7 @@ function CategoryDialog({
             editing={editing}
             onBusyChange={setBusy}
             onDone={onClose}
+            onCreated={onCreated}
           />
         )}
       </DialogContent>
@@ -282,11 +286,13 @@ function CategoryForm({
   editing,
   onBusyChange,
   onDone,
+  onCreated,
 }: {
   nodes: CategoryNode[];
   editing: Editing;
   onBusyChange: (busy: boolean) => void;
   onDone: () => void;
+  onCreated?: (id: string) => void;
 }) {
   const category = editing.mode === "edit" ? editing.category : null;
   const [name, setName] = useState(category?.name ?? "");
@@ -325,7 +331,8 @@ function CategoryForm({
           throwOnError: true,
         });
       } else {
-        await adminCreateCategory({ body, throwOnError: true });
+        const { data } = await adminCreateCategory({ body, throwOnError: true });
+        onCreated?.(data.data.id);
       }
     },
     quietOnFieldErrors: true,
@@ -339,6 +346,9 @@ function CategoryForm({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    // Opened from the product form, this form sits in a portal inside it,
+    // and React submit events bubble through portals.
+    e.stopPropagation();
     const parsed = CategoryBodySchema.safeParse({
       name,
       ...(parent !== ROOT && { parent_id: parent }),
