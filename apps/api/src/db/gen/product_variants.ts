@@ -195,3 +195,18 @@ export interface SetVariantCombinationParams {
 export async function setVariantCombination(db: Queryable, p: SetVariantCombinationParams): Promise<void> {
   await db.query(setVariantCombinationSql, [p["option_combination_key"], p["id"], p["product_id"]]);
 }
+
+// The admin's selling price for a variant of the given product, alone (an
+// offer must stay below it: the CHECK refuses one that wouldn't).
+export const setVariantPriceSql = "UPDATE product_variants SET selling_price = $1\nWHERE id = $2 AND product_id = $3\nRETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at, blank_id";
+
+export interface SetVariantPriceParams {
+  selling_price: number;
+  id: string;
+  product_id: string;
+}
+
+export async function setVariantPrice(db: Queryable, p: SetVariantPriceParams): Promise<ProductVariant | null> {
+  const { rows } = await db.query(setVariantPriceSql, [p["selling_price"], p["id"], p["product_id"]]);
+  return (rows[0] as ProductVariant | undefined) ?? null;
+}

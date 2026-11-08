@@ -37,6 +37,7 @@ import { useAdminVariants } from "../queries";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { Panel } from "./panel";
 import { ActiveBadge } from "./status-badge";
+import { PriceInput } from "./price-input";
 import { StockInput } from "./stock-input";
 import { VariantDialog } from "./variant-dialog";
 
@@ -203,8 +204,13 @@ export function VariantsPanel({
                 <TableCell className="font-mono text-[0.625rem] text-muted-foreground">
                   {variant.sku ?? "—"}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  <VariantPrice variant={variant} />
+                <TableCell className="pr-8 text-right tabular-nums">
+                  <PriceInput
+                    productId={productId}
+                    variant={variant}
+                    label={variantLabel(variant)}
+                  />
+                  <OfferNote variant={variant} />
                 </TableCell>
                 <TableCell className="pr-8 text-right">
                   <StockInput
@@ -315,31 +321,24 @@ const endFormat = new Intl.DateTimeFormat("en-GB", {
   month: "short",
 });
 
-/** The price, with the offer if there is one; an ended offer is shown as such. */
-function VariantPrice({ variant }: { variant: AdminVariant }) {
-  if (variant.offer_price === null) return formatPrice(variant.selling_price);
+/** Under the price: its offer (or that the offer ended), if it has one. */
+function OfferNote({ variant }: { variant: AdminVariant }) {
+  if (variant.offer_price === null) return null;
   const ends = variant.offer_expires_at
     ? new Date(variant.offer_expires_at)
     : null;
   if (ends && ends <= new Date()) {
     return (
-      <>
-        {formatPrice(variant.selling_price)}
-        <span className="block text-[0.625rem] text-muted-foreground">
-          Offer ended
-        </span>
-      </>
+      <span className="block pr-2 text-[0.625rem] text-muted-foreground">
+        Offer ended
+      </span>
     );
   }
   return (
-    <>
+    <span className="block pr-2 text-[0.625rem] text-muted-foreground">
+      Offer{" "}
       <span className="text-clay">{formatPrice(variant.offer_price)}</span>
-      <span className="block text-[0.625rem] text-muted-foreground">
-        <span className="line-through">
-          {formatPrice(variant.selling_price)}
-        </span>
-        {ends && ` · until ${endFormat.format(ends)}`}
-      </span>
-    </>
+      {ends && ` until ${endFormat.format(ends)}`}
+    </span>
   );
 }

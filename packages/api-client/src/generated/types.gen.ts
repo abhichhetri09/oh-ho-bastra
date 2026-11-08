@@ -675,6 +675,13 @@ export type UpdateVariantBody = {
 };
 
 /**
+ * The selling price in cents; an offer on the variant must stay below it.
+ */
+export type SetPriceBody = {
+    selling_price: number;
+};
+
+/**
  * The counted stock (an absolute value, not a change).
  */
 export type SetStockBody = {
@@ -3891,6 +3898,50 @@ export type AdminUpdateVariantResponses = {
 };
 
 export type AdminUpdateVariantResponse = AdminUpdateVariantResponses[keyof AdminUpdateVariantResponses];
+
+export type AdminSetVariantPriceData = {
+    body: SetPriceBody;
+    path: {
+        productID: string;
+        variantID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/products/{productID}/variants/{variantID}/price';
+};
+
+export type AdminSetVariantPriceErrors = {
+    /**
+     * Invalid product or variant id (INVALID_PRODUCT_ID, INVALID_VARIANT_ID), invalid body, or not above the offer price (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such variant on this product (VARIANT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetVariantPriceError = AdminSetVariantPriceErrors[keyof AdminSetVariantPriceErrors];
+
+export type AdminSetVariantPriceResponses = {
+    /**
+     * Price updated
+     */
+    200: VariantResponse;
+};
+
+export type AdminSetVariantPriceResponse = AdminSetVariantPriceResponses[keyof AdminSetVariantPriceResponses];
 
 export type AdminSetVariantStockData = {
     body: SetStockBody;

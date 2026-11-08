@@ -66,3 +66,29 @@ describe("PUT variant: options", () => {
     expect(res.body.code).toBe("VARIANT_ALREADY_EXISTS");
   });
 });
+
+describe("PUT variant price", () => {
+  it("sets the price, and keeps it above an offer", async () => {
+    const admin = cookieFor(cfg, await makeUser(db, { role: "admin" }));
+    const { product, variant } = await makeVariant(db, { price: 2500 });
+    const url = `/api/v1/admin/products/${product.id}/variants/${variant.id}/price`;
+
+    let res = await http()
+      .put(url)
+      .set("Cookie", admin)
+      .send({ selling_price: 3400 });
+    expect(res.status).toBe(200);
+    expect(res.body.data.selling_price).toBe(3400);
+
+    await db.query(
+      "UPDATE product_variants SET offer_price = 3000 WHERE id = $1",
+      [variant.id],
+    );
+    res = await http()
+      .put(url)
+      .set("Cookie", admin)
+      .send({ selling_price: 2900 });
+    expect(res.status).toBe(400);
+    expect(res.body.errors[0].field).toBe("selling_price");
+  });
+});

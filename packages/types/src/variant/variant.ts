@@ -188,6 +188,15 @@ export const SetStockBodySchema = z
   });
 export type SetStockBody = z.infer<typeof SetStockBodySchema>;
 
+export const SetPriceBodySchema = z
+  .object({ selling_price: z.int().positive().max(100_000_000) })
+  .meta({
+    id: "SetPriceBody",
+    description:
+      "The selling price in cents; an offer on the variant must stay below it.",
+  });
+export type SetPriceBody = z.infer<typeof SetPriceBodySchema>;
+
 export const AdminVariantSchema = ProductVariantSchema.extend({
   options: z.array(VariantOptionSchema),
 }).meta({

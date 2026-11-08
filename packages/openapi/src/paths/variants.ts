@@ -79,6 +79,27 @@ export function registerVariantPaths() {
 
   operation({
     method: "put",
+    path: `${base}/{variantID}/price`,
+    operationId: "adminSetVariantPrice",
+    tag,
+    summary: "Set a variant's price",
+    description:
+      "Sets the selling price alone. An offer on the variant must stay below it.",
+    auth: "admin",
+    request: { params: variantParams, ...body(schemas.SetPriceBodySchema) },
+    success: {
+      status: 200,
+      description: "Price updated",
+      schema: schemas.VariantResponseSchema,
+    },
+    errors: {
+      400: `${invalidIds}, invalid body, or not above the offer price (VALIDATION_FAILED)`,
+      404: notFound,
+    },
+  });
+
+  operation({
+    method: "put",
     path: `${base}/{variantID}/stock`,
     operationId: "adminSetVariantStock",
     tag,

@@ -8,12 +8,14 @@ import {
   getProductByID,
   getProductVariant,
   setVariantCombination,
+  setVariantPrice,
   setVariantStock,
   updateVariant,
   upsertProductOption,
   upsertProductOptionValue,
 } from "../db/gen";
 import {
+  CHECK_VIOLATION,
   FOREIGN_KEY_VIOLATION,
   pgCode,
   pgConstraint,
@@ -26,7 +28,7 @@ import { pathUuid } from "../http/params";
 import { fail, internal, ok } from "../http/response";
 import type { Group } from "../http/router";
 import { parseBody } from "../http/validate";
-import { SetStockBodySchema } from "@repo/types";
+import { SetPriceBodySchema, SetStockBodySchema } from "@repo/types";
 import { generateSku } from "../lib/text";
 import { CreateVariantBody, UpdateVariantBody } from "./schemas";
 
@@ -335,6 +337,46 @@ export function adminVariantRoutes(variants: Group, deps: Deps) {
       return;
     }
     ok(res, 200, "Variant fetched", variant);
+  });
+
+  /**
+   * Sets a variant's selling price alone, so a table edit can't put back
+   * other fields from a stale row. An offer must stay below it.
+   */
+  variants.put("/:variantID/price", async (req, res) => {
+    const ids = variantIds(req, res);
+    if (!ids) return;
+    const body = parseBody(SetPriceBodySchema, req, res);
+    if (!body) return;
+    let variant;
+    try {
+      variant = await setVariantPrice(db, {
+        id: ids.variantId,
+        product_id: ids.productId,
+        selling_price: body.selling_price,
+      });
+    } catch (err) {
+      if (pgCode(err) !== CHECK_VIOLATION) throw err;
+      res.status(400).json({
+        success: false,
+        message: "The price must be above the variant's offer price",
+        code: "VALIDATION_FAILED",
+        errors: [
+          {
+            code: "OUT_OF_RANGE",
+            field: "selling_price",
+            message:
+              "Must be above the offer price; change or end the offer first",
+          },
+        ],
+      });
+      return;
+    }
+    if (!variant) {
+      fail(res, 404, "VARIANT_NOT_FOUND", "Variant not found");
+      return;
+    }
+    ok(res, 200, "Price updated", variant);
   });
 
   /**

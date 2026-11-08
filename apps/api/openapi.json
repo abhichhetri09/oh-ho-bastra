@@ -2049,6 +2049,20 @@
         ],
         "description": "The SKU is fixed at creation; stock has its own endpoint. A blank_id left out unlinks the blank (this replaces the variant)."
       },
+      "SetPriceBody": {
+        "type": "object",
+        "properties": {
+          "selling_price": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 100000000
+          }
+        },
+        "required": [
+          "selling_price"
+        ],
+        "description": "The selling price in cents; an offer on the variant must stay below it."
+      },
       "SetStockBody": {
         "type": "object",
         "properties": {
@@ -9951,6 +9965,113 @@
           },
           "400": {
             "description": "Invalid product or variant id (INVALID_PRODUCT_ID, INVALID_VARIANT_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such variant on this product (VARIANT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/products/{productID}/variants/{variantID}/price": {
+      "put": {
+        "operationId": "adminSetVariantPrice",
+        "tags": [
+          "Variants"
+        ],
+        "summary": "Set a variant's price",
+        "description": "Sets the selling price alone. An offer on the variant must stay below it.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "productID",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "variantID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPriceBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Price updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VariantResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product or variant id (INVALID_PRODUCT_ID, INVALID_VARIANT_ID), invalid body, or not above the offer price (VALIDATION_FAILED)",
             "content": {
               "application/json": {
                 "schema": {

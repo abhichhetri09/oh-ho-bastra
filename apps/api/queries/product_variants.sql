@@ -124,3 +124,10 @@ FROM updated;
 -- the same transaction); the SKU stays as it was.
 UPDATE product_variants SET option_combination_key = @option_combination_key
 WHERE id = @id AND product_id = @product_id;
+
+-- name: SetVariantPrice :one
+-- The admin's selling price for a variant of the given product, alone (an
+-- offer must stay below it: the CHECK refuses one that wouldn't).
+UPDATE product_variants SET selling_price = @selling_price
+WHERE id = @id AND product_id = @product_id
+RETURNING *;
