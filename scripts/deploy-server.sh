@@ -61,15 +61,6 @@ rollback() {
   exit 1
 }
 
-# Before the restart: a failed migration leaves the running services on the
-# old code. The api's migrations are idempotent and take an advisory lock.
-echo "==> Migrating database"
-NODE=$(command -v node || command -v bun)
-if ! (set -a; . ./.env.production; set +a; cd apps/api && "$NODE" dist/migrate.js up); then
-  echo "!! Migration failed; services were not restarted"
-  rollback
-fi
-
 echo "==> Restarting services"
 restart
 

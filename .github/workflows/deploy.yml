@@ -1,8 +1,9 @@
 name: Deploy
 
-# Builds on GitHub (the t3.micro has 1 GB of RAM, next build needs ~2 GB),
-# then copies the finished build to the server, which only swaps it in and
-# restarts the ohhobastra-api and ohhobastra-web services.
+# 1. Migrate: on the server, apply database migrations for this commit.
+# 2. Deploy: build on GitHub (the t3.micro has 1 GB of RAM, next build needs
+#    ~2 GB), copy the build to the server, swap it in and restart the
+#    ohhobastra-api and ohhobastra-web services.
 
 on:
   push:
@@ -14,12 +15,48 @@ concurrency:
   group: production
   cancel-in-progress: false
 
+env:
+  SSH_OPTS: -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o StrictHostKeyChecking=yes
+
 jobs:
+  migrate:
+    name: Migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Set up SSH
+        run: &ssh_setup |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          echo "IdentityFile ~/.ssh/id_deploy" > ~/.ssh/config
+          for i in 1 2 3 4 5 6; do
+            if ssh-keyscan -T 15 -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null \
+               && [ -s ~/.ssh/known_hosts ]; then
+              exit 0
+            fi
+            echo "Server not answering, retry $i/6..."
+            sleep 20
+          done
+          echo "::error::Could not reach the server over SSH after 6 tries"
+          exit 1
+
+      # Uses DATABASE_URL from the server's own .env.production.
+      - name: Apply migrations
+        env:
+          APP_DIR: ${{ secrets.EC2_APP_DIR }}
+        run: |
+          APP_DIR=$(printf '%s' "$APP_DIR" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          [ -n "$APP_DIR" ] || { echo "::error::EC2_APP_DIR secret is not set"; exit 1; }
+          ssh $SSH_OPTS "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
+            "cd '$APP_DIR' && git fetch --quiet origin && git checkout --quiet --force ${{ github.sha }} \
+             && bash scripts/migrate-server.sh"
+
   deploy:
+    name: Deploy
+    needs: migrate
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      SSH_OPTS: -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o StrictHostKeyChecking=yes
     steps:
       - uses: actions/checkout@v4
 
@@ -39,7 +76,7 @@ jobs:
 
       # Next.js bakes these in at build time. WEB_ENV_PRODUCTION holds them as
       # KEY=value lines: NEXT_PUBLIC_API_URL and FRONTEND_URL are required;
-      # STORE_THEME, DEMO_THEME_PICKER and INTERNAL_API_URL are optional.
+      # STORE_THEME and DEMO_THEME_PICKER are optional.
       - name: Build web
         env:
           WEB_ENV: ${{ secrets.WEB_ENV_PRODUCTION }}
@@ -57,21 +94,7 @@ jobs:
         run: tar -czf build.tgz --exclude=apps/web/.next/cache apps/api/dist apps/web/.next
 
       - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          echo "IdentityFile ~/.ssh/id_deploy" > ~/.ssh/config
-          for i in 1 2 3 4 5 6; do
-            if ssh-keyscan -T 15 -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null \
-               && [ -s ~/.ssh/known_hosts ]; then
-              exit 0
-            fi
-            echo "Server not answering, retry $i/6..."
-            sleep 20
-          done
-          echo "::error::Could not reach the server over SSH after 6 tries"
-          exit 1
+        run: *ssh_setup
 
       - name: Copy build
         run: scp $SSH_OPTS build.tgz "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/ohhobastra-build.tgz"
