@@ -48,6 +48,28 @@ for d in "${BUILT[@]}"; do
   mv "$STAGE/$d" "$d"
 done
 
+rollback() {
+  echo "==> Rolling back to previous build"
+  for d in "${BUILT[@]}"; do
+    if [ -e "$d.previous" ]; then
+      rm -rf "$d"
+      mv "$d.previous" "$d"
+    fi
+  done
+  restart
+  healthy && echo "==> Previous build is back up" || echo "!! Previous build is not healthy either"
+  exit 1
+}
+
+# Before the restart: a failed migration leaves the running services on the
+# old code. The api's migrations are idempotent and take an advisory lock.
+echo "==> Migrating database"
+NODE=$(command -v node || command -v bun)
+if ! (set -a; . ./.env.production; set +a; cd apps/api && "$NODE" dist/migrate.js up); then
+  echo "!! Migration failed; services were not restarted"
+  rollback
+fi
+
 echo "==> Restarting services"
 restart
 
@@ -59,14 +81,4 @@ fi
 echo "!! Health check failed, logs:"
 sudo journalctl -u ohhobastra-api -n 60 --no-pager || true
 sudo journalctl -u ohhobastra-web -n 60 --no-pager || true
-
-echo "==> Rolling back to previous build"
-for d in "${BUILT[@]}"; do
-  if [ -e "$d.previous" ]; then
-    rm -rf "$d"
-    mv "$d.previous" "$d"
-  fi
-done
-restart
-healthy && echo "==> Previous build is back up" || echo "!! Previous build is not healthy either"
-exit 1
+rollback
