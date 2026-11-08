@@ -107,6 +107,12 @@
           "INVALID_VARIANT_ID",
           "VARIANT_ALREADY_EXISTS",
           "DEFAULT_VARIANT_EXISTS",
+          "BLANK_NOT_FOUND",
+          "INVALID_BLANK_ID",
+          "BLANK_ALREADY_EXISTS",
+          "ATTRIBUTE_NOT_FOUND",
+          "INVALID_ATTRIBUTE_ID",
+          "ATTRIBUTE_ALREADY_EXISTS",
           "CATEGORY_NOT_FOUND",
           "INVALID_CATEGORY_ID",
           "CATEGORY_ALREADY_EXISTS",
@@ -813,6 +819,56 @@
         ],
         "description": "color options render as swatches"
       },
+      "RecommendationsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Recommendations"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "Recommendations": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/RecommendationSource"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductWithPrice"
+            },
+            "description": "Up to 4, none of the given ones, all in stock"
+          }
+        },
+        "required": [
+          "source",
+          "products"
+        ]
+      },
+      "RecommendationSource": {
+        "type": "string",
+        "enum": [
+          "bought_together",
+          "similar",
+          "featured"
+        ],
+        "description": "bought_together: in the same paid orders (\"People also bought\"); similar: the same categories; featured: the store's picks"
+      },
       "ProductPageResponse": {
         "type": "object",
         "properties": {
@@ -1062,6 +1118,14 @@
             "items": {
               "$ref": "#/components/schemas/VariantOption"
             }
+          },
+          "blank_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The blank it is printed on: variants on one blank share its stock"
           }
         },
         "required": [
@@ -1352,6 +1416,14 @@
             ],
             "format": "date-time"
           },
+          "blank_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The blank it is printed on, whose stock it shares; null keeps its own stock."
+          },
           "options": {
             "type": "array",
             "items": {
@@ -1374,6 +1446,7 @@
           "updated_at",
           "option_combination_key",
           "offer_expires_at",
+          "blank_id",
           "options"
         ],
         "description": "A variant, active or not, with its options."
@@ -1775,6 +1848,14 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "blank_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The blank it is printed on, whose stock it shares; null keeps its own stock."
           }
         },
         "required": [
@@ -1791,7 +1872,8 @@
           "created_at",
           "updated_at",
           "option_combination_key",
-          "offer_expires_at"
+          "offer_expires_at",
+          "blank_id"
         ]
       },
       "CreateVariantBody": {
@@ -1838,10 +1920,19 @@
           "is_active": {
             "type": "boolean"
           },
+          "blank_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock."
+          },
           "stock": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 10000
+            "maximum": 10000,
+            "description": "Required without a blank; with one, the blank's is used."
           },
           "properties": {
             "type": "array",
@@ -1857,8 +1948,7 @@
           "image_public_ids",
           "selling_price",
           "is_default",
-          "is_active",
-          "stock"
+          "is_active"
         ],
         "description": "Prices are integer cents."
       },
@@ -1932,6 +2022,22 @@
           },
           "is_active": {
             "type": "boolean"
+          },
+          "blank_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock."
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantProperty"
+            },
+            "maxItems": 10,
+            "description": "New option values; omit to keep them. Another variant of the product with the same values is a 409."
           }
         },
         "required": [
@@ -1941,7 +2047,7 @@
           "is_default",
           "is_active"
         ],
-        "description": "The SKU and option combination are fixed at creation; stock has its own endpoint."
+        "description": "The SKU is fixed at creation; stock has its own endpoint. A blank_id left out unlinks the blank (this replaces the variant)."
       },
       "SetStockBody": {
         "type": "object",
@@ -2171,9 +2277,18 @@
               "null"
             ]
           },
+          "blank_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The blank it is printed on; lines on one blank share its stock"
+          },
           "stock": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "What is left for this line: on a blank, the bag's other lines on it are taken off"
           },
           "image": {
             "type": "string",
@@ -6241,6 +6356,288 @@
           "is_active"
         ]
       },
+      "BlankListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminBlank"
+            },
+            "description": "By name"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "AdminBlank": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "variant_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Variants drawing on it"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "stock",
+          "created_at",
+          "updated_at",
+          "variant_count"
+        ]
+      },
+      "BlankResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Blank"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "Blank": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "stock",
+          "created_at",
+          "updated_at"
+        ],
+        "description": "A plain garment whose stock its variants share (printed to order)."
+      },
+      "BlankBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "name",
+          "stock"
+        ],
+        "description": "The blank's name (unique, ignoring case) and its counted stock (an absolute value), which every variant on it takes."
+      },
+      "AttributeListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attribute"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "Attribute": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/OptionType"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttributeValue"
+            },
+            "description": "In the admin's order"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "values"
+        ],
+        "description": "An option list, like Size."
+      },
+      "AttributeValue": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "value": {
+            "type": "string"
+          },
+          "hex": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^#[0-9a-f]{6}$",
+            "description": "A colour's swatch; null for text"
+          }
+        },
+        "required": [
+          "id",
+          "value",
+          "hex"
+        ]
+      },
+      "AttributeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Attribute"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "AttributeBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 20
+          },
+          "type": {
+            "$ref": "#/components/schemas/OptionType"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20
+                },
+                "hex": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^#[0-9a-f]{6}$"
+                }
+              },
+              "required": [
+                "value"
+              ]
+            },
+            "maxItems": 100,
+            "description": "The whole list, in order (it replaces the old one)"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "values"
+        ],
+        "description": "The name (unique, ignoring case), type and every value in order."
+      },
       "ReferralOfferResponse": {
         "type": "object",
         "properties": {
@@ -8198,6 +8595,61 @@
         }
       }
     },
+    "/api/v1/recommendations": {
+      "get": {
+        "operationId": "getRecommendations",
+        "tags": [
+          "Products"
+        ],
+        "summary": "Suggestions for a bag",
+        "description": "Up to 4 in-stock products to suggest next to the given ones: those bought in the same paid orders, else ones in the same categories, else featured ones (with no ids, featured). `source` says which, so the page can title them.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 740,
+              "description": "Comma-separated product ids (at most 20), e.g. the bag's"
+            },
+            "required": true,
+            "description": "Comma-separated product ids (at most 20), e.g. the bag's",
+            "name": "product_ids",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recommendations fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "More than 20 ids, or one isn't a uuid (INVALID_QUERY_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/products": {
       "get": {
         "operationId": "listProducts",
@@ -8770,7 +9222,7 @@
             }
           },
           "404": {
-            "description": "Product not found (PRODUCT_NOT_FOUND)",
+            "description": "Product or blank not found (PRODUCT_NOT_FOUND, BLANK_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9346,7 +9798,7 @@
           "Variants"
         ],
         "summary": "Update a variant",
-        "description": "Replaces stock, images, prices and flags. The SKU and option combination never change.",
+        "description": "Replaces images, prices, flags and the blank it is printed on. The SKU and option combination never change; stock has its own endpoint. Linking a blank takes the blank's stock; unlinking keeps the count as the variant's own.",
         "security": [
           {
             "accessTokenCookie": []
@@ -9424,7 +9876,7 @@
             }
           },
           "404": {
-            "description": "No such variant on this product (VARIANT_NOT_FOUND)",
+            "description": "No such variant on this product (VARIANT_NOT_FOUND), or no such blank (BLANK_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {
@@ -9557,7 +10009,7 @@
           "Variants"
         ],
         "summary": "Set a variant's stock",
-        "description": "Sets the counted stock (an absolute value, so retrying is harmless).",
+        "description": "Sets the counted stock (an absolute value, so retrying is harmless). On a variant with a blank it counts the blank, for every variant on it.",
         "security": [
           {
             "accessTokenCookie": []
@@ -14513,6 +14965,676 @@
           },
           "404": {
             "description": "No such coupon (COUPON_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/blanks": {
+      "get": {
+        "operationId": "adminListBlanks",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Blanks",
+        "description": "Plain garments printed to order, by name, each with how many variants share its stock.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Blanks fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlankListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateBlank",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create a blank",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlankBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Blank created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlankResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another blank has the name, ignoring case (BLANK_ALREADY_EXISTS, with the field in errors)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/blanks/{blankID}": {
+      "put": {
+        "operationId": "adminUpdateBlank",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Update a blank",
+        "description": "Renames it and sets its counted stock (an absolute value), which every variant on it takes.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "blankID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlankBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Blank updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlankResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id or body (INVALID_BLANK_ID, VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such blank (BLANK_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another blank has the name, ignoring case (BLANK_ALREADY_EXISTS, with the field in errors)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "adminDeleteBlank",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Delete a blank",
+        "description": "Its variants keep the stock they had, as their own.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "blankID",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Blank deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id (INVALID_BLANK_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such blank (BLANK_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/attributes": {
+      "get": {
+        "operationId": "adminListAttributes",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Option lists",
+        "description": "The store's option lists (Size, Colour…) with their values, in order; variant options are picked from them.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Option lists fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttributeListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateAttribute",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create an option list",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Option list created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttributeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another option list has the name, ignoring case (ATTRIBUTE_ALREADY_EXISTS, with the field in errors)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/attributes/{attributeID}": {
+      "put": {
+        "operationId": "adminUpdateAttribute",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Save an option list",
+        "description": "Renames it and replaces its values, in order. Variants already made keep their own options.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "attributeID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributeBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Option list saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttributeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id or body (INVALID_ATTRIBUTE_ID, VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such option list (ATTRIBUTE_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another option list has the name, ignoring case (ATTRIBUTE_ALREADY_EXISTS, with the field in errors)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "adminDeleteAttribute",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Delete an option list",
+        "description": "Variants made from it keep their options.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "attributeID",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Option list deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id (INVALID_ATTRIBUTE_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such option list (ATTRIBUTE_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {

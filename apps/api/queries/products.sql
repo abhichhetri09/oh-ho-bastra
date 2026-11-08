@@ -217,7 +217,10 @@ SELECT
         JOIN product_option_values pov ON pov.id = vov.option_value_id
         JOIN product_options po ON po.id = pov.option_id
         WHERE vov.variant_id = sv.id
-    ) AS options
+    ) AS options,
+    -- variants on one blank share its stock (the page counts the bag's
+    -- lines on it together)
+    (SELECT pv.blank_id FROM product_variants pv WHERE pv.id = sv.id) AS blank_id
 FROM storefront_variants sv
 JOIN products p ON p.id = sv.product_id
 WHERE p.slug = $1

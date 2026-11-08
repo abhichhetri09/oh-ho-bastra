@@ -246,6 +246,7 @@ describe("GET /cart", () => {
           product_name: "Tee",
           product_slug: tee.slug,
           sku: expect.stringMatching(/^SKU-/),
+          blank_id: null,
           stock: 1,
           image: "https://img/p.png",
           selling_price: 2000,

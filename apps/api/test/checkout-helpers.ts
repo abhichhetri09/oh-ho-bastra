@@ -194,6 +194,7 @@ export async function makeVariant(
     is_default: true,
     is_active: true,
     option_combination_key: randomUUID(),
+    blank_id: null,
   });
   for (const [optName, value] of fields.options ?? []) {
     const option = await upsertProductOption(db, {

@@ -3,7 +3,8 @@
 import type { Queryable } from "../queryable";
 import type { ProductVariant } from "./models";
 
-export const createProductVariantSql = "INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\nRETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at";
+// With a blank, the variant takes the blank's stock (the trigger sets it).
+export const createProductVariantSql = "INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key, blank_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)\nRETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at, blank_id";
 
 export interface CreateProductVariantParams {
   product_id: string;
@@ -17,14 +18,15 @@ export interface CreateProductVariantParams {
   is_default: boolean;
   is_active: boolean;
   option_combination_key: string;
+  blank_id: string | null;
 }
 
 export async function createProductVariant(db: Queryable, p: CreateProductVariantParams): Promise<ProductVariant | null> {
-  const { rows } = await db.query(createProductVariantSql, [p["product_id"], p["sku"], p["stock"], p["images"], p["image_public_ids"], p["selling_price"], p["offer_price"], p["offer_expires_at"], p["is_default"], p["is_active"], p["option_combination_key"]]);
+  const { rows } = await db.query(createProductVariantSql, [p["product_id"], p["sku"], p["stock"], p["images"], p["image_public_ids"], p["selling_price"], p["offer_price"], p["offer_expires_at"], p["is_default"], p["is_active"], p["option_combination_key"], p["blank_id"]]);
   return (rows[0] as ProductVariant | undefined) ?? null;
 }
 
-export const getVariantsByProductSql = "SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants\nWHERE product_id = $1 AND is_active = TRUE\nORDER BY is_default DESC, created_at ASC";
+export const getVariantsByProductSql = "SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at, blank_id FROM product_variants\nWHERE product_id = $1 AND is_active = TRUE\nORDER BY is_default DESC, created_at ASC";
 
 export async function getVariantsByProduct(db: Queryable, product_id: string): Promise<ProductVariant[]> {
   const { rows } = await db.query(getVariantsByProductSql, [product_id]);
@@ -33,7 +35,7 @@ export async function getVariantsByProduct(db: Queryable, product_id: string): P
 
 // Admin routes address a variant through its product, so a variant id from
 // another product is not found.
-export const getProductVariantSql = "SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants\nWHERE id = $1 AND product_id = $2";
+export const getProductVariantSql = "SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at, blank_id FROM product_variants\nWHERE id = $1 AND product_id = $2";
 
 export interface GetProductVariantParams {
   id: string;
@@ -56,7 +58,7 @@ export async function variantSKUExists(db: Queryable, sku: string | null): Promi
   return (rows[0] as VariantSKUExistsRow | undefined) ?? null;
 }
 
-export const getDefaultVariantSql = "SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants\nWHERE product_id = $1 AND is_default = TRUE";
+export const getDefaultVariantSql = "SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at, blank_id FROM product_variants\nWHERE product_id = $1 AND is_default = TRUE";
 
 export async function getDefaultVariant(db: Queryable, product_id: string): Promise<ProductVariant | null> {
   const { rows } = await db.query(getDefaultVariantSql, [product_id]);
@@ -64,7 +66,8 @@ export async function getDefaultVariant(db: Queryable, product_id: string): Prom
 }
 
 // Admin stock count: an absolute value, for a variant of the given product.
-export const setVariantStockSql = "UPDATE product_variants SET stock = $1\nWHERE id = $2 AND product_id = $3\nRETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at";
+// On a variant with a blank it counts the blank, for all its variants.
+export const setVariantStockSql = "UPDATE product_variants SET stock = $1\nWHERE id = $2 AND product_id = $3\nRETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at, blank_id";
 
 export interface SetVariantStockParams {
   stock: number;
@@ -79,10 +82,12 @@ export async function setVariantStock(db: Queryable, p: SetVariantStockParams): 
 
 // sku and option_combination_key are set at creation and never change here,
 // and stock has its own write (SetVariantStock): a form opened before an
-// order took stock would otherwise put the old count back.
-export const updateVariantSql = "UPDATE product_variants SET\n    images = $1,\n    image_public_ids = $2,\n    selling_price = $3,\n    offer_price = $4,\n    offer_expires_at = $5,\n    is_default = $6,\n    is_active = $7\nWHERE id = $8 AND product_id = $9\nRETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at";
+// order took stock would otherwise put the old count back. Linking a blank
+// takes its count; unlinking keeps the count as the variant's own.
+export const updateVariantSql = "UPDATE product_variants SET\n    blank_id = $1,\n    images = $2,\n    image_public_ids = $3,\n    selling_price = $4,\n    offer_price = $5,\n    offer_expires_at = $6,\n    is_default = $7,\n    is_active = $8\nWHERE id = $9 AND product_id = $10\nRETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at, blank_id";
 
 export interface UpdateVariantParams {
+  blank_id: string | null;
   images: string[];
   image_public_ids: string[];
   selling_price: number;
@@ -95,7 +100,7 @@ export interface UpdateVariantParams {
 }
 
 export async function updateVariant(db: Queryable, p: UpdateVariantParams): Promise<ProductVariant | null> {
-  const { rows } = await db.query(updateVariantSql, [p["images"], p["image_public_ids"], p["selling_price"], p["offer_price"], p["offer_expires_at"], p["is_default"], p["is_active"], p["id"], p["product_id"]]);
+  const { rows } = await db.query(updateVariantSql, [p["blank_id"], p["images"], p["image_public_ids"], p["selling_price"], p["offer_price"], p["offer_expires_at"], p["is_default"], p["is_active"], p["id"], p["product_id"]]);
   return (rows[0] as ProductVariant | undefined) ?? null;
 }
 
@@ -175,4 +180,18 @@ export interface EndVariantsSaleRow {
 export async function endVariantsSale(db: Queryable, p: EndVariantsSaleParams): Promise<EndVariantsSaleRow | null> {
   const { rows } = await db.query(endVariantsSaleSql, [p["category_id"], p["include_subcategories"], p["all_products"], p["product_ids"]]);
   return (rows[0] as EndVariantsSaleRow | undefined) ?? null;
+}
+
+// New option values for a variant (its links are replaced by the caller in
+// the same transaction); the SKU stays as it was.
+export const setVariantCombinationSql = "UPDATE product_variants SET option_combination_key = $1\nWHERE id = $2 AND product_id = $3";
+
+export interface SetVariantCombinationParams {
+  option_combination_key: string;
+  id: string;
+  product_id: string;
+}
+
+export async function setVariantCombination(db: Queryable, p: SetVariantCombinationParams): Promise<void> {
+  await db.query(setVariantCombinationSql, [p["option_combination_key"], p["id"], p["product_id"]]);
 }

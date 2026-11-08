@@ -4,14 +4,23 @@ import {
   createProductVariant,
   createVariantOptionValue,
   deleteVariant,
+  deleteVariantOptionValues,
   getProductByID,
   getProductVariant,
+  setVariantCombination,
   setVariantStock,
   updateVariant,
   upsertProductOption,
   upsertProductOptionValue,
 } from "../db/gen";
-import { pgCode, pgConstraint, UNIQUE_VIOLATION, withTx } from "../db/pool";
+import {
+  FOREIGN_KEY_VIOLATION,
+  pgCode,
+  pgConstraint,
+  UNIQUE_VIOLATION,
+  withTx,
+  type Queryable,
+} from "../db/pool";
 import type { Deps } from "../deps";
 import { pathUuid } from "../http/params";
 import { fail, internal, ok } from "../http/response";
@@ -27,6 +36,8 @@ import { CreateVariantBody, UpdateVariantBody } from "./schemas";
 /** Unique constraints on product_variants (migrations/000006). */
 const UNIQUE_COMBINATION = "uq_variant_combination";
 const UNIQUE_DEFAULT_VARIANT = "unique_default_product_variant";
+/** product_variants.blank_id's foreign key (migrations/000038). */
+const BLANK_FK = "product_variants_blank_id_fkey";
 
 /** The :productID and :variantID path parameters, or null after a 400. */
 function variantIds(req: Request, res: Response) {
@@ -77,6 +88,10 @@ class Reply {
 
 /** A variant insert/update failure: the unique indexes are 409s. */
 function variantError(req: Request, res: Response, err: unknown, msg: string) {
+  if (pgCode(err) === FOREIGN_KEY_VIOLATION && pgConstraint(err) === BLANK_FK) {
+    fail(res, 404, "BLANK_NOT_FOUND", "Blank not found");
+    return;
+  }
   if (pgCode(err) === UNIQUE_VIOLATION) {
     switch (pgConstraint(err)) {
       case UNIQUE_COMBINATION:
@@ -121,6 +136,35 @@ async function replying(fn: () => Promise<void>) {
   } catch (err) {
     if (err instanceof Reply) err.send();
     else throw err;
+  }
+}
+
+/**
+ * Links a variant to its option values, creating the product's options and
+ * values it lacks (they are shared by the product's variants).
+ */
+async function linkOptions(
+  tx: Queryable,
+  productId: string,
+  variantId: string,
+  props: { name: string; value: string; type: "text" | "color" }[],
+) {
+  for (const prop of props) {
+    const option = await upsertProductOption(tx, {
+      product_id: productId,
+      name: prop.name,
+      type: prop.type,
+    });
+    if (!option) throw new Error("upsert product option returned no row");
+    const value = await upsertProductOptionValue(tx, {
+      option_id: option.id,
+      value: prop.value,
+    });
+    if (!value) throw new Error("upsert option value returned no row");
+    await createVariantOptionValue(tx, {
+      variant_id: variantId,
+      option_value_id: value.id,
+    });
   }
 }
 
@@ -172,7 +216,9 @@ export function adminVariantRoutes(variants: Group, deps: Deps) {
             createProductVariant(tx, {
               product_id: productId,
               sku,
-              stock: body.stock,
+              // With a blank the trigger sets the blank's stock instead.
+              stock: body.stock ?? 0,
+              blank_id: body.blank_id ?? null,
               images: body.images,
               image_public_ids: body.image_public_ids,
               selling_price: body.selling_price,
@@ -188,24 +234,7 @@ export function adminVariantRoutes(variants: Group, deps: Deps) {
         );
         if (!created) throw new Error("create variant returned no row");
 
-        // Upserts: options and values are shared by the product's variants.
-        for (const prop of props) {
-          const option = await upsertProductOption(tx, {
-            product_id: product.id,
-            name: prop.name,
-            type: prop.type,
-          });
-          if (!option) throw new Error("upsert product option returned no row");
-          const value = await upsertProductOptionValue(tx, {
-            option_id: option.id,
-            value: prop.value,
-          });
-          if (!value) throw new Error("upsert option value returned no row");
-          await createVariantOptionValue(tx, {
-            variant_id: created.id,
-            option_value_id: value.id,
-          });
-        }
+        await linkOptions(tx, product.id, created.id, props);
         return created;
       });
       ok(res, 201, "Variant created", variant);
@@ -213,8 +242,9 @@ export function adminVariantRoutes(variants: Group, deps: Deps) {
   });
 
   /**
-   * Replaces a variant's images, prices and flags. Its SKU and option
-   * combination are fixed at creation, and its stock has its own endpoint.
+   * Replaces a variant's images, prices, flags and blank, and its option
+   * values when given. Its SKU is fixed at creation, and its stock has its
+   * own endpoint.
    * Making it the default takes that from the current default in the same
    * transaction.
    */
@@ -240,6 +270,7 @@ export function adminVariantRoutes(variants: Group, deps: Deps) {
             updateVariant(tx, {
               id: ids.variantId,
               product_id: ids.productId,
+              blank_id: body.blank_id ?? null,
               images: body.images,
               image_public_ids: body.image_public_ids,
               selling_price: body.selling_price,
@@ -256,6 +287,21 @@ export function adminVariantRoutes(variants: Group, deps: Deps) {
           throw new Reply(() =>
             fail(res, 404, "VARIANT_NOT_FOUND", "Variant not found"),
           );
+        // New option values: the combination key (unique per product, so a
+        // clash with another variant is a 409) and the links are replaced.
+        if (body.properties) {
+          const props = body.properties;
+          await variantWrite(req, res, "failed to update variant", () =>
+            setVariantCombination(tx, {
+              id: row.id,
+              product_id: ids.productId,
+              option_combination_key: combinationKey(props),
+            }),
+          );
+          await deleteVariantOptionValues(tx, row.id);
+          await linkOptions(tx, ids.productId, row.id, props);
+          return { ...row, option_combination_key: combinationKey(props) };
+        }
         return row;
       });
       ok(res, 200, "Variant updated", updated);
@@ -291,7 +337,11 @@ export function adminVariantRoutes(variants: Group, deps: Deps) {
     ok(res, 200, "Variant fetched", variant);
   });
 
-  /** Sets a variant's stock to a counted value (not a delta, so retrying is harmless). */
+  /**
+   * Sets a variant's stock to a counted value (not a delta, so retrying is
+   * harmless). On a variant with a blank this counts the blank, for every
+   * variant on it.
+   */
   variants.put("/:variantID/stock", async (req, res) => {
     const ids = variantIds(req, res);
     if (!ids) return;

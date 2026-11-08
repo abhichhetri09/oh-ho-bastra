@@ -1,6 +1,7 @@
 -- name: CreateProductVariant :one
-INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+-- With a blank, the variant takes the blank's stock (the trigger sets it).
+INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key, blank_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING *;
 
 -- name: GetVariantsByProduct :many
@@ -25,6 +26,7 @@ WHERE product_id = $1 AND is_default = TRUE;
 
 -- name: SetVariantStock :one
 -- Admin stock count: an absolute value, for a variant of the given product.
+-- On a variant with a blank it counts the blank, for all its variants.
 UPDATE product_variants SET stock = @stock
 WHERE id = @id AND product_id = @product_id
 RETURNING *;
@@ -32,8 +34,10 @@ RETURNING *;
 -- name: UpdateVariant :one
 -- sku and option_combination_key are set at creation and never change here,
 -- and stock has its own write (SetVariantStock): a form opened before an
--- order took stock would otherwise put the old count back.
+-- order took stock would otherwise put the old count back. Linking a blank
+-- takes its count; unlinking keeps the count as the variant's own.
 UPDATE product_variants SET
+    blank_id = sqlc.narg(blank_id),
     images = @images,
     image_public_ids = @image_public_ids,
     selling_price = @selling_price,
@@ -114,3 +118,9 @@ updated AS (
 )
 SELECT COUNT(DISTINCT product_id)::int AS products, COUNT(*)::int AS variants
 FROM updated;
+
+-- name: SetVariantCombination :exec
+-- New option values for a variant (its links are replaced by the caller in
+-- the same transaction); the SKU stays as it was.
+UPDATE product_variants SET option_combination_key = @option_combination_key
+WHERE id = @id AND product_id = @product_id;

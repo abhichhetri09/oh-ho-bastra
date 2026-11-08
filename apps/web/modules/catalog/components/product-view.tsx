@@ -86,9 +86,17 @@ export function ProductView({
   // Stock is only taken at checkout, so what's already in the bag counts
   // against it here: with all of it bagged, there's nothing left to add.
   const bag = useCart().data;
-  const inBag =
-    bag?.items.find((l) => l.variant_id === (variant?.id ?? product.variant_id))
-      ?.quantity ?? 0;
+  // A variant printed on a blank shares its stock with every other variant
+  // on it, so the bag's lines on that blank all count.
+  const shownId = variant?.id ?? product.variant_id;
+  const blankId = variant?.blank_id ?? null;
+  const inBag = (bag?.items ?? [])
+    .filter(
+      (l) =>
+        l.variant_id === shownId ||
+        (blankId !== null && l.blank_id === blankId),
+    )
+    .reduce((sum, l) => sum + l.quantity, 0);
   const groups = optionGroups(variants);
   // The size guide shows wherever there's a size to pick.
   const hasSizes = groups.some((g) => g.name.toLowerCase() === "size");

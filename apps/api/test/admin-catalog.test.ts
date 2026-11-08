@@ -67,6 +67,7 @@ const makeVariant = (
     is_default: false,
     is_active: true,
     option_combination_key: "",
+    blank_id: null,
     ...over,
   }).then((v) => v!);
 

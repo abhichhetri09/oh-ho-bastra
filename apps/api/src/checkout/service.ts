@@ -15,6 +15,7 @@ import {
   listExpiredPendingOrders,
   listPendingOrdersForUser,
   lockAddresses,
+  lockBlanksOfVariants,
   lockVariants,
   recordStripeEvent,
   setOrderSession,
@@ -559,13 +560,27 @@ function discountName(order: Order): string {
   return off === null ? "Store credit" : `${off} + store credit`;
 }
 
-/** Checks every line against the locked variants and takes the stock. */
+/**
+ * Checks every line against the locked variants and takes the stock. Lines
+ * on one blank (two prints on a Black / M tee) share its count, so they are
+ * checked together against the blank. Blanks are locked before variants, the
+ * order an admin's blank count takes them in.
+ */
 async function reserve(tx: Queryable, lines: GetCartLinesRow[]): Promise<void> {
   const ids = lines.map((l) => l.variant_id);
+  const blanks = new Map(
+    (await lockBlanksOfVariants(tx, ids)).map((b) => [b.id, b.stock]),
+  );
   const stock = new Map((await lockVariants(tx, ids)).map((v) => [v.id, v]));
+  const wanted = new Map<string, number>();
   for (const line of lines) {
     const v = stock.get(line.variant_id);
     if (!v || !v.available || v.stock < line.quantity) throw errCartHasIssues;
+    if (v.blank_id !== null) {
+      const total = (wanted.get(v.blank_id) ?? 0) + line.quantity;
+      if (total > (blanks.get(v.blank_id) ?? 0)) throw errCartHasIssues;
+      wanted.set(v.blank_id, total);
+    }
   }
   await takeStock(tx, { ids, quantities: lines.map((l) => l.quantity) });
 }

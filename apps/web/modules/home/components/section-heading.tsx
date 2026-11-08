@@ -26,7 +26,9 @@ export function SectionHeading({
       <div className="space-y-3">
         {eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <div className="flex items-center gap-5">
-          <h2 className="display text-4xl sm:text-5xl lg:text-6xl">{title}</h2>
+          <h2 className="display text-4xl sm:text-5xl lg:text-6xl">
+            <Emphasised title={title} />
+          </h2>
           <span aria-hidden className="stripes" />
         </div>
       </div>
@@ -40,5 +42,21 @@ export function SectionHeading({
         </Link>
       )}
     </Reveal>
+  );
+}
+
+/**
+ * The title with its last word in the theme's emphasis, as the hero's last
+ * line is: an accent colour (and italic) in themes that set one, plain in
+ * the rest.
+ */
+function Emphasised({ title }: { title: string }) {
+  const cut = title.trimEnd().lastIndexOf(" ");
+  if (cut === -1) return <em>{title}</em>;
+  return (
+    <>
+      {title.slice(0, cut + 1)}
+      <em>{title.slice(cut + 1)}</em>
+    </>
   );
 }

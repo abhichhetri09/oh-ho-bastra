@@ -5,6 +5,7 @@
 SELECT
     pv.id,
     pv.stock,
+    pv.blank_id,
     EXISTS (SELECT 1 FROM storefront_variants sv WHERE sv.id = pv.id) AS available
 FROM product_variants pv
 WHERE pv.id = ANY(@ids::uuid[])

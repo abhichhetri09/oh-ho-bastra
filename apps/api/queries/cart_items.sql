@@ -2,6 +2,8 @@
 -- The user's cart, oldest line first, priced live. available is false once
 -- the variant or its product is no longer on sale. custom_print: the
 -- product is in the "custom" category or one under it (made to order).
+-- stock is what is left for the line: a variant on a blank shares it with
+-- the cart's other lines on that blank, so their quantities are taken off.
 SELECT
     ci.variant_id,
     ci.quantity,
@@ -10,7 +12,14 @@ SELECT
     p.name AS product_name,
     p.slug AS product_slug,
     pv.sku,
-    pv.stock,
+    pv.blank_id,
+    GREATEST(pv.stock - COALESCE((
+        SELECT SUM(o.quantity)
+        FROM cart_items o
+        JOIN product_variants opv ON opv.id = o.variant_id
+        WHERE o.cart_id = c.id AND o.variant_id <> pv.id
+          AND opv.blank_id = pv.blank_id
+    ), 0), 0)::int AS stock,
     COALESCE(pv.images[1], p.images[1], '')::text AS image,
     vp.selling_price,
     vp.offer_price,
@@ -52,11 +61,26 @@ SELECT COUNT(*) FROM cart_items WHERE cart_id = $1;
 
 -- name: GetVariantAvailability :one
 -- A variant's stock and whether it is on sale (it and its product active).
+-- On a blank, the cart's other lines on that blank are taken off the stock.
 SELECT
-    pv.stock,
+    GREATEST(pv.stock - COALESCE((
+        SELECT SUM(o.quantity)
+        FROM cart_items o
+        JOIN product_variants opv ON opv.id = o.variant_id
+        WHERE o.cart_id = @cart_id AND o.variant_id <> pv.id
+          AND opv.blank_id = pv.blank_id
+    ), 0), 0)::int AS stock,
+    -- what the cart's other lines on the blank hold
+    COALESCE((
+        SELECT SUM(o.quantity)
+        FROM cart_items o
+        JOIN product_variants opv ON opv.id = o.variant_id
+        WHERE o.cart_id = @cart_id AND o.variant_id <> pv.id
+          AND opv.blank_id = pv.blank_id
+    ), 0)::int AS shared_in_cart,
     EXISTS (SELECT 1 FROM storefront_variants sv WHERE sv.id = pv.id) AS available
 FROM product_variants pv
-WHERE pv.id = $1;
+WHERE pv.id = @variant_id;
 
 -- name: SetCartItemQuantity :exec
 INSERT INTO cart_items (cart_id, variant_id, quantity)

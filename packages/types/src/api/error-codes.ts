@@ -39,6 +39,14 @@ export const ErrorCodeSchema = z
     "INVALID_VARIANT_ID",
     "VARIANT_ALREADY_EXISTS",
     "DEFAULT_VARIANT_EXISTS",
+    // blank
+    "BLANK_NOT_FOUND",
+    "INVALID_BLANK_ID",
+    "BLANK_ALREADY_EXISTS",
+    // attribute
+    "ATTRIBUTE_NOT_FOUND",
+    "INVALID_ATTRIBUTE_ID",
+    "ATTRIBUTE_ALREADY_EXISTS",
     // category
     "CATEGORY_NOT_FOUND",
     "INVALID_CATEGORY_ID",

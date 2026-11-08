@@ -78,6 +78,8 @@ export class CartError extends Error {
 export interface Availability {
   stock: number;
   available: boolean;
+  /** Units the cart's other lines on the same blank hold (taken off stock). */
+  shared?: number;
 }
 
 const unavailable = () =>
@@ -85,9 +87,16 @@ const unavailable = () =>
 const itemNotFound = () =>
   new CartError(404, "CART_ITEM_NOT_FOUND", "This item is not in your bag");
 
-function insufficient(stock: number, inCart: number): CartError {
+function insufficient(stock: number, inCart: number, shared = 0): CartError {
   let message = "This item is out of stock";
-  if (stock > 0 && inCart > 0)
+  // Printed on the same plain shirt as other items in the bag: they share
+  // its stock, which the shopper can't see, so the message says so.
+  if (shared > 0 && stock === 0)
+    message =
+      "The last ones are already in your bag: this shares stock with another item in it";
+  else if (shared > 0)
+    message = `Only ${stock} more can be added: this shares stock with another item in your bag`;
+  else if (stock > 0 && inCart > 0)
     message = `Only ${stock} left, and ${inCart} already in your bag`;
   else if (stock > 0) message = `Only ${stock} left`;
   return new CartError(409, "INSUFFICIENT_STOCK", message);
@@ -118,7 +127,7 @@ export function checkAdd(
       "CART_QUANTITY_LIMIT",
       `You can add up to ${MAX_LINE} of an item`,
     );
-  if (next > v.stock) return insufficient(v.stock, existing);
+  if (next > v.stock) return insufficient(v.stock, existing, v.shared);
   return null;
 }
 
@@ -134,7 +143,7 @@ export function checkUpdate(
 ): CartError | null {
   if (next <= current) return null;
   if (!v.available) return unavailable();
-  if (next > v.stock) return insufficient(v.stock, 0);
+  if (next > v.stock) return insufficient(v.stock, 0, v.shared);
   return null;
 }
 
@@ -182,7 +191,13 @@ export async function mergeCarts(
           variant_id: line.variant_id,
         })
       )?.quantity ?? 0;
-    const quantity = mergedQuantity(existing, line.quantity, lines, line);
+    // Against the target's bag: its lines on the same blank share the stock.
+    const v = await getVariantAvailability(tx, {
+      cart_id: to.id,
+      variant_id: line.variant_id,
+    });
+    if (!v) continue;
+    const quantity = mergedQuantity(existing, line.quantity, lines, v);
     if (quantity === null) continue;
     await setCartItemQuantity(tx, {
       cart_id: to.id,
@@ -422,16 +437,24 @@ export function cartRoutes(api: Group, deps: Deps) {
   /** A variant's stock and sale state; a variant that doesn't exist is a 404. */
   async function availability(
     tx: Tx,
+    cartId: string,
     variantId: string,
   ): Promise<Availability> {
-    const row = await getVariantAvailability(tx, variantId);
+    const row = await getVariantAvailability(tx, {
+      cart_id: cartId,
+      variant_id: variantId,
+    });
     if (!row)
       throw new CartError(
         404,
         "VARIANT_NOT_FOUND",
         "Product variant not found",
       );
-    return { stock: row.stock, available: row.available };
+    return {
+      stock: row.stock,
+      available: row.available,
+      shared: row.shared_in_cart,
+    };
   }
 
   /** The user's cart (empty without one). */
@@ -451,7 +474,7 @@ export function cartRoutes(api: Group, deps: Deps) {
     const variantId = body.variant_id.toLowerCase();
 
     await mutate(req, res, "Added to your bag", async (tx, cartId) => {
-      const v = await availability(tx, variantId);
+      const v = await availability(tx, cartId, variantId);
       const existing =
         (
           await getCartItemQuantity(tx, {
@@ -492,7 +515,7 @@ export function cartRoutes(api: Group, deps: Deps) {
       const refusal = checkUpdate(
         current.quantity,
         body.quantity,
-        await availability(tx, variantId),
+        await availability(tx, cartId, variantId),
       );
       if (refusal) return refusal;
       await setCartItemQuantity(tx, {

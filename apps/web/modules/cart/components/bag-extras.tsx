@@ -6,11 +6,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, m } from "motion/react";
 import { CheckIcon, PlusIcon, SpinnerIcon, XIcon } from "@phosphor-icons/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { ProductWithPrice, StorefrontVariant } from "@repo/types";
+import type {
+  ProductWithPrice,
+  RecommendationSource,
+  StorefrontVariant,
+} from "@repo/types";
 import { Button } from "@/components/ui/button";
-import { listProducts } from "@/lib/api/client";
+import { getRecommendations } from "@/lib/api/client";
 import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { catalogKeys } from "@/modules/catalog/keys";
@@ -24,26 +32,34 @@ import { flyToBag } from "../lib/fly-to-bag";
 
 const PICKS = 4;
 
+/** What the rail is called, by where its picks came from. */
+const TITLES: Record<RecommendationSource, string> = {
+  bought_together: "People also bought",
+  similar: "You may also like",
+  featured: "You may also like",
+};
+
 /**
- * Editor's picks (else the newest products), for the bag's "You may also
- * like". Shared by the drawer and the bag page, and cached for a while:
- * it doesn't need to be fresher than that.
+ * Suggestions for the bag: what people bought with its products, else
+ * similar ones, else the store's featured ones (the API decides, and says
+ * which). Shared by the drawer and the bag page, and cached for a while
+ * per bag: it doesn't need to be fresher than that.
  */
-function usePicks() {
+function useRecommendations(inBag: string[]) {
+  const ids = [...new Set(inBag)].sort();
   return useQuery({
-    queryKey: [...catalogKeys.all, "bag-picks"],
+    queryKey: [...catalogKeys.all, "recommendations", ids],
     queryFn: async ({ signal }) => {
-      const featured = await listProducts({
-        query: { featured: true },
+      const { data } = await getRecommendations({
+        query: { product_ids: ids.join(",") },
         signal,
         throwOnError: true,
       });
-      if (featured.data.data.products.length >= 2)
-        return featured.data.data.products;
-      const newest = await listProducts({ signal, throwOnError: true });
-      return newest.data.data.products;
+      return data.data;
     },
     staleTime: 5 * 60_000,
+    // The last bag's picks stay up while the next bag's load.
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -65,29 +81,37 @@ export function YouMayAlsoLike({
   onNavigate?: () => void;
   className?: string;
 }) {
-  const picks = usePicks();
-  // Just added: kept a moment so the tick shows before the card leaves.
-  const [held, setHeld] = useState<string[]>([]);
-  const products = (picks.data ?? [])
-    .filter((p) => p.in_stock && (!inBag.includes(p.id) || held.includes(p.id)))
-    .slice(0, PICKS);
+  const picks = useRecommendations(inBag);
+  // Just added: kept a moment so the tick shows before the card leaves
+  // (the bag changed, so the next picks may not hold it).
+  const [held, setHeld] = useState<ProductWithPrice[]>([]);
+  const shown = picks.data?.products ?? [];
+  const products = [
+    ...shown.filter((p) => p.in_stock && !inBag.includes(p.id)),
+    ...held.filter(
+      (h) => !shown.some((p) => p.id === h.id && !inBag.includes(p.id)),
+    ),
+  ].slice(0, PICKS);
   if (products.length === 0) return null;
 
-  function hold(id: string) {
-    setHeld((ids) => [...ids, id]);
-    setTimeout(() => setHeld((ids) => ids.filter((x) => x !== id)), ADDED_FOR);
+  function hold(product: ProductWithPrice) {
+    setHeld((ps) => [...ps, product]);
+    setTimeout(
+      () => setHeld((ps) => ps.filter((x) => x.id !== product.id)),
+      ADDED_FOR,
+    );
   }
 
   return (
     <section className={cn("space-y-3", className)}>
-      <p className="eyebrow">You may also like</p>
+      <p className="eyebrow">{TITLES[picks.data?.source ?? "featured"]}</p>
       <ul className="no-scrollbar -mx-5 flex snap-x gap-3 overflow-x-auto px-5">
         <AnimatePresence initial={false}>
           {products.map((product) => (
             <PickCard
               key={product.id}
               product={product}
-              onAdded={() => hold(product.id)}
+              onAdded={() => hold(product)}
               onNavigate={onNavigate}
             />
           ))}

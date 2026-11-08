@@ -221,7 +221,7 @@ export async function getStorefrontPriceRange(db: Queryable, p: GetStorefrontPri
   return (rows[0] as GetStorefrontPriceRangeRow | undefined) ?? null;
 }
 
-export const getVariantsByProductSlugSql = "SELECT\n    sv.id, sv.product_id, sv.sku, sv.stock, sv.images, sv.selling_price, sv.offer_price, sv.price, sv.offer_expires_at, sv.is_default, sv.created_at,\n    (\n        SELECT COALESCE(\n            json_agg(\n                jsonb_build_object('name', po.name, 'value', pov.value, 'type', po.type)\n                ORDER BY po.name\n            ),\n            '[]'::json\n        )\n        FROM variant_option_values vov\n        JOIN product_option_values pov ON pov.id = vov.option_value_id\n        JOIN product_options po ON po.id = pov.option_id\n        WHERE vov.variant_id = sv.id\n    ) AS options\nFROM storefront_variants sv\nJOIN products p ON p.id = sv.product_id\nWHERE p.slug = $1\nORDER BY sv.is_default DESC, sv.created_at ASC, sv.id ASC";
+export const getVariantsByProductSlugSql = "SELECT\n    sv.id, sv.product_id, sv.sku, sv.stock, sv.images, sv.selling_price, sv.offer_price, sv.price, sv.offer_expires_at, sv.is_default, sv.created_at,\n    (\n        SELECT COALESCE(\n            json_agg(\n                jsonb_build_object('name', po.name, 'value', pov.value, 'type', po.type)\n                ORDER BY po.name\n            ),\n            '[]'::json\n        )\n        FROM variant_option_values vov\n        JOIN product_option_values pov ON pov.id = vov.option_value_id\n        JOIN product_options po ON po.id = pov.option_id\n        WHERE vov.variant_id = sv.id\n    ) AS options,\n    -- variants on one blank share its stock (the page counts the bag's\n    -- lines on it together)\n    (SELECT pv.blank_id FROM product_variants pv WHERE pv.id = sv.id) AS blank_id\nFROM storefront_variants sv\nJOIN products p ON p.id = sv.product_id\nWHERE p.slug = $1\nORDER BY sv.is_default DESC, sv.created_at ASC, sv.id ASC";
 
 export interface GetVariantsByProductSlugRow {
   id: string;
@@ -236,6 +236,7 @@ export interface GetVariantsByProductSlugRow {
   is_default: boolean;
   created_at: Date;
   options: unknown;
+  blank_id: string | null;
 }
 
 export async function getVariantsByProductSlug(db: Queryable, slug: string): Promise<GetVariantsByProductSlugRow[]> {

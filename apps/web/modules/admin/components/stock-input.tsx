@@ -62,6 +62,12 @@ export function StockInput({
           ),
       );
       onSaved?.(variant.stock);
+      // On a blank, the count moved every variant on it (other rows, other
+      // products), so the inventory and the blanks reload.
+      if (variant.blank_id) {
+        void queryClient.invalidateQueries({ queryKey: adminKeys.inventory() });
+        void queryClient.invalidateQueries({ queryKey: adminKeys.blanks() });
+      }
       setDraft(null);
       setDone(true);
       setTimeout(() => setDone(false), 1500);

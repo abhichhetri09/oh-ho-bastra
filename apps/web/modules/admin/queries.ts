@@ -4,6 +4,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { StatsRange } from "@repo/types";
 import {
   adminGetCounts,
+  adminListAttributes,
+  adminListBlanks,
   adminGetCreditAccount,
   adminSearch,
   adminSearchCreditCustomers,
@@ -95,6 +97,32 @@ export function useAdminVariants(productId: string) {
       });
       return data.data;
     },
+  });
+}
+
+/** Every blank (a shop has a few dozen at most: one request). */
+export function useAdminBlanks() {
+  return useQuery({
+    queryKey: adminKeys.blanks(),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListBlanks({ signal, throwOnError: true });
+      return data.data;
+    },
+  });
+}
+
+/** The store's option lists (Size, Colour…), with their values. */
+export function useAdminAttributes() {
+  return useQuery({
+    queryKey: adminKeys.attributes(),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListAttributes({
+        signal,
+        throwOnError: true,
+      });
+      return data.data;
+    },
+    staleTime: 60_000,
   });
 }
 

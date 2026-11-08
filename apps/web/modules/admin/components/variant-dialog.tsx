@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { PlusIcon, XIcon } from "@phosphor-icons/react";
 import {
   CreateVariantBodySchema,
@@ -8,6 +9,7 @@ import {
   type AdminVariant,
   type CreateVariantBody,
   type UpdateVariantBody,
+  type Attribute,
   type OptionType,
 } from "@repo/types";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -28,12 +31,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { adminCreateVariant, adminUpdateVariant } from "@/lib/api/client";
+import {
+  adminCreateVariant,
+  adminSetVariantStock,
+  adminUpdateVariant,
+} from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
 import { friendlyFieldErrors, withoutErrors } from "@/lib/forms";
 import { fromCents, toCents } from "@/lib/money";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { adminKeys } from "../keys";
+import { useAdminAttributes, useAdminBlanks } from "../queries";
 import { fromLocalInput, toLocalInput } from "../lib/datetime";
 import type { StoredImage } from "../lib/upload";
 import { ImageManager } from "./image-manager";
@@ -41,10 +49,40 @@ import { ToggleField } from "./product-form";
 
 type Property = { name: string; value: string; type: OptionType };
 
-const typeItems = [
-  { value: "text", label: "Text" },
-  { value: "color", label: "Colour" },
-];
+const NO_BLANK = "none";
+
+/** "color", "Colour" and "colours" are one option. */
+const nameKey = (name: string) => {
+  const key = name.trim().toLowerCase();
+  return /^colou?rs?$/.test(key) ? "colour" : key;
+};
+
+/** The store's list an option name belongs to, however it is spelt. */
+const listFor = (name: string, lists: Attribute[]) =>
+  lists.find((a) => nameKey(a.name) === nameKey(name));
+
+/**
+ * The values row i can pick: its list's, plus the value it has now when the
+ * list no longer holds it (a variant made before the list changed).
+ */
+function valueItems(p: Property, lists: Attribute[]) {
+  const values = listFor(p.name, lists)?.values ?? [];
+  const items = values.map((v) => ({ value: v.value, hex: v.hex }));
+  if (p.value && !items.some((v) => v.value === p.value))
+    items.unshift({ value: p.value, hex: null });
+  return items;
+}
+
+/** A colour's dot, from its swatch (or its name, which CSS may know). */
+function Swatch({ hex, name }: { hex: string | null; name: string }) {
+  return (
+    <span
+      aria-hidden
+      className="size-3.5 shrink-0 rounded-full ring-1 ring-foreground/15"
+      style={{ backgroundColor: hex ?? name.toLowerCase().replace(/\s+/g, "") }}
+    />
+  );
+}
 
 /** `editing` is the variant to edit, "new" to add one, null when closed. */
 export function VariantDialog({
@@ -65,19 +103,42 @@ export function VariantDialog({
   onClose: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const lists = useAdminAttributes();
   return (
     <Dialog
       open={editing !== null}
       onOpenChange={(open) => !open && !busy && onClose()}
     >
       <DialogContent className="max-h-[92svh] gap-0 overflow-y-auto p-0 sm:max-w-2xl">
-        {editing !== null && (
+        {editing !== null && !lists.data && (
+          <div className="space-y-4 p-6">
+            <DialogTitle className="sr-only">Loading</DialogTitle>
+            {lists.isError ? (
+              <p className="text-sm text-muted-foreground">
+                The option lists couldn&apos;t load.{" "}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => lists.refetch()}
+                >
+                  Try again
+                </button>
+              </p>
+            ) : (
+              Array.from({ length: 4 }, (_, i) => (
+                <Skeleton key={i} className="h-10" />
+              ))
+            )}
+          </div>
+        )}
+        {editing !== null && lists.data && (
           <VariantForm
             key={editing === "new" ? "new" : editing.id}
             productId={productId}
             productImages={productImages}
             variant={editing === "new" ? undefined : editing}
             options={options}
+            lists={lists.data}
             first={first}
             onBusyChange={setBusy}
             onDone={onClose}
@@ -93,6 +154,7 @@ function VariantForm({
   productImages,
   variant,
   options,
+  lists,
   first,
   onBusyChange,
   onDone,
@@ -101,12 +163,26 @@ function VariantForm({
   productImages: StoredImage[];
   variant?: AdminVariant;
   options: { name: string; type: OptionType }[];
+  /** The store's option lists, which options and values are picked from. */
+  lists: Attribute[];
   first: boolean;
   onBusyChange: (busy: boolean) => void;
   onDone: () => void;
 }) {
+  // An existing variant edits its own values; a new one starts with the
+  // product's options, or the store's first two lists (Size and Colour) for
+  // a product's first variant.
   const [properties, setProperties] = useState<Property[]>(() =>
-    options.map((o) => ({ ...o, value: "" })),
+    variant
+      ? variant.options.map((o) => ({
+          name: o.name,
+          value: o.value,
+          type: o.type,
+        }))
+      : (options.length > 0
+          ? options
+          : lists.slice(0, 2).map((a) => ({ name: a.name, type: a.type }))
+        ).map((o) => ({ ...o, value: "" })),
   );
   const [selling, setSelling] = useState(
     variant ? fromCents(variant.selling_price) : "",
@@ -117,9 +193,21 @@ function VariantForm({
   const [offerEnds, setOfferEnds] = useState(
     toLocalInput(variant?.offer_expires_at ?? null),
   );
-  // Stock is set here only for a new variant: an existing one's is counted
-  // in the table (its own write, so this form can't put back an old count).
-  const [stock, setStock] = useState("");
+  // An existing variant's count is saved through its own write, and only
+  // when changed here, so an untouched form can't put back an old count.
+  const [stock, setStock] = useState(variant ? String(variant.stock) : "");
+  // A blank shares its stock with every variant printed on it.
+  const [blankId, setBlankId] = useState(variant?.blank_id ?? NO_BLANK);
+  const blanks = useAdminBlanks();
+  const blankItems = [
+    { value: NO_BLANK, label: "None: its own stock" },
+    ...(blanks.data ?? []).map((b) => ({
+      value: b.id,
+      label: `${b.name} (${b.stock})`,
+    })),
+  ];
+  const onBlank = blankId !== NO_BLANK;
+  const blank = blanks.data?.find((b) => b.id === blankId);
   const [images, setImages] = useState<StoredImage[]>(() =>
     variant
       ? variant.images.map((url, i) => ({
@@ -141,6 +229,14 @@ function VariantForm({
           body,
           throwOnError: true,
         });
+        const count = Number(stock);
+        if (blankId === NO_BLANK && count !== variant.stock) {
+          await adminSetVariantStock({
+            path: { productID: productId, variantID: variant.id },
+            body: { stock: count },
+            throwOnError: true,
+          });
+        }
       } else {
         await adminCreateVariant({
           path: { productID: productId },
@@ -158,6 +254,7 @@ function VariantForm({
       adminKeys.stats(),
       adminKeys.inventory(),
       adminKeys.counts(),
+      adminKeys.blanks(),
     ],
     onSuccess: () => {
       onBusyChange(false);
@@ -178,14 +275,17 @@ function VariantForm({
       local.selling_price = "Enter a price, like 49 or 49.50";
     if (offerCents === null)
       local.offer_price = "Enter a price, like 39 or 39.50";
-    if (!variant && !/^\d+$/.test(stock.trim())) {
+    if (!onBlank && !/^\d+$/.test(stock.trim())) {
       local.stock = "Enter a whole number";
+    } else if (!onBlank && Number(stock) > 10_000) {
+      local.stock = "Enter a count up to 10,000";
     }
 
     const body = {
       images: images.map((i) => i.url),
       image_public_ids: images.map((i) => i.public_id),
-      ...(!variant && { stock: Number(stock) }),
+      ...(!variant && !onBlank && { stock: Number(stock) }),
+      blank_id: onBlank ? blankId : null,
       selling_price: sellingCents ?? 0,
       ...(offerCents != null && {
         offer_price: offerCents,
@@ -195,11 +295,13 @@ function VariantForm({
       }),
       is_default: isDefault,
       is_active: isActive,
-      ...(!variant && {
-        properties: properties
-          .map((p) => ({ ...p, name: p.name.trim(), value: p.value.trim() }))
-          .filter((p) => p.name || p.value),
-      }),
+      properties: properties
+        .map((p) => ({
+          ...p,
+          name: listFor(p.name, lists)?.name ?? p.name.trim(),
+          value: p.value.trim(),
+        }))
+        .filter((p) => p.name || p.value),
     };
 
     const schema = variant ? UpdateVariantBodySchema : CreateVariantBodySchema;
@@ -231,6 +333,11 @@ function VariantForm({
     });
   }
 
+  // The next list no row uses yet, for "Add option".
+  const unused = lists.find(
+    (l) => !properties.some((p) => nameKey(p.name) === nameKey(l.name)),
+  );
+
   const label = variant
     ? variant.options.map((o) => o.value).join(" / ") || "Default variant"
     : "New variant";
@@ -246,84 +353,121 @@ function VariantForm({
         </DialogTitle>
         <DialogDescription className="text-xs">
           {variant
-            ? `SKU ${variant.sku ?? "none"}. Its options are fixed; add a new variant for another combination.`
-            : "The options tell this variant apart, like Size M in Black. Prices are in dollars."}
+            ? `SKU ${variant.sku ?? "none"}. Prices are in euros.`
+            : "The options tell this variant apart, like Size M in Black. Prices are in euros."}
         </DialogDescription>
       </DialogHeader>
 
       <div className="space-y-7 px-6 py-6">
-        {!variant && (
-          <fieldset className="space-y-3">
-            <legend className="eyebrow mb-3 !text-foreground">Options</legend>
-            {properties.map((p, i) => (
+        <fieldset className="space-y-3">
+          <legend className="eyebrow mb-1 !text-foreground">Options</legend>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Picked from your option lists. Add sizes, colours or new options
+            under{" "}
+            <Link href="/admin/attributes" className="underline">
+              Catalog → Options
+            </Link>
+            .
+          </p>
+          {properties.map((p, i) => {
+            const taken = new Set(
+              properties.filter((_, j) => j !== i).map((x) => nameKey(x.name)),
+            );
+            const nameItems = lists
+              .filter((l) => !taken.has(nameKey(l.name)))
+              .map((l) => ({ value: l.name, label: l.name }));
+            const current = listFor(p.name, lists)?.name ?? p.name;
+            if (current && !nameItems.some((n) => n.value === current))
+              nameItems.unshift({ value: current, label: current });
+            const values = valueItems(p, lists);
+            return (
               <div
                 key={i}
-                className="grid grid-cols-[1fr_1fr_6.5rem_auto] items-start gap-2"
+                className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto] items-start gap-2"
               >
                 <Field data-invalid={Boolean(errors[`properties.${i}.name`])}>
-                  <Input
-                    value={p.name}
-                    onChange={(e) => {
-                      const name = e.target.value;
+                  <Select
+                    value={current || null}
+                    onValueChange={(name) => {
+                      if (!name) return;
+                      const list = listFor(name, lists);
                       setProperties((ps) =>
-                        ps.map((x, j) => (j === i ? { ...x, name } : x)),
+                        ps.map((x, j) =>
+                          j === i
+                            ? { name, value: "", type: list?.type ?? x.type }
+                            : x,
+                        ),
                       );
-                      clear(`properties.${i}.name`, "properties");
+                      clear(
+                        `properties.${i}.name`,
+                        `properties.${i}.value`,
+                        "properties",
+                      );
                     }}
-                    placeholder="Option, e.g. Size"
-                    aria-label={`Option ${i + 1} name`}
-                    maxLength={20}
-                    aria-invalid={Boolean(errors[`properties.${i}.name`])}
-                  />
+                    items={nameItems}
+                  >
+                    <SelectTrigger
+                      aria-label={`Option ${i + 1}`}
+                      aria-invalid={Boolean(errors[`properties.${i}.name`])}
+                      className="h-10 w-full"
+                    >
+                      <SelectValue placeholder="Choose an option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {nameItems.map((n) => (
+                        <SelectItem key={n.value} value={n.value}>
+                          {n.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FieldError>{errors[`properties.${i}.name`]}</FieldError>
                 </Field>
                 <Field data-invalid={Boolean(errors[`properties.${i}.value`])}>
-                  <Input
-                    value={p.value}
-                    onChange={(e) => {
-                      const value = e.target.value;
+                  <Select
+                    value={p.value || null}
+                    onValueChange={(value) => {
+                      if (!value) return;
                       setProperties((ps) =>
                         ps.map((x, j) => (j === i ? { ...x, value } : x)),
                       );
                       clear(`properties.${i}.value`);
                     }}
-                    placeholder={p.type === "color" ? "e.g. Black" : "e.g. M"}
-                    aria-label={`${p.name || `Option ${i + 1}`} value`}
-                    maxLength={20}
-                    aria-invalid={Boolean(errors[`properties.${i}.value`])}
-                  />
+                    items={values.map((v) => ({
+                      value: v.value,
+                      label: v.value,
+                    }))}
+                    disabled={!p.name}
+                  >
+                    <SelectTrigger
+                      aria-label={`${p.name || `Option ${i + 1}`} value`}
+                      aria-invalid={Boolean(errors[`properties.${i}.value`])}
+                      className="h-10 w-full"
+                    >
+                      <SelectValue
+                        placeholder={
+                          p.name ? `Choose a ${p.name.toLowerCase()}` : "—"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {values.map((v) => (
+                        <SelectItem key={v.value} value={v.value}>
+                          {p.type === "color" && (
+                            <Swatch hex={v.hex} name={v.value} />
+                          )}
+                          {v.value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FieldError>{errors[`properties.${i}.value`]}</FieldError>
                 </Field>
-                <Select
-                  value={p.type}
-                  onValueChange={(type) =>
-                    type &&
-                    setProperties((ps) =>
-                      ps.map((x, j) =>
-                        j === i ? { ...x, type: type as OptionType } : x,
-                      ),
-                    )
-                  }
-                  items={typeItems}
-                >
-                  <SelectTrigger
-                    aria-label={`Option ${i + 1} type`}
-                    className="h-10 w-full"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {typeItems.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
+                  className="size-10"
                   onClick={() => {
                     setProperties((ps) => ps.filter((_, j) => j !== i));
                     setErrors({});
@@ -333,28 +477,28 @@ function VariantForm({
                   <XIcon />
                 </Button>
               </div>
-            ))}
-            {errors.properties && (
-              <p className="text-xs text-destructive">{errors.properties}</p>
-            )}
-            {properties.length < 10 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setProperties((ps) => [
-                    ...ps,
-                    { name: "", value: "", type: "text" },
-                  ])
-                }
-              >
-                <PlusIcon data-icon="inline-start" />
-                Add option
-              </Button>
-            )}
-          </fieldset>
-        )}
+            );
+          })}
+          {errors.properties && (
+            <p className="text-xs text-destructive">{errors.properties}</p>
+          )}
+          {unused && properties.length < 10 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setProperties((ps) => [
+                  ...ps,
+                  { name: unused.name, value: "", type: unused.type },
+                ])
+              }
+            >
+              <PlusIcon data-icon="inline-start" />
+              Add option
+            </Button>
+          )}
+        </fieldset>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <MoneyField
@@ -367,13 +511,46 @@ function VariantForm({
             }}
             error={errors.selling_price}
           />
-          {variant ? (
+          <Field className="sm:col-span-2">
+            <FieldLabel className="eyebrow !text-foreground">
+              Printed on blank
+              <span className="ml-1 tracking-normal normal-case text-muted-foreground">
+                (optional)
+              </span>
+            </FieldLabel>
+            <Select
+              value={blankId}
+              onValueChange={(v) => {
+                setBlankId(v ?? NO_BLANK);
+                clear("stock", "blank_id");
+              }}
+              items={blankItems}
+            >
+              <SelectTrigger aria-label="Blank" className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {blankItems.map((b) => (
+                  <SelectItem key={b.value} value={b.value}>
+                    {b.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {onBlank
+                ? "Shares the blank's stock: a sale of any print on it takes one from all of them."
+                : "Pick one when you print this to order on a plain garment you keep in stock. Add blanks under Catalog → Blanks."}
+            </p>
+            <FieldError>{errors.blank_id}</FieldError>
+          </Field>
+          {onBlank ? (
             <div className="space-y-2">
               <p className="eyebrow !text-foreground">Stock</p>
               <p className="flex h-10 items-center text-sm tabular-nums">
-                {variant.stock}
+                {blank?.stock ?? "—"}
                 <span className="ml-2 text-xs text-muted-foreground">
-                  Count it in the variants table.
+                  The blank&apos;s, shared.
                 </span>
               </p>
             </div>
@@ -521,7 +698,7 @@ function MoneyField({
       </FieldLabel>
       <div className="relative">
         <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
-          $
+          €
         </span>
         <Input
           id={id}

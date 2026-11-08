@@ -24,6 +24,9 @@ export const ProductVariantSchema = z
       .string()
       .describe('Sorted `name=value` pairs joined by `|`; "" without options.'),
     offer_expires_at: Timestamp.nullable(),
+    blank_id: Uuid.nullable().describe(
+      "The blank it is printed on, whose stock it shares; null keeps its own stock.",
+    ),
   })
   .meta({ id: "ProductVariant" });
 export type ProductVariant = z.infer<typeof ProductVariantSchema>;
@@ -44,6 +47,11 @@ export const StorefrontVariantSchema = z
     is_default: z.boolean(),
     created_at: Timestamp,
     options: z.array(VariantOptionSchema),
+    blank_id: Uuid.nullable()
+      .optional()
+      .describe(
+        "The blank it is printed on: variants on one blank share its stock",
+      ),
   })
   .meta({
     id: "StorefrontVariant",
@@ -60,7 +68,7 @@ export const VariantPropertySchema = z
   .meta({ id: "VariantProperty" });
 export type VariantProperty = z.infer<typeof VariantPropertySchema>;
 
-// Mirrors apps/api/internal/types/variant.go. Prices are integer cents.
+// Prices are integer cents.
 const variantFields = {
   images: z.array(z.url()).min(1).max(5),
   image_public_ids: z
@@ -83,6 +91,11 @@ const variantFields = {
       "A product has at most one default: setting it takes it from the current one.",
     ),
   is_active: z.boolean(),
+  blank_id: Uuid.nullable()
+    .optional()
+    .describe(
+      "A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock.",
+    ),
 };
 
 type VariantFields = {
@@ -111,37 +124,62 @@ const checkVariant = (b: VariantFields, ctx: z.RefinementCtx) => {
   }
 };
 
+const variantProperties = z
+  .array(VariantPropertySchema)
+  .max(10)
+  .refine((p) => new Set(p.map((x) => x.name)).size === p.length, {
+    message: "Properties must not contain duplicates",
+    params: { code: "DUPLICATE_ITEM" },
+  })
+  .optional()
+  .describe("Option values that identify the variant; names must be unique.");
+
+/** A new variant needs a stock count unless a blank supplies it. */
+export const checkStock = (
+  b: { stock?: number | undefined; blank_id?: string | null | undefined },
+  ctx: z.RefinementCtx,
+) => {
+  if (b.stock === undefined && !b.blank_id) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stock"],
+      message: "Stock is required without a blank",
+      params: { code: "REQUIRED_FIELD" },
+    });
+  }
+};
+
 export const CreateVariantBodySchema = z
   .object({
     ...variantFields,
-    stock: z.int().min(0).max(10000),
-    properties: z
-      .array(VariantPropertySchema)
-      .max(10)
-      .refine((p) => new Set(p.map((x) => x.name)).size === p.length, {
-        message: "Properties must not contain duplicates",
-        params: { code: "DUPLICATE_ITEM" },
-      })
+    stock: z
+      .int()
+      .min(0)
+      .max(10000)
       .optional()
-      .describe(
-        "Option values that identify the variant; names must be unique.",
-      ),
+      .describe("Required without a blank; with one, the blank's is used."),
+    properties: variantProperties,
   })
   .superRefine(checkVariant)
+  .superRefine(checkStock)
   .meta({ id: "CreateVariantBody", description: "Prices are integer cents." });
 export type CreateVariantBody = z.infer<typeof CreateVariantBodySchema>;
 
 export const UpdateVariantBodySchema = z
-  .object(variantFields)
+  .object({
+    ...variantFields,
+    properties: variantProperties.describe(
+      "New option values; omit to keep them. Another variant of the product with the same values is a 409.",
+    ),
+  })
   .superRefine(checkVariant)
   .meta({
     id: "UpdateVariantBody",
     description:
-      "The SKU and option combination are fixed at creation; stock has its own endpoint.",
+      "The SKU is fixed at creation; stock has its own endpoint. A blank_id left out unlinks the blank (this replaces the variant).",
   });
 export type UpdateVariantBody = z.infer<typeof UpdateVariantBodySchema>;
 
-// Mirrors UpdateStock in apps/api/internal/types/variant.go.
 export const SetStockBodySchema = z
   .object({ stock: z.int().min(0).max(10_000) })
   .meta({

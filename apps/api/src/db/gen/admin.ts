@@ -167,7 +167,7 @@ export async function adminRecentOrders(db: Queryable): Promise<AdminRecentOrder
 }
 
 // Every variant of a product, inactive ones too, with its options.
-export const adminListVariantsSql = "SELECT\n    pv.id, pv.product_id, pv.sku, pv.stock, pv.images, pv.image_public_ids, pv.selling_price, pv.offer_price, pv.is_default, pv.is_active, pv.created_at, pv.updated_at, pv.option_combination_key, pv.offer_expires_at,\n    (\n        SELECT COALESCE(\n            json_agg(\n                jsonb_build_object('name', po.name, 'value', pov.value, 'type', po.type)\n                ORDER BY po.name\n            ),\n            '[]'::json\n        )\n        FROM variant_option_values vov\n        JOIN product_option_values pov ON pov.id = vov.option_value_id\n        JOIN product_options po ON po.id = pov.option_id\n        WHERE vov.variant_id = pv.id\n    ) AS options\nFROM product_variants pv\nWHERE pv.product_id = $1\nORDER BY pv.is_default DESC, pv.created_at, pv.id";
+export const adminListVariantsSql = "SELECT\n    pv.id, pv.product_id, pv.sku, pv.stock, pv.images, pv.image_public_ids, pv.selling_price, pv.offer_price, pv.is_default, pv.is_active, pv.created_at, pv.updated_at, pv.option_combination_key, pv.offer_expires_at, pv.blank_id,\n    (\n        SELECT COALESCE(\n            json_agg(\n                jsonb_build_object('name', po.name, 'value', pov.value, 'type', po.type)\n                ORDER BY po.name\n            ),\n            '[]'::json\n        )\n        FROM variant_option_values vov\n        JOIN product_option_values pov ON pov.id = vov.option_value_id\n        JOIN product_options po ON po.id = pov.option_id\n        WHERE vov.variant_id = pv.id\n    ) AS options\nFROM product_variants pv\nWHERE pv.product_id = $1\nORDER BY pv.is_default DESC, pv.created_at, pv.id";
 
 export interface AdminListVariantsRow {
   id: string;
@@ -184,6 +184,7 @@ export interface AdminListVariantsRow {
   updated_at: Date;
   option_combination_key: string;
   offer_expires_at: Date | null;
+  blank_id: string | null;
   options: unknown;
 }
 

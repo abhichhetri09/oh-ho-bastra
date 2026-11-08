@@ -43,15 +43,23 @@ const OPTION =
  * The store's look: a theme, and the headline font and corners it uses in
  * place of the theme's. Each theme card renders a small storefront inside
  * its own [data-theme], so it shows that theme's real colours, type and
- * corners; the selected one's card widens to the whole row and holds its
- * font and corner options beside its preview. Another theme starts from its own font and
- * corners. Choosing anything previews it on this page; Save applies it all
- * to the store, and leaving without saving puts the page back.
+ * corners; the selected theme's font and corner options sit below the grid.
+ * Another theme starts from its own font and corners. The page starts from
+ * the look this browser shows (the demo picker's pick, if any), so the
+ * selection matches the store around it. Choosing anything previews it on
+ * this page; Save applies it all to the store, and leaving without saving
+ * puts the page back.
  */
-export function AppearanceSettings({ initial }: { initial: Appearance }) {
+export function AppearanceSettings({
+  initial,
+  current = initial,
+}: {
+  initial: Appearance;
+  current?: Appearance;
+}) {
   const router = useRouter();
   const [saved, setSaved] = useState<Appearance>(initial);
-  const [selected, setSelected] = useState<Appearance>(initial);
+  const [selected, setSelected] = useState<Appearance>(current);
   // What <html> showed before previewing, restored on the way out.
   const restore = useRef<Appearance | undefined>(undefined);
 
@@ -115,8 +123,7 @@ export function AppearanceSettings({ initial }: { initial: Appearance }) {
           );
         }}
         aria-label="Store theme"
-        // dense: the cards after the widened one fill the gaps it leaves
-        className="grid grid-flow-row-dense gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3"
+        className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3"
       >
         {THEMES.map((theme) => {
           const isSelected = theme.id === selected.theme;
@@ -126,7 +133,7 @@ export function AppearanceSettings({ initial }: { initial: Appearance }) {
               className={cn(
                 "overflow-hidden rounded-panel border border-border transition-[border-color,box-shadow]",
                 isSelected
-                  ? "col-span-full grid border-foreground shadow-[0_0_0_1px_var(--foreground)] lg:grid-cols-[minmax(0,22rem)_1fr]"
+                  ? "border-foreground shadow-[0_0_0_1px_var(--foreground)]"
                   : "hover:border-foreground/40",
               )}
             >
@@ -160,19 +167,16 @@ export function AppearanceSettings({ initial }: { initial: Appearance }) {
                   <Check />
                 </span>
               </Radio.Root>
-              {isSelected && (
-                <Customise
-                  selected={selected}
-                  disabled={save.isPending}
-                  onChange={(change) =>
-                    setSelected((s) => ({ ...s, ...change }))
-                  }
-                />
-              )}
             </div>
           );
         })}
       </RadioGroup>
+
+      <Customise
+        selected={selected}
+        disabled={save.isPending}
+        onChange={(change) => setSelected((s) => ({ ...s, ...change }))}
+      />
 
       <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border bg-surface/40 px-5 py-4">
         {dirty && (
@@ -233,13 +237,13 @@ function Customise({
   return (
     <div
       onKeyDown={(event) => event.stopPropagation()}
-      className="space-y-6 border-t border-border p-5 lg:border-t-0 lg:border-l"
+      className="space-y-5 border-t border-border p-5"
     >
       <div className="space-y-1">
         <h3 className="text-[0.8125rem] font-medium">Customise {theme.name}</h3>
         <p className="text-xs leading-snug text-muted-foreground">
-          Keep its colours and change its headline font or corners. Another
-          theme starts again from its own.
+          Keep {theme.name}&apos;s colours and swap its headline font or
+          corners. Picking another theme resets these to that theme&apos;s own.
         </p>
       </div>
 
@@ -254,13 +258,13 @@ function Customise({
             else if (isHeadingFontId(value)) onChange({ font: value });
           }}
           aria-labelledby={fontLabel}
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-4"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-4"
         >
           <FontOption
             value={THEME_DEFAULT}
             theme={selected.theme}
-            name="Theme default"
-            character={themeFont.name}
+            name={`Default · ${themeFont.name}`}
+            character={themeFont.character}
             disabled={disabled}
           />
           {HEADING_FONTS.map((font) => (
@@ -286,12 +290,12 @@ function Customise({
             else if (isCornersId(value)) onChange({ corners: value });
           }}
           aria-labelledby={cornersLabel}
-          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-4"
         >
           <CornersOption
             value={THEME_DEFAULT}
             theme={selected.theme}
-            name="Theme default"
+            name="Default"
             disabled={disabled}
           />
           {CORNERS.map((corners) => (
@@ -326,24 +330,26 @@ function FontOption({
   disabled: boolean;
 }) {
   return (
-    <Radio.Root value={value} disabled={disabled} className={OPTION}>
-      <span className="flex items-start justify-between gap-2 p-3 pb-0">
-        <span
-          aria-hidden
-          data-theme={theme}
-          data-font={value}
-          className="display block bg-transparent text-[2.5rem] text-foreground"
-        >
-          Aa
-        </span>
-        <Check />
+    <Radio.Root
+      value={value}
+      disabled={disabled}
+      className={cn(OPTION, "flex-row items-center gap-3 px-3 py-2")}
+    >
+      <span
+        aria-hidden
+        data-theme={theme}
+        data-font={value}
+        className="display block w-8 shrink-0 bg-transparent text-xl leading-none text-foreground"
+      >
+        Aa
       </span>
-      <span className="space-y-0.5 p-3">
-        <span className="block text-[0.8125rem] font-medium">{name}</span>
-        <span className="block text-xs leading-snug text-muted-foreground">
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-medium">{name}</span>
+        <span className="block truncate text-[0.6875rem] text-muted-foreground">
           {character}
         </span>
       </span>
+      <Check />
     </Radio.Root>
   );
 }
@@ -364,20 +370,24 @@ function CornersOption({
   disabled: boolean;
 }) {
   return (
-    <Radio.Root value={value} disabled={disabled} className={OPTION}>
-      <span className="flex items-start justify-between gap-2 p-3 pb-0">
-        <span
-          aria-hidden
-          data-theme={theme}
-          data-corners={value}
-          className="flex items-end gap-1.5 bg-transparent text-foreground"
-        >
-          <span className="block size-9 rounded-media border border-border bg-surface" />
-          <span className="block h-4 w-9 rounded-control bg-primary" />
-        </span>
-        <Check />
+    <Radio.Root
+      value={value}
+      disabled={disabled}
+      className={cn(OPTION, "flex-row items-center gap-3 px-3 py-2")}
+    >
+      <span
+        aria-hidden
+        data-theme={theme}
+        data-corners={value}
+        className="flex shrink-0 items-end gap-1 bg-transparent text-foreground"
+      >
+        <span className="block size-5 rounded-media border border-border bg-surface" />
+        <span className="block h-2.5 w-5 rounded-control bg-primary" />
       </span>
-      <span className="block p-3 text-[0.8125rem] font-medium">{name}</span>
+      <span className="min-w-0 flex-1 truncate text-xs font-medium">
+        {name}
+      </span>
+      <Check />
     </Radio.Root>
   );
 }

@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_REFUND' | 'REFUND_TOO_LARGE' | 'REFUND_REQUEST_REUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'REFERRALS_DISABLED' | 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL' | 'CREDIT_NOT_ENOUGH' | 'CREDIT_OVER_LIMIT' | 'CREDIT_CODE_INVALID' | 'CREDIT_CODE_EXPIRED' | 'INVALID_REDEMPTION_ID' | 'REDEMPTION_NOT_FOUND';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'BLANK_NOT_FOUND' | 'INVALID_BLANK_ID' | 'BLANK_ALREADY_EXISTS' | 'ATTRIBUTE_NOT_FOUND' | 'INVALID_ATTRIBUTE_ID' | 'ATTRIBUTE_ALREADY_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_REFUND' | 'REFUND_TOO_LARGE' | 'REFUND_REQUEST_REUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'REFERRALS_DISABLED' | 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL' | 'CREDIT_NOT_ENOUGH' | 'CREDIT_OVER_LIMIT' | 'CREDIT_CODE_INVALID' | 'CREDIT_CODE_EXPIRED' | 'INVALID_REDEMPTION_ID' | 'REDEMPTION_NOT_FOUND';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -255,6 +255,25 @@ export type FilterOption = {
  */
 export type OptionType = 'text' | 'color';
 
+export type RecommendationsResponse = {
+    success: true;
+    message: string;
+    data: Recommendations;
+};
+
+export type Recommendations = {
+    source: RecommendationSource;
+    /**
+     * Up to 4, none of the given ones, all in stock
+     */
+    products: Array<ProductWithPrice>;
+};
+
+/**
+ * bought_together: in the same paid orders ("People also bought"); similar: the same categories; featured: the store's picks
+ */
+export type RecommendationSource = 'bought_together' | 'similar' | 'featured';
+
 export type ProductPageResponse = {
     success: true;
     message: string;
@@ -349,6 +368,10 @@ export type StorefrontVariant = {
     is_default: boolean;
     created_at: string;
     options: Array<VariantOption>;
+    /**
+     * The blank it is printed on: variants on one blank share its stock
+     */
+    blank_id?: string | null;
 };
 
 export type VariantOption = {
@@ -438,6 +461,10 @@ export type AdminVariant = {
      */
     option_combination_key: string;
     offer_expires_at: string | null;
+    /**
+     * The blank it is printed on, whose stock it shares; null keeps its own stock.
+     */
+    blank_id: string | null;
     options: Array<VariantOption>;
 };
 
@@ -565,6 +592,10 @@ export type ProductVariant = {
      */
     option_combination_key: string;
     offer_expires_at: string | null;
+    /**
+     * The blank it is printed on, whose stock it shares; null keeps its own stock.
+     */
+    blank_id: string | null;
 };
 
 /**
@@ -590,7 +621,14 @@ export type CreateVariantBody = {
      */
     is_default: boolean;
     is_active: boolean;
-    stock: number;
+    /**
+     * A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock.
+     */
+    blank_id?: string | null;
+    /**
+     * Required without a blank; with one, the blank's is used.
+     */
+    stock?: number;
     /**
      * Option values that identify the variant; names must be unique.
      */
@@ -604,7 +642,7 @@ export type VariantProperty = {
 };
 
 /**
- * The SKU and option combination are fixed at creation; stock has its own endpoint.
+ * The SKU is fixed at creation; stock has its own endpoint. A blank_id left out unlinks the blank (this replaces the variant).
  */
 export type UpdateVariantBody = {
     images: Array<string>;
@@ -626,6 +664,14 @@ export type UpdateVariantBody = {
      */
     is_default: boolean;
     is_active: boolean;
+    /**
+     * A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock.
+     */
+    blank_id?: string | null;
+    /**
+     * New option values; omit to keep them. Another variant of the product with the same values is a 409.
+     */
+    properties?: Array<VariantProperty>;
 };
 
 /**
@@ -729,6 +775,13 @@ export type CartLine = {
     product_name: string;
     product_slug: string;
     sku: string | null;
+    /**
+     * The blank it is printed on; lines on one blank share its stock
+     */
+    blank_id?: string | null;
+    /**
+     * What is left for this line: on a blank, the bag's other lines on it are taken off
+     */
     stock: number;
     /**
      * The variant's first image, else the product's; "" if none
@@ -2182,6 +2235,101 @@ export type CouponActiveBody = {
     is_active: boolean;
 };
 
+export type BlankListResponse = {
+    success: true;
+    message: string;
+    /**
+     * By name
+     */
+    data: Array<AdminBlank>;
+};
+
+export type AdminBlank = {
+    id: string;
+    name: string;
+    stock: number;
+    created_at: string;
+    updated_at: string;
+    /**
+     * Variants drawing on it
+     */
+    variant_count: number;
+};
+
+export type BlankResponse = {
+    success: true;
+    message: string;
+    data: Blank;
+};
+
+/**
+ * A plain garment whose stock its variants share (printed to order).
+ */
+export type Blank = {
+    id: string;
+    name: string;
+    stock: number;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * The blank's name (unique, ignoring case) and its counted stock (an absolute value), which every variant on it takes.
+ */
+export type BlankBody = {
+    name: string;
+    stock: number;
+};
+
+export type AttributeListResponse = {
+    success: true;
+    message: string;
+    data: Array<Attribute>;
+};
+
+/**
+ * An option list, like Size.
+ */
+export type Attribute = {
+    id: string;
+    name: string;
+    type: OptionType;
+    /**
+     * In the admin's order
+     */
+    values: Array<AttributeValue>;
+};
+
+export type AttributeValue = {
+    id: string;
+    value: string;
+    /**
+     * A colour's swatch; null for text
+     */
+    hex: string | null;
+};
+
+export type AttributeResponse = {
+    success: true;
+    message: string;
+    data: Attribute;
+};
+
+/**
+ * The name (unique, ignoring case), type and every value in order.
+ */
+export type AttributeBody = {
+    name: string;
+    type: OptionType;
+    /**
+     * The whole list, in order (it replaces the old one)
+     */
+    values: Array<{
+        value: string;
+        hex?: string | null;
+    }>;
+};
+
 export type ReferralOfferResponse = {
     success: true;
     message: string;
@@ -3084,6 +3232,40 @@ export type ListCategoryProductsResponses = {
 
 export type ListCategoryProductsResponse = ListCategoryProductsResponses[keyof ListCategoryProductsResponses];
 
+export type GetRecommendationsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Comma-separated product ids (at most 20), e.g. the bag's
+         */
+        product_ids: string;
+    };
+    url: '/api/v1/recommendations';
+};
+
+export type GetRecommendationsErrors = {
+    /**
+     * More than 20 ids, or one isn't a uuid (INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type GetRecommendationsError = GetRecommendationsErrors[keyof GetRecommendationsErrors];
+
+export type GetRecommendationsResponses = {
+    /**
+     * Recommendations fetched
+     */
+    200: RecommendationsResponse;
+};
+
+export type GetRecommendationsResponse = GetRecommendationsResponses[keyof GetRecommendationsResponses];
+
 export type ListProductsData = {
     body?: never;
     path?: never;
@@ -3339,7 +3521,7 @@ export type AdminCreateVariantErrors = {
      */
     403: ApiError;
     /**
-     * Product not found (PRODUCT_NOT_FOUND)
+     * Product or blank not found (PRODUCT_NOT_FOUND, BLANK_NOT_FOUND)
      */
     404: ApiError;
     /**
@@ -3686,7 +3868,7 @@ export type AdminUpdateVariantErrors = {
      */
     403: ApiError;
     /**
-     * No such variant on this product (VARIANT_NOT_FOUND)
+     * No such variant on this product (VARIANT_NOT_FOUND), or no such blank (BLANK_NOT_FOUND)
      */
     404: ApiError;
     /**
@@ -6102,6 +6284,334 @@ export type AdminSetCouponActiveResponses = {
 };
 
 export type AdminSetCouponActiveResponse = AdminSetCouponActiveResponses[keyof AdminSetCouponActiveResponses];
+
+export type AdminListBlanksData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/blanks';
+};
+
+export type AdminListBlanksErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListBlanksError = AdminListBlanksErrors[keyof AdminListBlanksErrors];
+
+export type AdminListBlanksResponses = {
+    /**
+     * Blanks fetched
+     */
+    200: BlankListResponse;
+};
+
+export type AdminListBlanksResponse = AdminListBlanksResponses[keyof AdminListBlanksResponses];
+
+export type AdminCreateBlankData = {
+    body: BlankBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/blanks';
+};
+
+export type AdminCreateBlankErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Another blank has the name, ignoring case (BLANK_ALREADY_EXISTS, with the field in errors)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminCreateBlankError = AdminCreateBlankErrors[keyof AdminCreateBlankErrors];
+
+export type AdminCreateBlankResponses = {
+    /**
+     * Blank created
+     */
+    201: BlankResponse;
+};
+
+export type AdminCreateBlankResponse = AdminCreateBlankResponses[keyof AdminCreateBlankResponses];
+
+export type AdminDeleteBlankData = {
+    body?: never;
+    path: {
+        blankID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/blanks/{blankID}';
+};
+
+export type AdminDeleteBlankErrors = {
+    /**
+     * Invalid id (INVALID_BLANK_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such blank (BLANK_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminDeleteBlankError = AdminDeleteBlankErrors[keyof AdminDeleteBlankErrors];
+
+export type AdminDeleteBlankResponses = {
+    /**
+     * Blank deleted
+     */
+    200: MessageResponse;
+};
+
+export type AdminDeleteBlankResponse = AdminDeleteBlankResponses[keyof AdminDeleteBlankResponses];
+
+export type AdminUpdateBlankData = {
+    body: BlankBody;
+    path: {
+        blankID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/blanks/{blankID}';
+};
+
+export type AdminUpdateBlankErrors = {
+    /**
+     * Invalid id or body (INVALID_BLANK_ID, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such blank (BLANK_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Another blank has the name, ignoring case (BLANK_ALREADY_EXISTS, with the field in errors)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminUpdateBlankError = AdminUpdateBlankErrors[keyof AdminUpdateBlankErrors];
+
+export type AdminUpdateBlankResponses = {
+    /**
+     * Blank updated
+     */
+    200: BlankResponse;
+};
+
+export type AdminUpdateBlankResponse = AdminUpdateBlankResponses[keyof AdminUpdateBlankResponses];
+
+export type AdminListAttributesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/attributes';
+};
+
+export type AdminListAttributesErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListAttributesError = AdminListAttributesErrors[keyof AdminListAttributesErrors];
+
+export type AdminListAttributesResponses = {
+    /**
+     * Option lists fetched
+     */
+    200: AttributeListResponse;
+};
+
+export type AdminListAttributesResponse = AdminListAttributesResponses[keyof AdminListAttributesResponses];
+
+export type AdminCreateAttributeData = {
+    body: AttributeBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/attributes';
+};
+
+export type AdminCreateAttributeErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Another option list has the name, ignoring case (ATTRIBUTE_ALREADY_EXISTS, with the field in errors)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminCreateAttributeError = AdminCreateAttributeErrors[keyof AdminCreateAttributeErrors];
+
+export type AdminCreateAttributeResponses = {
+    /**
+     * Option list created
+     */
+    201: AttributeResponse;
+};
+
+export type AdminCreateAttributeResponse = AdminCreateAttributeResponses[keyof AdminCreateAttributeResponses];
+
+export type AdminDeleteAttributeData = {
+    body?: never;
+    path: {
+        attributeID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/attributes/{attributeID}';
+};
+
+export type AdminDeleteAttributeErrors = {
+    /**
+     * Invalid id (INVALID_ATTRIBUTE_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such option list (ATTRIBUTE_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminDeleteAttributeError = AdminDeleteAttributeErrors[keyof AdminDeleteAttributeErrors];
+
+export type AdminDeleteAttributeResponses = {
+    /**
+     * Option list deleted
+     */
+    200: MessageResponse;
+};
+
+export type AdminDeleteAttributeResponse = AdminDeleteAttributeResponses[keyof AdminDeleteAttributeResponses];
+
+export type AdminUpdateAttributeData = {
+    body: AttributeBody;
+    path: {
+        attributeID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/attributes/{attributeID}';
+};
+
+export type AdminUpdateAttributeErrors = {
+    /**
+     * Invalid id or body (INVALID_ATTRIBUTE_ID, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such option list (ATTRIBUTE_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Another option list has the name, ignoring case (ATTRIBUTE_ALREADY_EXISTS, with the field in errors)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminUpdateAttributeError = AdminUpdateAttributeErrors[keyof AdminUpdateAttributeErrors];
+
+export type AdminUpdateAttributeResponses = {
+    /**
+     * Option list saved
+     */
+    200: AttributeResponse;
+};
+
+export type AdminUpdateAttributeResponse = AdminUpdateAttributeResponses[keyof AdminUpdateAttributeResponses];
 
 export type GetReferralOfferData = {
     body?: never;

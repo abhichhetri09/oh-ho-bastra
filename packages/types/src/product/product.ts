@@ -237,3 +237,33 @@ export const SaleResponseSchema = successResponse(SaleResultSchema).meta({
   id: "SaleResponse",
 });
 export type SaleResponse = z.infer<typeof SaleResponseSchema>;
+
+export const RecommendationSourceSchema = z
+  .enum(["bought_together", "similar", "featured"])
+  .meta({
+    id: "RecommendationSource",
+    description:
+      'bought_together: in the same paid orders ("People also bought"); similar: the same categories; featured: the store\'s picks',
+  });
+export type RecommendationSource = z.infer<typeof RecommendationSourceSchema>;
+
+export const RecommendationsQuerySchema = z.object({
+  product_ids: z
+    .string()
+    .max(20 * 37)
+    .describe("Comma-separated product ids (at most 20), e.g. the bag's"),
+});
+
+export const RecommendationsSchema = z
+  .object({
+    source: RecommendationSourceSchema,
+    products: z
+      .array(ProductWithPriceSchema)
+      .describe("Up to 4, none of the given ones, all in stock"),
+  })
+  .meta({ id: "Recommendations" });
+export type Recommendations = z.infer<typeof RecommendationsSchema>;
+
+export const RecommendationsResponseSchema = successResponse(
+  RecommendationsSchema,
+).meta({ id: "RecommendationsResponse" });

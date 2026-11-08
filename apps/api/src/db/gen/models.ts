@@ -67,6 +67,7 @@ export interface ProductVariant {
   updated_at: Date;
   option_combination_key: string;
   offer_expires_at: Date | null;
+  blank_id: string | null;
 }
 
 export interface ProductOption {
@@ -398,4 +399,28 @@ export interface OrderRefundItem {
   quantity: number;
   amount: number;
   restocked: number;
+}
+
+export interface Blank {
+  id: string;
+  name: string;
+  stock: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Attribute {
+  id: string;
+  name: string;
+  type: string;
+  position: number;
+  created_at: Date;
+}
+
+export interface AttributeValue {
+  id: string;
+  attribute_id: string;
+  value: string;
+  hex: string | null;
+  position: number;
 }

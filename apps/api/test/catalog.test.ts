@@ -750,6 +750,7 @@ describe("GET /products/:productSlug", () => {
         "is_default",
         "created_at",
         "options",
+        "blank_id",
       ].sort(),
     );
     expect(variants[0]).toMatchObject({

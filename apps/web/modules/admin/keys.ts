@@ -30,6 +30,8 @@ export const adminKeys = {
   counts: () => [...adminKeys.all, "counts"] as const,
   search: (q: string) => [...adminKeys.all, "search", q] as const,
   inventory: () => [...adminKeys.all, "inventory"] as const,
+  blanks: () => [...adminKeys.all, "blanks"] as const,
+  attributes: () => [...adminKeys.all, "attributes"] as const,
   inventoryList: (filters: AdminInventoryFilters) =>
     [...adminKeys.inventory(), filters] as const,
   emails: () => [...adminKeys.all, "emails"] as const,

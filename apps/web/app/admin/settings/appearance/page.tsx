@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { AppearanceSettings } from "@/modules/admin/components/appearance-settings";
 import { LogoSettings } from "@/modules/admin/components/logo-settings";
 import { SettingsSection } from "@/modules/admin/components/settings-section";
-import { savedAppearance, storeLogo } from "@/lib/theme-server";
+import {
+  currentAppearance,
+  savedAppearance,
+  storeLogo,
+} from "@/lib/theme-server";
 
 export const metadata: Metadata = { title: "Appearance · Settings" };
 
@@ -11,7 +15,10 @@ export default async function AdminAppearancePage() {
     <SettingsSection page="appearance">
       <div className="space-y-6">
         <LogoSettings initial={await storeLogo()} />
-        <AppearanceSettings initial={await savedAppearance()} />
+        <AppearanceSettings
+          initial={await savedAppearance()}
+          current={await currentAppearance()}
+        />
       </div>
     </SettingsSection>
   );

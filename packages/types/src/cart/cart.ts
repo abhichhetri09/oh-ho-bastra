@@ -16,7 +16,17 @@ export const CartLineSchema = z
     product_name: z.string(),
     product_slug: z.string(),
     sku: z.string().nullable(),
-    stock: z.int().nonnegative(),
+    blank_id: Uuid.nullable()
+      .optional()
+      .describe(
+        "The blank it is printed on; lines on one blank share its stock",
+      ),
+    stock: z
+      .int()
+      .nonnegative()
+      .describe(
+        "What is left for this line: on a blank, the bag's other lines on it are taken off",
+      ),
     image: z
       .string()
       .describe("The variant's first image, else the product's; \"\" if none"),

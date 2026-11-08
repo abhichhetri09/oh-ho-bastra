@@ -88,7 +88,9 @@ export function ProductCard({
         </div>
         <div className="flex items-start justify-between gap-3 text-[0.8125rem] leading-snug">
           <div className="min-w-0 space-y-1.5">
-            <h3 className="link-underline line-clamp-2 self-start">
+            {/* The theme's emphasis colour on hover (the accent in themes
+                that have one; unchanged in the rest). */}
+            <h3 className="link-underline line-clamp-2 self-start transition-colors duration-300 group-hover/link:text-(--em-color)">
               {product.name}
             </h3>
             {product.rating_count > 0 && (

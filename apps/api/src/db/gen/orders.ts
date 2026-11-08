@@ -6,11 +6,12 @@ import type { Order, OrderItem, Payment } from "./models";
 // Locks the variants an order takes stock from, in id order so two
 // checkouts sharing variants can't deadlock. available is whether each is
 // still on sale.
-export const lockVariantsSql = "SELECT\n    pv.id,\n    pv.stock,\n    EXISTS (SELECT 1 FROM storefront_variants sv WHERE sv.id = pv.id) AS available\nFROM product_variants pv\nWHERE pv.id = ANY($1::uuid[])\nORDER BY pv.id\nFOR UPDATE OF pv";
+export const lockVariantsSql = "SELECT\n    pv.id,\n    pv.stock,\n    pv.blank_id,\n    EXISTS (SELECT 1 FROM storefront_variants sv WHERE sv.id = pv.id) AS available\nFROM product_variants pv\nWHERE pv.id = ANY($1::uuid[])\nORDER BY pv.id\nFOR UPDATE OF pv";
 
 export interface LockVariantsRow {
   id: string;
   stock: number;
+  blank_id: string | null;
   available: boolean;
 }
 

@@ -3,6 +3,8 @@
 export type * from "./models";
 export * from "./addresses";
 export * from "./admin";
+export * from "./attributes";
+export * from "./blanks";
 export * from "./cart_items";
 export * from "./carts";
 export * from "./categories";
@@ -17,6 +19,7 @@ export * from "./product_option_values";
 export * from "./product_options";
 export * from "./product_variants";
 export * from "./products";
+export * from "./recommendations";
 export * from "./referrals";
 export * from "./refunds";
 export * from "./reviews";

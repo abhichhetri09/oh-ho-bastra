@@ -17,6 +17,25 @@ const pageQuery = z.object({
 export function registerProductPaths() {
   operation({
     method: "get",
+    path: "/api/v1/recommendations",
+    operationId: "getRecommendations",
+    tag,
+    summary: "Suggestions for a bag",
+    description:
+      "Up to 4 in-stock products to suggest next to the given ones: those bought in the same paid orders, else ones in the same categories, else featured ones (with no ids, featured). `source` says which, so the page can title them.",
+    request: { query: schemas.RecommendationsQuerySchema },
+    success: {
+      status: 200,
+      description: "Recommendations fetched",
+      schema: schemas.RecommendationsResponseSchema,
+    },
+    errors: {
+      400: "More than 20 ids, or one isn't a uuid (INVALID_QUERY_PARAMETER)",
+    },
+  });
+
+  operation({
+    method: "get",
     path: "/api/v1/products",
     operationId: "listProducts",
     tag,

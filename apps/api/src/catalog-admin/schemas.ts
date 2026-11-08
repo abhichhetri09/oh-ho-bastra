@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  checkStock,
   CreateVariantBodySchema,
   ProductBodySchema,
   PutOnSaleBodySchema,
@@ -110,8 +111,10 @@ export const CreateVariantBody = z
     offer_expires_at: c.offer_expires_at,
     is_default: c.is_default,
     is_active: c.is_active,
+    blank_id: c.blank_id,
     properties,
   })
+  .superRefine(checkStock)
   .refine(sameLen.check, sameLen.params)
   .refine(offerBelowPrice.check, offerBelowPrice.params);
 export type CreateVariantInput = z.output<typeof CreateVariantBody>;
@@ -125,6 +128,8 @@ export const UpdateVariantBody = z
     offer_expires_at: u.offer_expires_at,
     is_default: u.is_default,
     is_active: u.is_active,
+    blank_id: u.blank_id,
+    properties,
   })
   .refine(sameLen.check, sameLen.params)
   .refine(offerBelowPrice.check, offerBelowPrice.params);

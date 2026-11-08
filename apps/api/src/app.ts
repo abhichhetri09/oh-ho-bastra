@@ -11,6 +11,9 @@ import { jsonReplacer } from "./http/response";
 import { createGroup, fallback, type RouteRecord } from "./http/router";
 import { adminRoutes } from "./routes/admin";
 import { adminCatalogRoutes } from "./routes/admin-catalog";
+import { recommendationRoutes } from "./routes/recommendations";
+import { adminAttributeRoutes } from "./routes/admin-attributes";
+import { adminBlankRoutes } from "./routes/admin-blanks";
 import { adminCouponRoutes } from "./routes/admin-coupons";
 import { adminEmailRoutes } from "./routes/admin-emails";
 import { authRoutes } from "./routes/auth";
@@ -64,12 +67,15 @@ export function buildApp(deps: Deps): App {
   authRoutes(api, deps);
   categoryRoutes(api, deps);
   catalogRoutes(api, deps);
+  recommendationRoutes(api, deps);
   adminCatalogRoutes(api, deps);
   shoppingRoutes(api, deps);
   checkoutRoutes(api, deps);
   contactRoutes(api, deps);
   adminEmailRoutes(api, deps);
   adminCouponRoutes(api, deps);
+  adminBlankRoutes(api, deps);
+  adminAttributeRoutes(api, deps);
   adminRoutes(api, deps);
   referralRoutes(api, deps);
 

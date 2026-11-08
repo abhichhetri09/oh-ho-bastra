@@ -28,7 +28,7 @@ export async function getOptionValuesByVariant(db: Queryable, variant_id: string
 }
 
 // used for filtering: give me all variants that have color = "Red"
-export const getVariantsByOptionValueSql = "SELECT pv.id, pv.product_id, pv.sku, pv.stock, pv.images, pv.image_public_ids, pv.selling_price, pv.offer_price, pv.is_default, pv.is_active, pv.created_at, pv.updated_at, pv.option_combination_key, pv.offer_expires_at FROM product_variants pv\nJOIN variant_option_values vov ON vov.variant_id = pv.id\nWHERE vov.option_value_id = $1\nAND pv.is_active = TRUE";
+export const getVariantsByOptionValueSql = "SELECT pv.id, pv.product_id, pv.sku, pv.stock, pv.images, pv.image_public_ids, pv.selling_price, pv.offer_price, pv.is_default, pv.is_active, pv.created_at, pv.updated_at, pv.option_combination_key, pv.offer_expires_at, pv.blank_id FROM product_variants pv\nJOIN variant_option_values vov ON vov.variant_id = pv.id\nWHERE vov.option_value_id = $1\nAND pv.is_active = TRUE";
 
 export async function getVariantsByOptionValue(db: Queryable, option_value_id: string): Promise<ProductVariant[]> {
   const { rows } = await db.query(getVariantsByOptionValueSql, [option_value_id]);

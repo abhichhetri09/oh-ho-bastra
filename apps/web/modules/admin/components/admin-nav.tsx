@@ -13,7 +13,9 @@ import {
   SignOutIcon,
   SquaresFourIcon,
   StackIcon,
+  SlidersHorizontalIcon,
   TagIcon,
+  TShirtIcon,
   TreeStructureIcon,
   UsersIcon,
   WalletIcon,
@@ -64,6 +66,12 @@ export const groups: { label: string; links: NavLink[] }[] = [
         href: "/admin/inventory",
         icon: StackIcon,
         badge: (c) => ({ count: c.out_of_stock, label: "sold out" }),
+      },
+      { label: "Blanks", href: "/admin/blanks", icon: TShirtIcon },
+      {
+        label: "Options",
+        href: "/admin/attributes",
+        icon: SlidersHorizontalIcon,
       },
       {
         label: "Categories",

@@ -1,5 +1,7 @@
 import { registerAdminPaths } from "./admin.ts";
+import { registerAttributePaths } from "./attributes.ts";
 import { registerAuthPaths } from "./auth.ts";
+import { registerBlankPaths } from "./blanks.ts";
 import { registerCartPaths } from "./carts.ts";
 import { registerCategoryPaths } from "./categories.ts";
 import { registerCheckoutPaths } from "./checkout.ts";
@@ -27,5 +29,7 @@ export function registerPaths() {
   registerSettingsPaths();
   registerAdminPaths();
   registerCouponPaths();
+  registerBlankPaths();
+  registerAttributePaths();
   registerReferralPaths();
 }

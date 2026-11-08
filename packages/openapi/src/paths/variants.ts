@@ -31,7 +31,7 @@ export function registerVariantPaths() {
     },
     errors: {
       400: "Invalid id or body (INVALID_PRODUCT_ID, VALIDATION_FAILED)",
-      404: "Product not found (PRODUCT_NOT_FOUND)",
+      404: "Product or blank not found (PRODUCT_NOT_FOUND, BLANK_NOT_FOUND)",
       409: "Same option combination, or a second default variant (VARIANT_ALREADY_EXISTS, DEFAULT_VARIANT_EXISTS)",
     },
   });
@@ -59,7 +59,7 @@ export function registerVariantPaths() {
     tag,
     summary: "Update a variant",
     description:
-      "Replaces stock, images, prices and flags. The SKU and option combination never change.",
+      "Replaces images, prices, flags and the blank it is printed on. The SKU and option combination never change; stock has its own endpoint. Linking a blank takes the blank's stock; unlinking keeps the count as the variant's own.",
     auth: "admin",
     request: {
       params: variantParams,
@@ -72,7 +72,7 @@ export function registerVariantPaths() {
     },
     errors: {
       400: `${invalidIds}, or invalid body (VALIDATION_FAILED)`,
-      404: notFound,
+      404: `${notFound}, or no such blank (BLANK_NOT_FOUND)`,
       409: "The product already has a default variant (DEFAULT_VARIANT_EXISTS)",
     },
   });
@@ -84,7 +84,7 @@ export function registerVariantPaths() {
     tag,
     summary: "Set a variant's stock",
     description:
-      "Sets the counted stock (an absolute value, so retrying is harmless).",
+      "Sets the counted stock (an absolute value, so retrying is harmless). On a variant with a blank it counts the blank, for every variant on it.",
     auth: "admin",
     request: { params: variantParams, ...body(schemas.SetStockBodySchema) },
     success: {
