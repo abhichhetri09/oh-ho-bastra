@@ -26,4 +26,24 @@ export async function enqueue(
   if (!EMAIL_KINDS.includes(kind))
     throw new Error(`unknown email kind "${kind}"`);
   await enqueueEmail(tx, { kind, order_id: orderId });
+  nudgeEmails();
+}
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+/**
+ * Tells the sender that an email was just queued (or requeued), so it
+ * checks the outbox soon instead of at its next hourly pass. The queueing
+ * transaction may not have committed yet; the sender keeps checking for a
+ * short while after a nudge to cover that.
+ */
+export function nudgeEmails(): void {
+  for (const l of listeners) l();
+}
+
+/** Subscribes to nudgeEmails; returns the unsubscribe function. */
+export function onEmailsNudged(l: Listener): () => void {
+  listeners.add(l);
+  return () => listeners.delete(l);
 }

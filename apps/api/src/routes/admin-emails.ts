@@ -1,3 +1,4 @@
+import { nudgeEmails } from "../emails/outbox";
 import {
   adminEmailCounts,
   adminGetEmail,
@@ -78,6 +79,7 @@ export function adminEmailRoutes(api: Group, deps: Deps) {
     const id = pathUuid(req, res, "emailID", "INVALID_EMAIL_ID", "email ID");
     if (!id) return;
     const n = await adminRequeueEmail(db, id);
+    if (n > 0) nudgeEmails();
     const email = await adminGetEmail(db, id);
     if (!email) {
       fail(res, 404, "EMAIL_NOT_FOUND", "Email not found");

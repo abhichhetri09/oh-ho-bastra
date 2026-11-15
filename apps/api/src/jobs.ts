@@ -6,33 +6,60 @@ import {
 } from "./db/gen";
 import type { Queryable } from "./db/queryable";
 import type { Deps } from "./deps";
+import { onEmailsNudged } from "./emails/outbox";
 import type { EmailWorker } from "./emails/worker";
 import { log } from "./log";
 import { settleCredit } from "./referrals/credit";
 
-const SESSION_CLEANUP_INTERVAL = 60 * 60_000;
-const ORDER_EXPIRY_INTERVAL = 5 * 60_000;
-const EMAIL_INTERVAL = 10_000;
-const CREDIT_INTERVAL = 60 * 60_000;
+// Every loop touches the database, and a serverless Postgres (Neon) only
+// scales to zero after ~5 idle minutes, so nothing here runs more often
+// than hourly while the shop is quiet.
+const HOURLY = 60 * 60_000;
+// Checkouts past their reservation are also released when a checkout
+// starts and by Stripe's checkout.session.expired webhook; this is the
+// backstop for a missed webhook.
+const ORDER_EXPIRY_INTERVAL = HOURLY;
+// The outbox is checked hourly (retries, mail that was down), and right
+// after an email is queued: every EMAIL_BURST_INTERVAL for EMAIL_BURST_MS,
+// which covers the queueing transaction committing a little later.
+const EMAIL_IDLE_INTERVAL = HOURLY;
+const EMAIL_BURST_INTERVAL = 10_000;
+const EMAIL_BURST_MS = 2 * 60_000;
 
 /**
- * Runs `task` now and then every `interval` ms, never two at once. Resolves
- * the returned stop() once a run in flight has finished.
+ * Runs `task` now and then every `interval` ms (or after `interval()` ms,
+ * asked after each run), never two at once. wake() runs it as soon as the
+ * run in flight (if any) is done. stop() resolves once that run finishes.
  */
-function every(interval: number, task: () => Promise<void>) {
+function every(interval: number | (() => number), task: () => Promise<void>) {
   let timer: NodeJS.Timeout | undefined;
-  let running: Promise<void> = Promise.resolve();
+  let running: Promise<void> | null = null;
+  let wakeAfter = false;
   let stopped = false;
+  const next = () => (typeof interval === "number" ? interval : interval());
   const tick = () => {
+    clearTimeout(timer);
     running = task().finally(() => {
-      if (!stopped) timer = setTimeout(tick, interval);
+      running = null;
+      if (stopped) return;
+      if (wakeAfter) {
+        wakeAfter = false;
+        tick();
+      } else timer = setTimeout(tick, next());
     });
   };
   tick();
-  return async () => {
-    stopped = true;
-    clearTimeout(timer);
-    await running;
+  return {
+    wake() {
+      if (stopped) return;
+      if (running) wakeAfter = true;
+      else tick();
+    },
+    async stop() {
+      stopped = true;
+      clearTimeout(timer);
+      await running;
+    },
   };
 }
 
@@ -59,7 +86,8 @@ export async function cleanUp(db: Queryable, now = new Date()) {
  * The loops inside the API process: expired sessions, stale reset links
  * and unused guests (hourly), referral payouts and lapsed store credit
  * (hourly), checkouts whose reservation ran out without word from Stripe
- * (every 5 minutes), and the order email outbox (every 10 seconds).
+ * (hourly), and the order email outbox (hourly, and in a short burst
+ * after an email is queued).
  * Resolves the returned function once they've stopped.
  */
 export function startBackgroundJobs(
@@ -67,14 +95,14 @@ export function startBackgroundJobs(
   emails: EmailWorker | null,
 ): () => Promise<void> {
   const stops = [
-    every(SESSION_CLEANUP_INTERVAL, async () => {
+    every(HOURLY, async () => {
       try {
         await cleanUp(deps.db);
       } catch (err) {
         log.error("session cleanup failed", err);
       }
     }),
-    every(CREDIT_INTERVAL, async () => {
+    every(HOURLY, async () => {
       try {
         await settleCredit(deps.db);
       } catch (err) {
@@ -94,18 +122,31 @@ export function startBackgroundJobs(
       }),
     );
   }
+  let unsubscribe = () => {};
   if (emails) {
-    stops.push(
-      every(EMAIL_INTERVAL, async () => {
+    let burstUntil = 0;
+    const outbox = every(
+      () =>
+        Date.now() < burstUntil ? EMAIL_BURST_INTERVAL : EMAIL_IDLE_INTERVAL,
+      async () => {
         try {
-          await emails.sendDue();
+          // Something was due: look again soon, there may be more.
+          if ((await emails.sendDue()) > 0)
+            burstUntil = Math.max(burstUntil, Date.now() + EMAIL_BURST_MS);
         } catch (err) {
           log.error("email outbox failed", err);
         }
-      }),
+      },
     );
+    unsubscribe = onEmailsNudged(() => {
+      burstUntil = Date.now() + EMAIL_BURST_MS;
+      // Give the queueing transaction a moment to commit.
+      setTimeout(() => outbox.wake(), 1_000).unref();
+    });
+    stops.push(outbox);
   }
   return async () => {
-    await Promise.all(stops.map((stop) => stop()));
+    unsubscribe();
+    await Promise.all(stops.map((s) => s.stop()));
   };
 }

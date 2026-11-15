@@ -1,3 +1,4 @@
+import { nudgeEmails } from "../emails/outbox";
 import { randomUUID } from "node:crypto";
 import {
   addRefundItem,
@@ -550,6 +551,7 @@ export function refundOrder(
     await reverseRefundCredit(tx, order, row.id, plan.credit, ctx.now());
     const updated = await applyRefundTotals(tx, order, true);
     await enqueueRefundEmail(tx, { order_id: order.id, refund_id: row.id });
+    nudgeEmails();
     log.info("checkout: order refunded", {
       order: number,
       card: plan.card,
@@ -643,6 +645,7 @@ export async function syncStripeRefund(
   if (!created) throw new Error("create refund: no rows in result set");
   const updated = await applyRefundTotals(tx, order, true);
   await enqueueRefundEmail(tx, { order_id: order.id, refund_id: created.id });
+  nudgeEmails();
   log.info("refunds: recorded a refund made in Stripe", {
     order: order.number,
     amount: info.amount,

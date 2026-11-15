@@ -22,7 +22,8 @@ export type Tx = pg.PoolClient;
 export function createPool(connectionString: string): Pool {
   const pool = new pg.Pool({
     connectionString,
-    idleTimeoutMillis: 4 * 60_000,
+    // Short, so idle connections don't keep a serverless Postgres awake.
+    idleTimeoutMillis: 30_000,
   });
   // An idle client losing its connection (e.g. Postgres restarting) must not
   // crash the process; the pool replaces it.
