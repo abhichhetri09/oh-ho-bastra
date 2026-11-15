@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import { reportError } from "./sentry";
 
 // Logs as JSON lines in production and as readable text otherwise. Request
 // logs carry the path, method, ip, request id and the signed-in user.
@@ -42,8 +43,10 @@ export const log = {
   debug: (msg: string, fields?: Fields) => write("debug", msg, fields),
   info: (msg: string, fields?: Fields) => write("info", msg, fields),
   warn: (msg: string, fields?: Fields) => write("warn", msg, fields),
-  error: (msg: string, err: unknown, fields?: Fields) =>
-    write("error", msg, { ...fields, error: err }),
+  error: (msg: string, err: unknown, fields?: Fields) => {
+    write("error", msg, { ...fields, error: err });
+    reportError(msg, err, fields);
+  },
 };
 
 function requestFields(req: Request, extra?: Fields): Fields {
@@ -63,6 +66,9 @@ export const rlog = {
     write("info", msg, requestFields(req, extra)),
   warn: (req: Request, msg: string, extra?: Fields) =>
     write("warn", msg, requestFields(req, extra)),
-  error: (req: Request, msg: string, err: unknown, extra?: Fields) =>
-    write("error", msg, requestFields(req, { ...extra, error: err })),
+  error: (req: Request, msg: string, err: unknown, extra?: Fields) => {
+    const fields = requestFields(req, extra);
+    write("error", msg, { ...fields, error: err });
+    reportError(msg, err, fields);
+  },
 };

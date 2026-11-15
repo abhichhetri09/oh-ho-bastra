@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export function ErrorState({
 }) {
   useEffect(() => {
     console.error(error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

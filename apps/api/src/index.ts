@@ -14,11 +14,13 @@ import { createMailer } from "./emails/mailer";
 import { EmailWorker } from "./emails/worker";
 import { startBackgroundJobs } from "./jobs";
 import { log } from "./log";
+import { flushSentry, initSentry } from "./sentry";
 import { createCloudinary } from "./services/cloudinary";
 import { createPayments } from "./services/payments";
 
 async function main() {
   loadEnvFile();
+  initSentry();
   const cfg = loadConfig();
   validateAuth(cfg);
   validateMail(cfg);
@@ -83,6 +85,7 @@ async function main() {
     server.close(async () => {
       await stopJobs();
       await db.end().catch(() => {});
+      await flushSentry();
       log.info("server stopped");
       process.exit(0);
     });
@@ -91,7 +94,8 @@ async function main() {
   process.on("SIGTERM", shutdown);
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   log.error("startup failed", err);
+  await flushSentry();
   process.exit(1);
 });

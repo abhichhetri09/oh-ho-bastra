@@ -16,6 +16,7 @@
     "@phosphor-icons/react": "2.1.10",
     "@repo/api-client": "workspace:*",
     "@repo/types": "workspace:*",
+    "@sentry/nextjs": "^11.12.0",
     "@tanstack/react-query": "5.101.2",
     "@tanstack/react-query-devtools": "5.101.2",
     "axios": "1.19.0",

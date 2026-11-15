@@ -16,7 +16,13 @@
         "FRONTEND_URL",
         "VERCEL_ENV",
         "VERCEL_PROJECT_PRODUCTION_URL",
-        "NEXT_OUTPUT"
+        "NEXT_OUTPUT",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "NEXT_PUBLIC_SENTRY_ENVIRONMENT",
+        "SENTRY_AUTH_TOKEN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT_WEB",
+        "CI"
       ]
     },
     "generate": {

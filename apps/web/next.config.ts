@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 // Set by the dev container (docker-compose.dev.yml): a soft memory target
@@ -51,4 +52,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Uploads source maps to Sentry (so stack traces show the real files and
+// lines) only when SENTRY_AUTH_TOKEN is set, i.e. in the deploy build.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT_WEB,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  widenClientFileUpload: true,
+  telemetry: false,
+  silent: !process.env.CI,
+});

@@ -74,12 +74,29 @@ jobs:
       - name: Build api
         run: cd apps/api && bun run build
 
+      # Gives Sentry the api's source maps, so its stack traces point at
+      # src/*.ts. Skipped until the SENTRY_AUTH_TOKEN secret is set.
+      - name: Upload api source maps to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT_API }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then echo "No SENTRY_AUTH_TOKEN, skipping"; exit 0; fi
+          npx --yes @sentry/cli@2 sourcemaps inject apps/api/dist
+          npx --yes @sentry/cli@2 sourcemaps upload apps/api/dist
+
       # Next.js bakes these in at build time. WEB_ENV_PRODUCTION holds them as
       # KEY=value lines: NEXT_PUBLIC_API_URL and FRONTEND_URL are required;
-      # STORE_THEME and DEMO_THEME_PICKER are optional.
+      # STORE_THEME, DEMO_THEME_PICKER and NEXT_PUBLIC_SENTRY_DSN are optional.
+      # With SENTRY_AUTH_TOKEN set, the build also uploads the web's source
+      # maps to Sentry (next.config.ts).
       - name: Build web
         env:
           WEB_ENV: ${{ secrets.WEB_ENV_PRODUCTION }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT_WEB: ${{ vars.SENTRY_PROJECT_WEB }}
         run: |
           printf '%s\n' "$WEB_ENV" | tr -d '\r' > web.env
           set -a; . ./web.env; set +a
