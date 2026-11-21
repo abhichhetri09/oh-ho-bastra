@@ -1287,3 +1287,67 @@ describe("PUT /admin/settings/logo", () => {
     expect((await put({ logo_url: url }, cookie)).status).toBe(403);
   });
 });
+
+describe("admins", () => {
+  const post = (body: unknown) =>
+    http().post("/api/v1/admin/admins").set("Cookie", admin).send(body);
+  const del = (id: string) =>
+    http().delete(`/api/v1/admin/admins/${id}`).set("Cookie", admin);
+
+  it("lists the admins", async () => {
+    const res = await get("/admins");
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((a: { id: string }) => a.id)).toEqual([
+      adminUser.id,
+    ]);
+  });
+
+  it("makes a customer an admin by email, in any case", async () => {
+    const ada = await makeUser(db, { email: "ada@example.com" });
+    const res = await post({ email: "ADA@example.com" });
+    expect(res.status).toBe(201);
+    expect(res.body.data).toMatchObject({ id: ada.id, email: ada.email });
+    const list = await get("/admins");
+    expect(list.body.data).toHaveLength(2);
+  });
+
+  it("refuses an unknown email, an admin and a bad email", async () => {
+    expect((await post({ email: "nobody@example.com" })).body.code).toBe(
+      "USER_NOT_FOUND",
+    );
+    const other = await makeUser(db, { role: "admin" });
+    const again = await post({ email: other.email });
+    expect(again.status).toBe(409);
+    expect(again.body.code).toBe("ALREADY_ADMIN");
+    expect((await post({ email: "nope" })).status).toBe(400);
+  });
+
+  it("removes another admin, signing them out", async () => {
+    const other = await signIn(db, cfg, "admin");
+    const res = await del(other.user.id);
+    expect(res.status).toBe(200);
+    const { rows } = await db.query("SELECT role FROM users WHERE id = $1", [
+      other.user.id,
+    ]);
+    expect(rows[0].role).toBe("customer");
+    const live = await db.query(
+      "SELECT 1 FROM sessions WHERE user_id = $1 AND revoked_at IS NULL",
+      [other.user.id],
+    );
+    expect(live.rowCount).toBe(0);
+  });
+
+  it("won't remove yourself, a customer, or the last admin", async () => {
+    expect((await del(adminUser.id)).body.code).toBe("CANNOT_REMOVE_SELF");
+    const customer = await makeUser(db);
+    expect((await del(customer.id)).status).toBe(404);
+  });
+
+  it("is admin only", async () => {
+    const shopper = await signIn(db, cfg, "customer");
+    const res = await http()
+      .get("/api/v1/admin/admins")
+      .set("Cookie", shopper.cookie);
+    expect(res.status).toBe(403);
+  });
+});

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Request, Response } from "express";
 import {
+  AddAdminBodySchema,
   AnnouncementsBodySchema,
   StoreLogoBodySchema,
   BusinessDetailsBodySchema,
@@ -55,6 +56,12 @@ import {
   adminTopProducts,
   countAdminCustomers,
   countAdminOrders,
+  countAdmins,
+  getUserByEmail,
+  getUserByID,
+  listAdmins,
+  revokeAllUserSessions,
+  setUserRole,
   listAddresses,
   setOrderTracking,
   updateAnnouncements,
@@ -64,7 +71,7 @@ import {
   updateStoreLogo,
   updateStoreAppearance,
 } from "../db/gen";
-import type { Order } from "../db/gen";
+import type { Order, User } from "../db/gen";
 import type { Queryable } from "../db/queryable";
 import type { Deps } from "../deps";
 import { requireAuth, requireRole } from "../http/middleware";
@@ -82,6 +89,7 @@ import { fail, internal, ok, paginationMeta } from "../http/response";
 import type { Group } from "../http/router";
 import { parseBody } from "../http/validate";
 import { containsPattern } from "../lib/text";
+import { normalizeEmail } from "../auth/session";
 
 // The admin dashboard, orders, customers, inventory and settings
 // (internal/handlers/admin, routes/admin.go).
@@ -693,4 +701,75 @@ export function adminRoutes(api: Group, deps: Deps) {
       ),
     );
   });
+
+  /** ListAdmins is every account that can use the admin, oldest first. */
+  admin.get("/admins", async (_req, res) => {
+    ok(res, 200, "Admins fetched", await listAdmins(db));
+  });
+
+  /**
+   * AddAdmin makes an existing account an admin, by its email. The person
+   * signs up as a shopper first; their next sign-in (or token refresh,
+   * within 15 minutes) opens the admin.
+   */
+  admin.post("/admins", async (req, res) => {
+    const body = parseBody(AddAdminBodySchema, req, res);
+    if (body === null) return;
+    const user = await getUserByEmail(db, normalizeEmail(body.email));
+    if (user === null || user.role === "guest") {
+      fail(
+        res,
+        404,
+        "USER_NOT_FOUND",
+        "No account with that email. Ask them to sign up first.",
+      );
+      return;
+    }
+    if (user.role === "admin") {
+      fail(res, 409, "ALREADY_ADMIN", "That account is already an admin");
+      return;
+    }
+    const updated = must(await setUserRole(db, { id: user.id, role: "admin" }));
+    ok(res, 201, "Admin added", adminUser(updated));
+  });
+
+  /**
+   * RemoveAdmin makes an admin a customer again and signs them out
+   * everywhere. Not yourself, and never the last admin.
+   */
+  admin.delete("/admins/:userID", async (req, res) => {
+    const id = pathUuid(req, res, "userID", "INVALID_USER_ID", "user ID");
+    if (id === null) return;
+    if (id === userId(req)) {
+      fail(
+        res,
+        400,
+        "CANNOT_REMOVE_SELF",
+        "You can't remove yourself as admin",
+      );
+      return;
+    }
+    const user = await getUserByID(db, id);
+    if (user === null || user.role !== "admin") {
+      fail(res, 404, "ADMIN_NOT_FOUND", "Admin not found");
+      return;
+    }
+    if (must(await countAdmins(db)).count <= 1) {
+      fail(res, 409, "LAST_ADMIN", "The store needs at least one admin");
+      return;
+    }
+    const updated = must(await setUserRole(db, { id, role: "customer" }));
+    await revokeAllUserSessions(db, id);
+    ok(res, 200, "Admin removed", adminUser(updated));
+  });
+}
+
+/** An admin as the admins list shows them. */
+function adminUser(u: Pick<User, "id" | "name" | "email" | "created_at">) {
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email ?? "",
+    created_at: u.created_at,
+  };
 }

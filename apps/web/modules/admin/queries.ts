@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { StatsRange } from "@repo/types";
 import {
   adminGetCounts,
+  adminListAdmins,
   adminListAttributes,
   adminListBlanks,
   adminGetCreditAccount,
@@ -346,5 +347,15 @@ export function useCreditAccount(id: string | null) {
       return data.data;
     },
     enabled: id !== null,
+  });
+}
+
+export function useAdminAdmins() {
+  return useQuery({
+    queryKey: adminKeys.admins(),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListAdmins({ signal, throwOnError: true });
+      return data.data;
+    },
   });
 }

@@ -125,3 +125,43 @@ export async function deleteStaleGuests(db: Queryable, before: Date | string): P
   const { rowCount } = await db.query(deleteStaleGuestsSql, [before]);
   return rowCount ?? 0;
 }
+
+// Admin → Settings → Admins: everyone who can use the admin, oldest first.
+export const listAdminsSql = "SELECT id, name, email::text AS email, created_at FROM users\nWHERE role = 'admin' ORDER BY created_at, id";
+
+export interface ListAdminsRow {
+  id: string;
+  name: string;
+  email: string;
+  created_at: Date;
+}
+
+export async function listAdmins(db: Queryable): Promise<ListAdminsRow[]> {
+  const { rows } = await db.query(listAdminsSql, []);
+  return rows as ListAdminsRow[];
+}
+
+export const countAdminsSql = "SELECT COUNT(*) FROM users WHERE role = 'admin'";
+
+export interface CountAdminsRow {
+  count: number;
+}
+
+export async function countAdmins(db: Queryable): Promise<CountAdminsRow | null> {
+  const { rows } = await db.query(countAdminsSql, []);
+  return (rows[0] as CountAdminsRow | undefined) ?? null;
+}
+
+// Promotes a customer to admin, or an admin back to customer. Guests
+// (no email, no password) never change role.
+export const setUserRoleSql = "UPDATE users SET role = $1\nWHERE id = $2 AND role IN ('customer', 'admin')\nRETURNING id, name, email, password_hash, role, image_url, created_at, updated_at, google_id";
+
+export interface SetUserRoleParams {
+  role: string;
+  id: string;
+}
+
+export async function setUserRole(db: Queryable, p: SetUserRoleParams): Promise<User | null> {
+  const { rows } = await db.query(setUserRoleSql, [p["role"], p["id"]]);
+  return (rows[0] as User | undefined) ?? null;
+}

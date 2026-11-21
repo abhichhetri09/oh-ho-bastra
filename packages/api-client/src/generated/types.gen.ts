@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'BLANK_NOT_FOUND' | 'INVALID_BLANK_ID' | 'BLANK_ALREADY_EXISTS' | 'ATTRIBUTE_NOT_FOUND' | 'INVALID_ATTRIBUTE_ID' | 'ATTRIBUTE_ALREADY_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_REFUND' | 'REFUND_TOO_LARGE' | 'REFUND_REQUEST_REUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'REFERRALS_DISABLED' | 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL' | 'CREDIT_NOT_ENOUGH' | 'CREDIT_OVER_LIMIT' | 'CREDIT_CODE_INVALID' | 'CREDIT_CODE_EXPIRED' | 'INVALID_REDEMPTION_ID' | 'REDEMPTION_NOT_FOUND';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'ADMIN_NOT_FOUND' | 'ALREADY_ADMIN' | 'CANNOT_REMOVE_SELF' | 'LAST_ADMIN' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'BLANK_NOT_FOUND' | 'INVALID_BLANK_ID' | 'BLANK_ALREADY_EXISTS' | 'ATTRIBUTE_NOT_FOUND' | 'INVALID_ATTRIBUTE_ID' | 'ATTRIBUTE_ALREADY_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_REFUND' | 'REFUND_TOO_LARGE' | 'REFUND_REQUEST_REUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'REFERRALS_DISABLED' | 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL' | 'CREDIT_NOT_ENOUGH' | 'CREDIT_OVER_LIMIT' | 'CREDIT_CODE_INVALID' | 'CREDIT_CODE_EXPIRED' | 'INVALID_REDEMPTION_ID' | 'REDEMPTION_NOT_FOUND';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -2161,6 +2161,35 @@ export type ReferralBody = {
 };
 
 export type ReferralFriendKind = 'amount' | 'percent';
+
+export type AdminUserListResponse = {
+    success: true;
+    message: string;
+    data: Array<AdminUser>;
+};
+
+/**
+ * An account that can use the admin.
+ */
+export type AdminUser = {
+    id: string;
+    name: string;
+    email: string;
+    created_at: string;
+};
+
+export type AdminUserResponse = {
+    success: true;
+    message: string;
+    data: AdminUser;
+};
+
+/**
+ * The email of an existing account to make an admin.
+ */
+export type AddAdminBody = {
+    email: string;
+};
 
 export type AdminCouponListResponse = {
     success: true;
@@ -6118,6 +6147,131 @@ export type AdminSetReferralsResponses = {
 };
 
 export type AdminSetReferralsResponse = AdminSetReferralsResponses[keyof AdminSetReferralsResponses];
+
+export type AdminListAdminsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/admins';
+};
+
+export type AdminListAdminsErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListAdminsError = AdminListAdminsErrors[keyof AdminListAdminsErrors];
+
+export type AdminListAdminsResponses = {
+    /**
+     * Admins fetched
+     */
+    200: AdminUserListResponse;
+};
+
+export type AdminListAdminsResponse = AdminListAdminsResponses[keyof AdminListAdminsResponses];
+
+export type AdminAddAdminData = {
+    body: AddAdminBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/admins';
+};
+
+export type AdminAddAdminErrors = {
+    /**
+     * Invalid email (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No account with that email (USER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Already an admin (ALREADY_ADMIN)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminAddAdminError = AdminAddAdminErrors[keyof AdminAddAdminErrors];
+
+export type AdminAddAdminResponses = {
+    /**
+     * Admin added
+     */
+    201: AdminUserResponse;
+};
+
+export type AdminAddAdminResponse = AdminAddAdminResponses[keyof AdminAddAdminResponses];
+
+export type AdminRemoveAdminData = {
+    body?: never;
+    path: {
+        userID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/admins/{userID}';
+};
+
+export type AdminRemoveAdminErrors = {
+    /**
+     * Invalid id, or yourself (INVALID_USER_ID, CANNOT_REMOVE_SELF)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No admin with that id (ADMIN_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * The last admin (LAST_ADMIN)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminRemoveAdminError = AdminRemoveAdminErrors[keyof AdminRemoveAdminErrors];
+
+export type AdminRemoveAdminResponses = {
+    /**
+     * Admin removed
+     */
+    200: AdminUserResponse;
+};
+
+export type AdminRemoveAdminResponse = AdminRemoveAdminResponses[keyof AdminRemoveAdminResponses];
 
 export type AdminListCouponsData = {
     body?: never;

@@ -585,3 +585,31 @@ export type AdminSearch = z.infer<typeof AdminSearchSchema>;
 export const AdminSearchResponseSchema = successResponse(
   AdminSearchSchema,
 ).meta({ id: "AdminSearchResponse" });
+
+export const AdminUserSchema = z
+  .object({
+    id: Uuid,
+    name: z.string(),
+    email: z.string(),
+    created_at: Timestamp,
+  })
+  .meta({ id: "AdminUser", description: "An account that can use the admin." });
+export type AdminUser = z.infer<typeof AdminUserSchema>;
+
+export const AdminUserListResponseSchema = successResponse(
+  z.array(AdminUserSchema),
+).meta({ id: "AdminUserListResponse" });
+
+export const AdminUserResponseSchema = successResponse(AdminUserSchema).meta({
+  id: "AdminUserResponse",
+});
+
+export const AddAdminBodySchema = z
+  .object({
+    email: z.email("Enter a valid email address").max(254),
+  })
+  .meta({
+    id: "AddAdminBody",
+    description: "The email of an existing account to make an admin.",
+  });
+export type AddAdminBody = z.infer<typeof AddAdminBodySchema>;

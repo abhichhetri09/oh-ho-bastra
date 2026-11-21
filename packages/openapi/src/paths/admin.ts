@@ -543,4 +543,63 @@ export function registerAdminPaths() {
       400: "An amount, percent or limit out of range, or not whole cents (VALIDATION_FAILED)",
     },
   });
+
+  operation({
+    method: "get",
+    path: "/api/v1/admin/admins",
+    operationId: "adminListAdmins",
+    tag: "Admin",
+    summary: "Admin accounts",
+    description: "Everyone who can use the admin, oldest first.",
+    auth: "admin",
+    success: {
+      status: 200,
+      description: "Admins fetched",
+      schema: schemas.AdminUserListResponseSchema,
+    },
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/admin/admins",
+    operationId: "adminAddAdmin",
+    tag: "Admin",
+    summary: "Make an account an admin",
+    description:
+      "By the email of an existing account (they sign up first). It takes effect at their next sign-in or token refresh.",
+    auth: "admin",
+    request: body(schemas.AddAdminBodySchema),
+    success: {
+      status: 201,
+      description: "Admin added",
+      schema: schemas.AdminUserResponseSchema,
+    },
+    errors: {
+      400: "Invalid email (VALIDATION_FAILED)",
+      404: "No account with that email (USER_NOT_FOUND)",
+      409: "Already an admin (ALREADY_ADMIN)",
+    },
+  });
+
+  operation({
+    method: "delete",
+    path: "/api/v1/admin/admins/{userID}",
+    operationId: "adminRemoveAdmin",
+    tag: "Admin",
+    summary: "Remove an admin",
+    description:
+      "Makes them a customer again and signs them out everywhere. Not yourself, and never the last admin.",
+    auth: "admin",
+    request: { params: z.object({ userID: Uuid }) },
+    success: {
+      status: 200,
+      description: "Admin removed",
+      schema: schemas.AdminUserResponseSchema,
+    },
+    errors: {
+      400: "Invalid id, or yourself (INVALID_USER_ID, CANNOT_REMOVE_SELF)",
+      404: "No admin with that id (ADMIN_NOT_FOUND)",
+      409: "The last admin (LAST_ADMIN)",
+    },
+  });
 }

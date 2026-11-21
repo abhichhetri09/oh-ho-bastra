@@ -6,7 +6,8 @@ export type SettingsPageId =
   | "appearance"
   | "announcements"
   | "delivery"
-  | "referrals";
+  | "referrals"
+  | "admins";
 
 export type SettingsPage = {
   id: SettingsPageId;
@@ -58,6 +59,14 @@ export const SETTINGS_PAGES: SettingsPage[] = [
     hint: "Friend discount and credit",
     description:
       "What a referred friend gets off their first order, and the store credit the referrer earns. Referrals keep the rule they were made under.",
+  },
+  {
+    id: "admins",
+    href: "/admin/settings/admins",
+    label: "Admins",
+    hint: "Who can use the admin",
+    description:
+      "Everyone who can manage the store. To add someone, they sign up as a shopper first, then you add their email here.",
   },
 ];
 

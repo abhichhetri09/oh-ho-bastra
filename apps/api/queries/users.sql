@@ -56,3 +56,18 @@ WHERE u.role = 'guest'
       SELECT 1 FROM sessions s
       WHERE s.user_id = u.id AND s.revoked_at IS NULL AND s.expires_at > now()
   );
+
+-- name: ListAdmins :many
+-- Admin → Settings → Admins: everyone who can use the admin, oldest first.
+SELECT id, name, email::text AS email, created_at FROM users
+WHERE role = 'admin' ORDER BY created_at, id;
+
+-- name: CountAdmins :one
+SELECT COUNT(*) FROM users WHERE role = 'admin';
+
+-- name: SetUserRole :one
+-- Promotes a customer to admin, or an admin back to customer. Guests
+-- (no email, no password) never change role.
+UPDATE users SET role = @role
+WHERE id = @id AND role IN ('customer', 'admin')
+RETURNING *;

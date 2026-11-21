@@ -7,6 +7,7 @@ import {
   GiftIcon,
   MegaphoneIcon,
   PaletteIcon,
+  ShieldCheckIcon,
   StorefrontIcon,
   TruckIcon,
   type Icon,
@@ -24,6 +25,7 @@ export const SETTINGS_ICONS: Record<SettingsPageId, Icon> = {
   announcements: MegaphoneIcon,
   delivery: TruckIcon,
   referrals: GiftIcon,
+  admins: ShieldCheckIcon,
 };
 
 /**
