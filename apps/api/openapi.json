@@ -1925,12 +1925,9 @@
             "type": "boolean"
           },
           "blank_id": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": "string",
             "format": "uuid",
-            "description": "A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock."
+            "description": "The blank to print on: the variant shares the blank's stock."
           },
           "stock": {
             "type": "integer",
@@ -1952,7 +1949,8 @@
           "image_public_ids",
           "selling_price",
           "is_default",
-          "is_active"
+          "is_active",
+          "blank_id"
         ],
         "description": "Prices are integer cents."
       },
@@ -2028,12 +2026,9 @@
             "type": "boolean"
           },
           "blank_id": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": "string",
             "format": "uuid",
-            "description": "A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock."
+            "description": "The blank to print on: the variant shares the blank's stock."
           },
           "properties": {
             "type": "array",
@@ -2049,9 +2044,10 @@
           "image_public_ids",
           "selling_price",
           "is_default",
-          "is_active"
+          "is_active",
+          "blank_id"
         ],
-        "description": "The SKU is fixed at creation; stock has its own endpoint. A blank_id left out unlinks the blank (this replaces the variant)."
+        "description": "The SKU is fixed at creation; stock has its own endpoint. A blank_id is required (this replaces the variant)."
       },
       "SetPriceBody": {
         "type": "object",

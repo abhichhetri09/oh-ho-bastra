@@ -622,9 +622,9 @@ export type CreateVariantBody = {
     is_default: boolean;
     is_active: boolean;
     /**
-     * A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock.
+     * The blank to print on: the variant shares the blank's stock.
      */
-    blank_id?: string | null;
+    blank_id: string;
     /**
      * Required without a blank; with one, the blank's is used.
      */
@@ -642,7 +642,7 @@ export type VariantProperty = {
 };
 
 /**
- * The SKU is fixed at creation; stock has its own endpoint. A blank_id left out unlinks the blank (this replaces the variant).
+ * The SKU is fixed at creation; stock has its own endpoint. A blank_id is required (this replaces the variant).
  */
 export type UpdateVariantBody = {
     images: Array<string>;
@@ -665,9 +665,9 @@ export type UpdateVariantBody = {
     is_default: boolean;
     is_active: boolean;
     /**
-     * A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock.
+     * The blank to print on: the variant shares the blank's stock.
      */
-    blank_id?: string | null;
+    blank_id: string;
     /**
      * New option values; omit to keep them. Another variant of the product with the same values is a 409.
      */

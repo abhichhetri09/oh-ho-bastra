@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { createBlank } from "../src/db/gen";
 import { makeVariant, setupCheckoutApp } from "./checkout-helpers";
 import { cookieFor, makeUser } from "./helpers";
 
 const { http, db, cfg } = setupCheckoutApp();
 
 const IMG = "https://res.cloudinary.com/x/image/upload/a.jpg";
+let blankId = "";
 const body = (properties?: unknown) => ({
+  blank_id: blankId,
   images: [IMG],
   image_public_ids: ["a"],
   selling_price: 2500,
@@ -18,6 +21,7 @@ describe("PUT variant: options", () => {
   it("changes a variant's size and colour, and refuses a clash", async () => {
     const admin = cookieFor(cfg, await makeUser(db, { role: "admin" }));
     const { product, variant } = await makeVariant(db);
+    blankId = (await createBlank(db, { name: "Black tee", stock: 5 }))!.id;
     const url = `/api/v1/admin/products/${product.id}/variants`;
 
     let res = await http()

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createBlank,
   createCategory,
   createProduct,
   createProductVariant,
@@ -16,7 +17,9 @@ const IMG =
 
 let admin = "";
 let categoryId = "";
+let blankId = "";
 beforeEach(async () => {
+  blankId = (await createBlank(db, { name: "Black tee", stock: 10 }))!.id;
   admin = (await signIn(db, cfg, "admin")).cookie;
   categoryId = (await createCategory(db, { name: "Tees", slug: "tees" }))!.id;
   cloudinary.deleted.length = 0;
@@ -78,6 +81,7 @@ const variantBody = (over: Record<string, unknown> = {}) => ({
   selling_price: 2500,
   is_default: false,
   is_active: true,
+  blank_id: blankId,
   ...over,
 });
 
@@ -665,12 +669,12 @@ describe("PUT /admin/products/:productID/variants/:variantID", () => {
       );
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("Variant updated");
-    // stock has its own endpoint, and the SKU is fixed
+    // stock comes from the blank (not the body's 99), and the SKU is fixed
     expect(res.body.data).toMatchObject({
       selling_price: 4000,
       offer_price: 3000,
       is_default: true,
-      stock: 7,
+      stock: 10,
       sku: v.sku,
     });
     expect(

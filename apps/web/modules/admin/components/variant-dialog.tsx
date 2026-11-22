@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/select";
 import {
   adminCreateVariant,
-  adminSetVariantStock,
   adminUpdateVariant,
 } from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
@@ -193,14 +192,14 @@ function VariantForm({
   const [offerEnds, setOfferEnds] = useState(
     toLocalInput(variant?.offer_expires_at ?? null),
   );
-  // An existing variant's count is saved through its own write, and only
-  // when changed here, so an untouched form can't put back an old count.
-  const [stock, setStock] = useState(variant ? String(variant.stock) : "");
   // A blank shares its stock with every variant printed on it.
   const [blankId, setBlankId] = useState(variant?.blank_id ?? NO_BLANK);
   const blanks = useAdminBlanks();
   const blankItems = [
-    { value: NO_BLANK, label: "None: its own stock" },
+    // Only an old variant without a blank shows this, until one is picked.
+    ...(blankId === NO_BLANK
+      ? [{ value: NO_BLANK, label: "Choose a blank" }]
+      : []),
     ...(blanks.data ?? []).map((b) => ({
       value: b.id,
       label: `${b.name} (${b.stock})`,
@@ -229,14 +228,6 @@ function VariantForm({
           body,
           throwOnError: true,
         });
-        const count = Number(stock);
-        if (blankId === NO_BLANK && count !== variant.stock) {
-          await adminSetVariantStock({
-            path: { productID: productId, variantID: variant.id },
-            body: { stock: count },
-            throwOnError: true,
-          });
-        }
       } else {
         await adminCreateVariant({
           path: { productID: productId },
@@ -275,17 +266,12 @@ function VariantForm({
       local.selling_price = "Enter a price, like 49 or 49.50";
     if (offerCents === null)
       local.offer_price = "Enter a price, like 39 or 39.50";
-    if (!onBlank && !/^\d+$/.test(stock.trim())) {
-      local.stock = "Enter a whole number";
-    } else if (!onBlank && Number(stock) > 10_000) {
-      local.stock = "Enter a count up to 10,000";
-    }
+    if (!onBlank) local.blank_id = "Choose a blank";
 
     const body = {
       images: images.map((i) => i.url),
       image_public_ids: images.map((i) => i.public_id),
-      ...(!variant && !onBlank && { stock: Number(stock) }),
-      blank_id: onBlank ? blankId : null,
+      blank_id: blankId,
       selling_price: sellingCents ?? 0,
       ...(offerCents != null && {
         offer_price: offerCents,
@@ -308,7 +294,6 @@ function VariantForm({
     const parsed = schema.safeParse(body);
     const labels: Record<string, string> = {
       images: "at least one image",
-      stock: "a count up to 10,000",
       selling_price: "a price up to €1,000,000",
     };
     properties.forEach((_, i) => {
@@ -514,15 +499,12 @@ function VariantForm({
           <Field className="sm:col-span-2">
             <FieldLabel className="eyebrow !text-foreground">
               Printed on blank
-              <span className="ml-1 tracking-normal normal-case text-muted-foreground">
-                (optional)
-              </span>
             </FieldLabel>
             <Select
               value={blankId}
               onValueChange={(v) => {
                 setBlankId(v ?? NO_BLANK);
-                clear("stock", "blank_id");
+                clear("blank_id");
               }}
               items={blankItems}
             >
@@ -540,41 +522,19 @@ function VariantForm({
             <p className="text-xs text-muted-foreground">
               {onBlank
                 ? "Shares the blank's stock: a sale of any print on it takes one from all of them."
-                : "Pick one when you print this to order on a plain garment you keep in stock. Add blanks under Catalog → Blanks."}
+                : "Every variant is printed on a blank and shares its stock. Add blanks under Catalog → Blanks."}
             </p>
             <FieldError>{errors.blank_id}</FieldError>
           </Field>
-          {onBlank ? (
-            <div className="space-y-2">
-              <p className="eyebrow !text-foreground">Stock</p>
-              <p className="flex h-10 items-center text-sm tabular-nums">
-                {blank?.stock ?? "—"}
-                <span className="ml-2 text-xs text-muted-foreground">
-                  The blank&apos;s, shared.
-                </span>
-              </p>
-            </div>
-          ) : (
-            <Field data-invalid={Boolean(errors.stock)}>
-              <FieldLabel
-                htmlFor="variant-stock"
-                className="eyebrow !text-foreground"
-              >
-                Stock
-              </FieldLabel>
-              <Input
-                id="variant-stock"
-                inputMode="numeric"
-                value={stock}
-                onChange={(e) => {
-                  setStock(e.target.value.replace(/\D/g, "").slice(0, 5));
-                  clear("stock");
-                }}
-                aria-invalid={Boolean(errors.stock)}
-              />
-              <FieldError>{errors.stock}</FieldError>
-            </Field>
-          )}
+          <div className="space-y-2">
+            <p className="eyebrow !text-foreground">Stock</p>
+            <p className="flex h-10 items-center text-sm tabular-nums">
+              {blank?.stock ?? "—"}
+              <span className="ml-2 text-xs text-muted-foreground">
+                The blank&apos;s, shared.
+              </span>
+            </p>
+          </div>
           <MoneyField
             id="variant-offer"
             label="Offer price"
@@ -592,9 +552,6 @@ function VariantForm({
               className="eyebrow !text-foreground"
             >
               Offer ends
-              <span className="ml-1 tracking-normal normal-case text-muted-foreground">
-                (optional)
-              </span>
             </FieldLabel>
             <Input
               id="variant-offer-ends"

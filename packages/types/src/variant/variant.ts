@@ -91,11 +91,9 @@ const variantFields = {
       "A product has at most one default: setting it takes it from the current one.",
     ),
   is_active: z.boolean(),
-  blank_id: Uuid.nullable()
-    .optional()
-    .describe(
-      "A blank to print on: the variant then shares the blank's stock. Omit or null for a variant with its own stock.",
-    ),
+  blank_id: Uuid.describe(
+    "The blank to print on: the variant shares the blank's stock.",
+  ),
 };
 
 type VariantFields = {
@@ -176,7 +174,7 @@ export const UpdateVariantBodySchema = z
   .meta({
     id: "UpdateVariantBody",
     description:
-      "The SKU is fixed at creation; stock has its own endpoint. A blank_id left out unlinks the blank (this replaces the variant).",
+      "The SKU is fixed at creation; stock has its own endpoint. A blank_id is required (this replaces the variant).",
   });
 export type UpdateVariantBody = z.infer<typeof UpdateVariantBodySchema>;
 
