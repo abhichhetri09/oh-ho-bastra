@@ -34,6 +34,7 @@ async function twoPrints(stock: number) {
   const blank = (await createBlank(db, {
     name: `Tee Black M ${Math.random()}`,
     stock,
+    price: null,
   }))!;
   const a = (await makeVariant(db, { name: "Mountain", stock: 99 })).variant;
   const b = (await makeVariant(db, { name: "Logo", stock: 3 })).variant;

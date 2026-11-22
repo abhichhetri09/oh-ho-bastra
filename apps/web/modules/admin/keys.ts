@@ -31,6 +31,8 @@ export const adminKeys = {
   search: (q: string) => [...adminKeys.all, "search", q] as const,
   inventory: () => [...adminKeys.all, "inventory"] as const,
   blanks: () => [...adminKeys.all, "blanks"] as const,
+  // under blanks, so a change to the blanks refetches it too
+  garments: () => [...adminKeys.all, "blanks", "garments"] as const,
   attributes: () => [...adminKeys.all, "attributes"] as const,
   inventoryList: (filters: AdminInventoryFilters) =>
     [...adminKeys.inventory(), filters] as const,

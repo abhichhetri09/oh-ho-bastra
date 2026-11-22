@@ -7,6 +7,8 @@ import {
   deleteVariantOptionValues,
   getProductByID,
   getProductVariant,
+  listGarmentBlanks,
+  listProductVariantKeys,
   setVariantCombination,
   setVariantPrice,
   setVariantStock,
@@ -28,7 +30,12 @@ import { pathUuid } from "../http/params";
 import { fail, internal, ok } from "../http/response";
 import type { Group } from "../http/router";
 import { parseBody } from "../http/validate";
-import { SetPriceBodySchema, SetStockBodySchema } from "@repo/types";
+import {
+  GenerateVariantsBodySchema,
+  SetPriceBodySchema,
+  SetStockBodySchema,
+  type VariantProperty,
+} from "@repo/types";
 import { generateSku } from "../lib/text";
 import { CreateVariantBody, UpdateVariantBody } from "./schemas";
 
@@ -240,6 +247,97 @@ export function adminVariantRoutes(variants: Group, deps: Deps) {
         return created;
       });
       ok(res, 201, "Variant created", variant);
+    });
+  });
+
+  /**
+   * Makes one variant per blank of a garment, each with the blank's options,
+   * price (or the one given) and stock, and the product's images. The
+   * combinations the product already has are skipped, so it can be run
+   * again after the garment gains a colour. Without a default variant the
+   * first one made becomes it, so the store lists the product.
+   */
+  variants.post("/generate", async (req, res) => {
+    const productId = pathUuid(
+      req,
+      res,
+      "productID",
+      "INVALID_PRODUCT_ID",
+      "product ID",
+    );
+    if (!productId) return;
+    const body = parseBody(GenerateVariantsBodySchema, req, res);
+    if (!body) return;
+
+    await replying(async () => {
+      const result = await withTx(db, async (tx) => {
+        const product = await getProductByID(tx, productId);
+        if (!product)
+          throw new Reply(() =>
+            fail(res, 404, "PRODUCT_NOT_FOUND", "Product not found"),
+          );
+        const blanks = await listGarmentBlanks(tx, body.garment);
+        if (blanks.length === 0)
+          throw new Reply(() =>
+            fail(res, 404, "GARMENT_NOT_FOUND", "No blanks for this garment"),
+          );
+        const unpriced = blanks.filter((b) => b.price === null);
+        if (body.selling_price === undefined && unpriced.length > 0)
+          throw new Reply(() =>
+            res.status(400).json({
+              success: false,
+              message: "Some blanks have no price",
+              code: "VALIDATION_FAILED",
+              errors: [
+                {
+                  code: "REQUIRED_FIELD",
+                  field: "selling_price",
+                  message: `Give a price: ${unpriced[0]!.name} has none of its own`,
+                },
+              ],
+            }),
+          );
+
+        const existing = await listProductVariantKeys(tx, productId);
+        const taken = new Set(existing.map((v) => v.option_combination_key));
+        let needsDefault = !existing.some((v) => v.is_default);
+        let created = 0;
+        for (const blank of blanks) {
+          const props = blank.options as VariantProperty[];
+          const key = combinationKey(props);
+          if (taken.has(key)) continue;
+          taken.add(key);
+          const row = await variantWrite(
+            req,
+            res,
+            "failed to generate variants",
+            () =>
+              createProductVariant(tx, {
+                product_id: productId,
+                sku: generateSku(
+                  product.name,
+                  props.map((p) => p.value),
+                ),
+                stock: 0, // the blank's, set by the trigger
+                blank_id: blank.id,
+                images: product.images.slice(0, 5),
+                image_public_ids: product.image_public_ids.slice(0, 5),
+                selling_price: body.selling_price ?? blank.price!,
+                offer_price: null,
+                offer_expires_at: null,
+                option_combination_key: key,
+                is_default: needsDefault,
+                is_active: true,
+              }),
+          );
+          if (!row) throw new Error("create variant returned no row");
+          needsDefault = false;
+          await linkOptions(tx, productId, row.id, props);
+          created++;
+        }
+        return { created, skipped: blanks.length - created };
+      });
+      ok(res, 201, "Variants generated", result);
     });
   });
 

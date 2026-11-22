@@ -210,3 +210,16 @@ export async function setVariantPrice(db: Queryable, p: SetVariantPriceParams): 
   const { rows } = await db.query(setVariantPriceSql, [p["selling_price"], p["id"], p["product_id"]]);
   return (rows[0] as ProductVariant | undefined) ?? null;
 }
+
+// Every variant's combination, active or not, and whether it is the default.
+export const listProductVariantKeysSql = "SELECT option_combination_key, is_default FROM product_variants\nWHERE product_id = $1";
+
+export interface ListProductVariantKeysRow {
+  option_combination_key: string;
+  is_default: boolean;
+}
+
+export async function listProductVariantKeys(db: Queryable, product_id: string): Promise<ListProductVariantKeysRow[]> {
+  const { rows } = await db.query(listProductVariantKeysSql, [product_id]);
+  return rows as ListProductVariantKeysRow[];
+}

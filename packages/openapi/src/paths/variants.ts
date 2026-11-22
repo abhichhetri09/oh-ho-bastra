@@ -37,6 +37,30 @@ export function registerVariantPaths() {
   });
 
   operation({
+    method: "post",
+    path: `${base}/generate`,
+    operationId: "adminGenerateVariants",
+    tag,
+    summary: "Make variants from a garment",
+    description:
+      "One variant per blank of the garment, with the blank's options, price (or selling_price) and stock and the product's images. Combinations the product has are skipped; without a default, the first made becomes it.",
+    auth: "admin",
+    request: {
+      params: z.object({ productID: Uuid }),
+      ...body(schemas.GenerateVariantsBodySchema),
+    },
+    success: {
+      status: 201,
+      description: "Variants generated",
+      schema: schemas.GenerateVariantsResponseSchema,
+    },
+    errors: {
+      400: "Invalid id or body, or a blank has no price and none was given (INVALID_PRODUCT_ID, VALIDATION_FAILED)",
+      404: "No such product, or no blanks for the garment (PRODUCT_NOT_FOUND, GARMENT_NOT_FOUND)",
+    },
+  });
+
+  operation({
     method: "get",
     path: `${base}/{variantID}`,
     operationId: "adminGetVariant",

@@ -28,6 +28,40 @@ export function registerBlankPaths() {
   });
 
   operation({
+    method: "get",
+    path: `${base}/garments`,
+    operationId: "adminListGarments",
+    tag,
+    summary: "Garments",
+    description:
+      "The garments blanks belong to, with how many blanks each has.",
+    auth: "admin",
+    success: {
+      status: 200,
+      description: "Garments fetched",
+      schema: schemas.GarmentListResponseSchema,
+    },
+  });
+
+  operation({
+    method: "post",
+    path: `${base}/garments`,
+    operationId: "adminSaveGarment",
+    tag,
+    summary: "Make a garment's blanks",
+    description:
+      'One blank per combination of the options, named "Garment, Black, M", with the price. A blank of that name already joins the garment and keeps its stock, so a resend is harmless.',
+    auth: "admin",
+    request: body(schemas.GarmentBodySchema),
+    success: {
+      status: 201,
+      description: "Garment saved",
+      schema: schemas.GarmentResponseSchema,
+    },
+    errors: { 400: "Invalid body (VALIDATION_FAILED)" },
+  });
+
+  operation({
     method: "post",
     path: base,
     operationId: "adminCreateBlank",

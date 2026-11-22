@@ -131,3 +131,8 @@ WHERE id = @id AND product_id = @product_id;
 UPDATE product_variants SET selling_price = @selling_price
 WHERE id = @id AND product_id = @product_id
 RETURNING *;
+
+-- name: ListProductVariantKeys :many
+-- Every variant's combination, active or not, and whether it is the default.
+SELECT option_combination_key, is_default FROM product_variants
+WHERE product_id = $1;

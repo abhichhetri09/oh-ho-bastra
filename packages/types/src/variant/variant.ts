@@ -232,3 +232,33 @@ export const ProductPageResponseSchema = successResponse(
   ProductPageSchema,
 ).meta({ id: "ProductPageResponse" });
 export type ProductPageResponse = z.infer<typeof ProductPageResponseSchema>;
+
+export const GenerateVariantsBodySchema = z
+  .object({
+    garment: z.string().trim().min(1).max(60),
+    selling_price: z
+      .int()
+      .positive()
+      .max(100_000_000)
+      .optional()
+      .describe("Every new variant's price; omit to use each blank's own."),
+  })
+  .meta({
+    id: "GenerateVariantsBody",
+    description:
+      "Makes one variant per blank of the garment, with the blank's options, price and stock and the product's images. Combinations the product already has are skipped.",
+  });
+export type GenerateVariantsBody = z.infer<typeof GenerateVariantsBodySchema>;
+
+export const GenerateVariantsResponseSchema = successResponse(
+  z.object({
+    created: z.int().nonnegative(),
+    skipped: z
+      .int()
+      .nonnegative()
+      .describe("Combinations the product already had"),
+  }),
+).meta({ id: "GenerateVariantsResponse" });
+export type GenerateVariantsResponse = z.infer<
+  typeof GenerateVariantsResponseSchema
+>;

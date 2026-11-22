@@ -21,7 +21,11 @@ describe("PUT variant: options", () => {
   it("changes a variant's size and colour, and refuses a clash", async () => {
     const admin = cookieFor(cfg, await makeUser(db, { role: "admin" }));
     const { product, variant } = await makeVariant(db);
-    blankId = (await createBlank(db, { name: "Black tee", stock: 5 }))!.id;
+    blankId = (await createBlank(db, {
+      name: "Black tee",
+      stock: 5,
+      price: null,
+    }))!.id;
     const url = `/api/v1/admin/products/${product.id}/variants`;
 
     let res = await http()

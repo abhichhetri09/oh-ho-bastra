@@ -6,6 +6,7 @@ import {
   adminGetCounts,
   adminListAdmins,
   adminListAttributes,
+  adminListGarments,
   adminListBlanks,
   adminGetCreditAccount,
   adminSearch,
@@ -107,6 +108,17 @@ export function useAdminBlanks() {
     queryKey: adminKeys.blanks(),
     queryFn: async ({ signal }) => {
       const { data } = await adminListBlanks({ signal, throwOnError: true });
+      return data.data;
+    },
+  });
+}
+
+/** The garments blanks belong to, for making variants from one. */
+export function useAdminGarments() {
+  return useQuery({
+    queryKey: adminKeys.garments(),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListGarments({ signal, throwOnError: true });
       return data.data;
     },
   });

@@ -407,6 +407,9 @@ export interface Blank {
   stock: number;
   created_at: Date;
   updated_at: Date;
+  garment: string | null;
+  options: unknown;
+  price: number | null;
 }
 
 export interface Attribute {

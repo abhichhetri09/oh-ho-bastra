@@ -1,7 +1,14 @@
 import type { Response } from "express";
-import { BlankBodySchema } from "@repo/types";
-import { createBlank, deleteBlank, listBlanks, updateBlank } from "../db/gen";
-import { pgCode, UNIQUE_VIOLATION } from "../db/pool";
+import { BlankBodySchema, combinations, GarmentBodySchema } from "@repo/types";
+import {
+  createBlank,
+  deleteBlank,
+  listBlanks,
+  listGarments,
+  updateBlank,
+  upsertGarmentBlank,
+} from "../db/gen";
+import { pgCode, UNIQUE_VIOLATION, withTx } from "../db/pool";
 import type { Deps } from "../deps";
 import { requireAuth, requireRole } from "../http/middleware";
 import { pathUuid } from "../http/params";
@@ -45,12 +52,47 @@ export function adminBlankRoutes(api: Group, deps: Deps) {
     ok(res, 200, "Blanks fetched", await listBlanks(db));
   });
 
+  /** The garments, with how many blanks each has. */
+  admin.get("/garments", async (_req, res) => {
+    ok(res, 200, "Garments fetched", await listGarments(db));
+  });
+
+  /**
+   * Makes a garment: one blank per combination of its options, named
+   * "Classic tee, Black, M". A blank of that name already joins the
+   * garment and keeps its counted stock, so sending it again is harmless.
+   */
+  admin.post("/garments", async (req, res) => {
+    const body = parseBody(GarmentBodySchema, req, res);
+    if (!body) return;
+    const lists = body.options.map((o) =>
+      o.values.map((value) => ({ name: o.name, type: o.type, value })),
+    );
+    const blanks = await withTx(db, async (tx) => {
+      const out = [];
+      for (const combo of combinations(lists)) {
+        const blank = await upsertGarmentBlank(tx, {
+          name: [body.garment, ...combo.map((o) => o.value)].join(", "),
+          stock: body.stock,
+          garment: body.garment,
+          // pg would send a JS array as a Postgres array, not JSON
+          options: JSON.stringify(combo),
+          price: body.price,
+        });
+        if (!blank) throw new Error("upsert garment blank returned no row");
+        out.push(blank);
+      }
+      return out;
+    });
+    ok(res, 201, "Garment saved", blanks);
+  });
+
   admin.post("", async (req, res) => {
     const body = parseBody(BlankBodySchema, req, res);
     if (!body) return;
     let created;
     try {
-      created = await createBlank(db, body);
+      created = await createBlank(db, { ...body, price: body.price ?? null });
     } catch (err) {
       if (pgCode(err) === UNIQUE_VIOLATION)
         return duplicateName(res, body.name);
@@ -71,7 +113,11 @@ export function adminBlankRoutes(api: Group, deps: Deps) {
     if (!body) return;
     let updated;
     try {
-      updated = await updateBlank(db, { id, ...body });
+      updated = await updateBlank(db, {
+        id,
+        ...body,
+        price: body.price ?? null,
+      });
     } catch (err) {
       if (pgCode(err) === UNIQUE_VIOLATION)
         return duplicateName(res, body.name);

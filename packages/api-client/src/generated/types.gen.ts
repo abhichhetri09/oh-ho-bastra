@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'ADMIN_NOT_FOUND' | 'ALREADY_ADMIN' | 'CANNOT_REMOVE_SELF' | 'LAST_ADMIN' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'BLANK_NOT_FOUND' | 'INVALID_BLANK_ID' | 'BLANK_ALREADY_EXISTS' | 'ATTRIBUTE_NOT_FOUND' | 'INVALID_ATTRIBUTE_ID' | 'ATTRIBUTE_ALREADY_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_REFUND' | 'REFUND_TOO_LARGE' | 'REFUND_REQUEST_REUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'REFERRALS_DISABLED' | 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL' | 'CREDIT_NOT_ENOUGH' | 'CREDIT_OVER_LIMIT' | 'CREDIT_CODE_INVALID' | 'CREDIT_CODE_EXPIRED' | 'INVALID_REDEMPTION_ID' | 'REDEMPTION_NOT_FOUND';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'ADMIN_NOT_FOUND' | 'ALREADY_ADMIN' | 'CANNOT_REMOVE_SELF' | 'LAST_ADMIN' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'GOOGLE_UNAVAILABLE' | 'GUEST_NOT_ALLOWED' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'BLANK_NOT_FOUND' | 'GARMENT_NOT_FOUND' | 'INVALID_BLANK_ID' | 'BLANK_ALREADY_EXISTS' | 'ATTRIBUTE_NOT_FOUND' | 'INVALID_ATTRIBUTE_ID' | 'ATTRIBUTE_ALREADY_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'COUPON_NOT_FOUND' | 'COUPON_EXPIRED' | 'COUPON_MIN_SUBTOTAL' | 'COUPON_USED_UP' | 'COUPON_ALREADY_USED' | 'COUPON_ALREADY_EXISTS' | 'COUPON_IN_USE' | 'INVALID_COUPON_ID' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_REFUND' | 'REFUND_TOO_LARGE' | 'REFUND_REQUEST_REUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'REFERRALS_DISABLED' | 'REFERRAL_NOT_FOUND' | 'REFERRAL_OWN_CODE' | 'REFERRAL_NOT_FIRST_ORDER' | 'REFERRAL_MIN_SUBTOTAL' | 'CREDIT_NOT_ENOUGH' | 'CREDIT_OVER_LIMIT' | 'CREDIT_CODE_INVALID' | 'CREDIT_CODE_EXPIRED' | 'INVALID_REDEMPTION_ID' | 'REDEMPTION_NOT_FOUND';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -639,6 +639,29 @@ export type VariantProperty = {
     name: string;
     value: string;
     type: 'text' | 'color';
+};
+
+export type GenerateVariantsResponse = {
+    success: true;
+    message: string;
+    data: {
+        created: number;
+        /**
+         * Combinations the product already had
+         */
+        skipped: number;
+    };
+};
+
+/**
+ * Makes one variant per blank of the garment, with the blank's options, price and stock and the product's images. Combinations the product already has are skipped.
+ */
+export type GenerateVariantsBody = {
+    garment: string;
+    /**
+     * Every new variant's price; omit to use each blank's own.
+     */
+    selling_price?: number;
 };
 
 /**
@@ -2284,6 +2307,18 @@ export type AdminBlank = {
     id: string;
     name: string;
     stock: number;
+    /**
+     * The garment it is one colour and size of, if any
+     */
+    garment: string | null;
+    /**
+     * Its option values (Colour, Size), given to its variants
+     */
+    options: Array<VariantOption>;
+    /**
+     * The usual price of a print on it
+     */
+    price: number | null;
     created_at: string;
     updated_at: string;
     /**
@@ -2292,10 +2327,27 @@ export type AdminBlank = {
     variant_count: number;
 };
 
-export type BlankResponse = {
+export type GarmentListResponse = {
     success: true;
     message: string;
-    data: Blank;
+    /**
+     * By name
+     */
+    data: Array<Garment>;
+};
+
+export type Garment = {
+    garment: string;
+    blank_count: number;
+};
+
+export type GarmentResponse = {
+    success: true;
+    message: string;
+    /**
+     * The garment's blanks
+     */
+    data: Array<Blank>;
 };
 
 /**
@@ -2305,16 +2357,58 @@ export type Blank = {
     id: string;
     name: string;
     stock: number;
+    /**
+     * The garment it is one colour and size of, if any
+     */
+    garment: string | null;
+    /**
+     * Its option values (Colour, Size), given to its variants
+     */
+    options: Array<VariantOption>;
+    /**
+     * The usual price of a print on it
+     */
+    price: number | null;
     created_at: string;
     updated_at: string;
 };
 
 /**
- * The blank's name (unique, ignoring case) and its counted stock (an absolute value), which every variant on it takes.
+ * A garment and its options: one blank is made per combination, named "Garment, Black, M". A blank of that name already joins the garment and keeps its stock.
+ */
+export type GarmentBody = {
+    garment: string;
+    options: Array<{
+        name: string;
+        type: 'text' | 'color';
+        values: Array<string>;
+    }>;
+    /**
+     * In cents
+     */
+    price: number;
+    /**
+     * The count each new blank starts with
+     */
+    stock: number;
+};
+
+export type BlankResponse = {
+    success: true;
+    message: string;
+    data: Blank;
+};
+
+/**
+ * The blank's name (unique, ignoring case), its counted stock (an absolute value), which every variant on it takes, and its usual price.
  */
 export type BlankBody = {
     name: string;
     stock: number;
+    /**
+     * The usual price of a print on it, in cents; null for none
+     */
+    price?: number | null;
 };
 
 export type AttributeListResponse = {
@@ -3791,6 +3885,49 @@ export type AdminUpdateProductResponses = {
 };
 
 export type AdminUpdateProductResponse = AdminUpdateProductResponses[keyof AdminUpdateProductResponses];
+
+export type AdminGenerateVariantsData = {
+    body: GenerateVariantsBody;
+    path: {
+        productID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/products/{productID}/variants/generate';
+};
+
+export type AdminGenerateVariantsErrors = {
+    /**
+     * Invalid id or body, or a blank has no price and none was given (INVALID_PRODUCT_ID, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such product, or no blanks for the garment (PRODUCT_NOT_FOUND, GARMENT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminGenerateVariantsError = AdminGenerateVariantsErrors[keyof AdminGenerateVariantsErrors];
+
+export type AdminGenerateVariantsResponses = {
+    /**
+     * Variants generated
+     */
+    201: GenerateVariantsResponse;
+};
+
+export type AdminGenerateVariantsResponse = AdminGenerateVariantsResponses[keyof AdminGenerateVariantsResponses];
 
 export type AdminDeleteVariantData = {
     body?: never;
@@ -6563,6 +6700,76 @@ export type AdminCreateBlankResponses = {
 };
 
 export type AdminCreateBlankResponse = AdminCreateBlankResponses[keyof AdminCreateBlankResponses];
+
+export type AdminListGarmentsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/blanks/garments';
+};
+
+export type AdminListGarmentsErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListGarmentsError = AdminListGarmentsErrors[keyof AdminListGarmentsErrors];
+
+export type AdminListGarmentsResponses = {
+    /**
+     * Garments fetched
+     */
+    200: GarmentListResponse;
+};
+
+export type AdminListGarmentsResponse = AdminListGarmentsResponses[keyof AdminListGarmentsResponses];
+
+export type AdminSaveGarmentData = {
+    body: GarmentBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/blanks/garments';
+};
+
+export type AdminSaveGarmentErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSaveGarmentError = AdminSaveGarmentErrors[keyof AdminSaveGarmentErrors];
+
+export type AdminSaveGarmentResponses = {
+    /**
+     * Garment saved
+     */
+    201: GarmentResponse;
+};
+
+export type AdminSaveGarmentResponse = AdminSaveGarmentResponses[keyof AdminSaveGarmentResponses];
 
 export type AdminDeleteBlankData = {
     body?: never;

@@ -112,6 +112,7 @@
           "VARIANT_ALREADY_EXISTS",
           "DEFAULT_VARIANT_EXISTS",
           "BLANK_NOT_FOUND",
+          "GARMENT_NOT_FOUND",
           "INVALID_BLANK_ID",
           "BLANK_ALREADY_EXISTS",
           "ATTRIBUTE_NOT_FOUND",
@@ -1980,6 +1981,63 @@
           "value",
           "type"
         ]
+      },
+      "GenerateVariantsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "skipped": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Combinations the product already had"
+              }
+            },
+            "required": [
+              "created",
+              "skipped"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "GenerateVariantsBody": {
+        "type": "object",
+        "properties": {
+          "garment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "selling_price": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 100000000,
+            "description": "Every new variant's price; omit to use each blank's own."
+          }
+        },
+        "required": [
+          "garment"
+        ],
+        "description": "Makes one variant per blank of the garment, with the blank's options, price and stock and the product's images. Combinations the product already has are skipped."
       },
       "UpdateVariantBody": {
         "type": "object",
@@ -6497,6 +6555,28 @@
             "type": "integer",
             "minimum": 0
           },
+          "garment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The garment it is one colour and size of, if any"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantOption"
+            },
+            "description": "Its option values (Colour, Size), given to its variants"
+          },
+          "price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "The usual price of a print on it"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -6515,10 +6595,204 @@
           "id",
           "name",
           "stock",
+          "garment",
+          "options",
+          "price",
           "created_at",
           "updated_at",
           "variant_count"
         ]
+      },
+      "GarmentListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Garment"
+            },
+            "description": "By name"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "Garment": {
+        "type": "object",
+        "properties": {
+          "garment": {
+            "type": "string"
+          },
+          "blank_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "garment",
+          "blank_count"
+        ]
+      },
+      "GarmentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Blank"
+            },
+            "description": "The garment's blanks"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "Blank": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "garment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The garment it is one colour and size of, if any"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantOption"
+            },
+            "description": "Its option values (Colour, Size), given to its variants"
+          },
+          "price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "The usual price of a print on it"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "stock",
+          "garment",
+          "options",
+          "price",
+          "created_at",
+          "updated_at"
+        ],
+        "description": "A plain garment whose stock its variants share (printed to order)."
+      },
+      "GarmentBody": {
+        "type": "object",
+        "properties": {
+          "garment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 20
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "color"
+                  ]
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20
+                  },
+                  "minItems": 1,
+                  "maxItems": 30
+                }
+              },
+              "required": [
+                "name",
+                "type",
+                "values"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 3
+          },
+          "price": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 100000000,
+            "description": "In cents"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "The count each new blank starts with"
+          }
+        },
+        "required": [
+          "garment",
+          "options",
+          "price",
+          "stock"
+        ],
+        "description": "A garment and its options: one blank is made per combination, named \"Garment, Black, M\". A blank of that name already joins the garment and keeps its stock."
       },
       "BlankResponse": {
         "type": "object",
@@ -6542,38 +6816,6 @@
           "data"
         ]
       },
-      "Blank": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "stock": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "stock",
-          "created_at",
-          "updated_at"
-        ],
-        "description": "A plain garment whose stock its variants share (printed to order)."
-      },
       "BlankBody": {
         "type": "object",
         "properties": {
@@ -6586,13 +6828,22 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 10000
+          },
+          "price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "maximum": 100000000,
+            "description": "The usual price of a print on it, in cents; null for none"
           }
         },
         "required": [
           "name",
           "stock"
         ],
-        "description": "The blank's name (unique, ignoring case) and its counted stock (an absolute value), which every variant on it takes."
+        "description": "The blank's name (unique, ignoring case), its counted stock (an absolute value), which every variant on it takes, and its usual price."
       },
       "AttributeListResponse": {
         "type": "object",
@@ -9777,6 +10028,104 @@
           },
           "404": {
             "description": "Product not found (PRODUCT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/products/{productID}/variants/generate": {
+      "post": {
+        "operationId": "adminGenerateVariants",
+        "tags": [
+          "Variants"
+        ],
+        "summary": "Make variants from a garment",
+        "description": "One variant per blank of the garment, with the blank's options, price (or selling_price) and stock and the product's images. Combinations the product has are skipped; without a default, the first made becomes it.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "productID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateVariantsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Variants generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateVariantsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id or body, or a blank has no price and none was given (INVALID_PRODUCT_ID, VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such product, or no blanks for the garment (PRODUCT_NOT_FOUND, GARMENT_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {
@@ -15564,6 +15913,138 @@
           },
           "409": {
             "description": "Another blank has the name, ignoring case (BLANK_ALREADY_EXISTS, with the field in errors)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/blanks/garments": {
+      "get": {
+        "operationId": "adminListGarments",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Garments",
+        "description": "The garments blanks belong to, with how many blanks each has.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Garments fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarmentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminSaveGarment",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Make a garment's blanks",
+        "description": "One blank per combination of the options, named \"Garment, Black, M\", with the price. A blank of that name already joins the garment and keeps its stock, so a resend is harmless.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GarmentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Garment saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
             "content": {
               "application/json": {
                 "schema": {

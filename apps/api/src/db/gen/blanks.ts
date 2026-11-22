@@ -6,7 +6,7 @@ import type { Blank } from "./models";
 // Blanks: plain garments printed to order, whose stock their variants share
 // (see migrations/000038_blanks.up.sql).
 // Every blank by name, with how many variants draw on it.
-export const listBlanksSql = "\nSELECT\n    b.id, b.name, b.stock, b.created_at, b.updated_at,\n    (SELECT COUNT(*) FROM product_variants pv WHERE pv.blank_id = b.id)::int AS variant_count\nFROM blanks b\nORDER BY lower(b.name)";
+export const listBlanksSql = "\nSELECT\n    b.id, b.name, b.stock, b.created_at, b.updated_at, b.garment, b.options, b.price,\n    (SELECT COUNT(*) FROM product_variants pv WHERE pv.blank_id = b.id)::int AS variant_count\nFROM blanks b\nORDER BY lower(b.name)";
 
 export interface ListBlanksRow {
   id: string;
@@ -14,6 +14,9 @@ export interface ListBlanksRow {
   stock: number;
   created_at: Date;
   updated_at: Date;
+  garment: string | null;
+  options: unknown;
+  price: number | null;
   variant_count: number;
 }
 
@@ -22,37 +25,39 @@ export async function listBlanks(db: Queryable): Promise<ListBlanksRow[]> {
   return rows as ListBlanksRow[];
 }
 
-export const getBlankSql = "SELECT id, name, stock, created_at, updated_at FROM blanks WHERE id = $1";
+export const getBlankSql = "SELECT id, name, stock, created_at, updated_at, garment, options, price FROM blanks WHERE id = $1";
 
 export async function getBlank(db: Queryable, id: string): Promise<Blank | null> {
   const { rows } = await db.query(getBlankSql, [id]);
   return (rows[0] as Blank | undefined) ?? null;
 }
 
-export const createBlankSql = "INSERT INTO blanks (name, stock) VALUES ($1, $2)\nRETURNING id, name, stock, created_at, updated_at";
+export const createBlankSql = "INSERT INTO blanks (name, stock, price) VALUES ($1, $2, $3)\nRETURNING id, name, stock, created_at, updated_at, garment, options, price";
 
 export interface CreateBlankParams {
   name: string;
   stock: number;
+  price: number | null;
 }
 
 export async function createBlank(db: Queryable, p: CreateBlankParams): Promise<Blank | null> {
-  const { rows } = await db.query(createBlankSql, [p["name"], p["stock"]]);
+  const { rows } = await db.query(createBlankSql, [p["name"], p["stock"], p["price"]]);
   return (rows[0] as Blank | undefined) ?? null;
 }
 
-// The name and the counted stock (an absolute value); the variants on it
-// take the count.
-export const updateBlankSql = "UPDATE blanks SET name = $1, stock = $2, updated_at = now()\nWHERE id = $3\nRETURNING id, name, stock, created_at, updated_at";
+// The name, the counted stock (an absolute value; the variants on it take
+// the count) and the usual price.
+export const updateBlankSql = "UPDATE blanks SET name = $1, stock = $2, price = $3, updated_at = now()\nWHERE id = $4\nRETURNING id, name, stock, created_at, updated_at, garment, options, price";
 
 export interface UpdateBlankParams {
   name: string;
   stock: number;
+  price: number | null;
   id: string;
 }
 
 export async function updateBlank(db: Queryable, p: UpdateBlankParams): Promise<Blank | null> {
-  const { rows } = await db.query(updateBlankSql, [p["name"], p["stock"], p["id"]]);
+  const { rows } = await db.query(updateBlankSql, [p["name"], p["stock"], p["price"], p["id"]]);
   return (rows[0] as Blank | undefined) ?? null;
 }
 
@@ -78,4 +83,43 @@ export interface LockBlanksOfVariantsRow {
 export async function lockBlanksOfVariants(db: Queryable, ids: string[]): Promise<LockBlanksOfVariantsRow[]> {
   const { rows } = await db.query(lockBlanksOfVariantsSql, [ids]);
   return rows as LockBlanksOfVariantsRow[];
+}
+
+// One colour and size of a garment. A blank of that name already (made by
+// hand) joins the garment and keeps its counted stock. clock_timestamp()
+// keeps the order they were made in within one transaction.
+export const upsertGarmentBlankSql = "INSERT INTO blanks (name, stock, garment, options, price, created_at)\nVALUES ($1, $2, $3, $4, $5, clock_timestamp())\nON CONFLICT (lower(name)) DO UPDATE SET\n    garment = EXCLUDED.garment,\n    options = EXCLUDED.options,\n    price = EXCLUDED.price,\n    updated_at = now()\nRETURNING id, name, stock, created_at, updated_at, garment, options, price";
+
+export interface UpsertGarmentBlankParams {
+  name: string;
+  stock: number;
+  garment: string | null;
+  options: unknown;
+  price: number | null;
+}
+
+export async function upsertGarmentBlank(db: Queryable, p: UpsertGarmentBlankParams): Promise<Blank | null> {
+  const { rows } = await db.query(upsertGarmentBlankSql, [p["name"], p["stock"], p["garment"], p["options"], p["price"]]);
+  return (rows[0] as Blank | undefined) ?? null;
+}
+
+// A garment's blanks, in the order they were made.
+export const listGarmentBlanksSql = "SELECT id, name, stock, created_at, updated_at, garment, options, price FROM blanks\nWHERE lower(garment) = lower($1)\nORDER BY created_at, lower(name)";
+
+export async function listGarmentBlanks(db: Queryable, garment: string): Promise<Blank[]> {
+  const { rows } = await db.query(listGarmentBlanksSql, [garment]);
+  return rows as Blank[];
+}
+
+// The garments, with how many blanks each has.
+export const listGarmentsSql = "SELECT min(garment)::text AS garment, COUNT(*)::int AS blank_count\nFROM blanks\nWHERE garment IS NOT NULL\nGROUP BY lower(garment)\nORDER BY lower(min(garment))";
+
+export interface ListGarmentsRow {
+  garment: string;
+  blank_count: number;
+}
+
+export async function listGarments(db: Queryable): Promise<ListGarmentsRow[]> {
+  const { rows } = await db.query(listGarmentsSql, []);
+  return rows as ListGarmentsRow[];
 }

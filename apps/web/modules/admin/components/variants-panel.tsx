@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   DotsThreeIcon,
   PencilSimpleIcon,
+  StackIcon,
   PlusIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
@@ -39,6 +40,7 @@ import { Panel } from "./panel";
 import { ActiveBadge } from "./status-badge";
 import { PriceInput } from "./price-input";
 import { StockInput } from "./stock-input";
+import { GenerateVariantsDialog } from "./generate-variants-dialog";
 import { VariantDialog } from "./variant-dialog";
 
 function variantLabel(v: AdminVariant): string {
@@ -56,6 +58,7 @@ export function VariantsPanel({
   const variants = useAdminVariants(productId);
   const [editing, setEditing] = useState<AdminVariant | "new" | null>(null);
   const [deleting, setDeleting] = useState<AdminVariant | null>(null);
+  const [generating, setGenerating] = useState(false);
   const list = variants.data ?? [];
 
   // Option names and types in use, so a new variant starts with the same.
@@ -96,16 +99,26 @@ export function VariantsPanel({
       title="Variants"
       hint={variants.isSuccess ? String(list.length) : undefined}
       action={
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setEditing("new")}
-          // The dialog needs the existing options (and whether there are any).
-          disabled={!variants.isSuccess}
-        >
-          <PlusIcon data-icon="inline-start" />
-          Add variant
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setGenerating(true)}
+          >
+            <StackIcon data-icon="inline-start" />
+            Add from garment
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setEditing("new")}
+            // The dialog needs the existing options (and whether there are any).
+            disabled={!variants.isSuccess}
+          >
+            <PlusIcon data-icon="inline-start" />
+            Add variant
+          </Button>
+        </div>
       }
       className="[&>div]:p-0"
     >
@@ -138,10 +151,16 @@ export function VariantsPanel({
             A variant holds the price, stock and options (such as size and
             colour). The store lists the product once it has a default one.
           </p>
-          <Button className="mt-6" onClick={() => setEditing("new")}>
-            <PlusIcon data-icon="inline-start" />
-            Add the first variant
-          </Button>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <Button onClick={() => setGenerating(true)}>
+              <StackIcon data-icon="inline-start" />
+              Add all from a garment
+            </Button>
+            <Button variant="outline" onClick={() => setEditing("new")}>
+              <PlusIcon data-icon="inline-start" />
+              Add one variant
+            </Button>
+          </div>
         </div>
       ) : (
         <Table className="min-w-[44rem]">
@@ -263,6 +282,12 @@ export function VariantsPanel({
         options={options}
         first={list.length === 0}
         onClose={() => setEditing(null)}
+      />
+
+      <GenerateVariantsDialog
+        productId={productId}
+        open={generating}
+        onClose={() => setGenerating(false)}
       />
 
       <ConfirmDialog

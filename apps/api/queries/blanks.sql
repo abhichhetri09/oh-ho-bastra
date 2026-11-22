@@ -13,13 +13,13 @@ ORDER BY lower(b.name);
 SELECT * FROM blanks WHERE id = $1;
 
 -- name: CreateBlank :one
-INSERT INTO blanks (name, stock) VALUES (@name, @stock)
+INSERT INTO blanks (name, stock, price) VALUES (@name, @stock, sqlc.narg(price))
 RETURNING *;
 
 -- name: UpdateBlank :one
--- The name and the counted stock (an absolute value); the variants on it
--- take the count.
-UPDATE blanks SET name = @name, stock = @stock, updated_at = now()
+-- The name, the counted stock (an absolute value; the variants on it take
+-- the count) and the usual price.
+UPDATE blanks SET name = @name, stock = @stock, price = sqlc.narg(price), updated_at = now()
 WHERE id = @id
 RETURNING *;
 
@@ -39,3 +39,30 @@ WHERE b.id IN (
 )
 ORDER BY b.id
 FOR UPDATE;
+
+-- name: UpsertGarmentBlank :one
+-- One colour and size of a garment. A blank of that name already (made by
+-- hand) joins the garment and keeps its counted stock. clock_timestamp()
+-- keeps the order they were made in within one transaction.
+INSERT INTO blanks (name, stock, garment, options, price, created_at)
+VALUES (@name, @stock, @garment, @options, @price, clock_timestamp())
+ON CONFLICT (lower(name)) DO UPDATE SET
+    garment = EXCLUDED.garment,
+    options = EXCLUDED.options,
+    price = EXCLUDED.price,
+    updated_at = now()
+RETURNING *;
+
+-- name: ListGarmentBlanks :many
+-- A garment's blanks, in the order they were made.
+SELECT * FROM blanks
+WHERE lower(garment) = lower(@garment)
+ORDER BY created_at, lower(name);
+
+-- name: ListGarments :many
+-- The garments, with how many blanks each has.
+SELECT min(garment)::text AS garment, COUNT(*)::int AS blank_count
+FROM blanks
+WHERE garment IS NOT NULL
+GROUP BY lower(garment)
+ORDER BY lower(min(garment));

@@ -21,10 +21,12 @@ import {
   adminUpdateBlank,
 } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
+import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { adminKeys } from "../keys";
 import { useAdminBlanks } from "../queries";
+import { GarmentForm } from "./garment-form";
 
 /** Stock moves every variant on the blank, so all their views refetch. */
 const touched = [
@@ -60,13 +62,16 @@ export function BlanksManager() {
 
   return (
     <div className="space-y-5">
+      <GarmentForm />
       <AddBlank />
 
       <div className="overflow-hidden rounded-panel border border-border">
-        <Table className="min-w-[32rem]">
+        <Table className="min-w-[44rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Blank</TableHead>
+              <TableHead>Garment</TableHead>
+              <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Variants</TableHead>
               <TableHead className="pr-8 text-right">Stock</TableHead>
               <TableHead className="w-12" />
@@ -76,14 +81,14 @@ export function BlanksManager() {
             {blanks.isPending ? (
               Array.from({ length: 4 }, (_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={4}>
+                  <TableCell colSpan={6}>
                     <Skeleton className="h-8" />
                   </TableCell>
                 </TableRow>
               ))
             ) : blanks.isError ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={4} className="py-16 text-center">
+                <TableCell colSpan={6} className="py-16 text-center">
                   <p className="mb-4 text-sm text-muted-foreground">
                     The blanks couldn&apos;t load.
                   </p>
@@ -94,7 +99,7 @@ export function BlanksManager() {
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={4} className="py-16 text-center">
+                <TableCell colSpan={6} className="py-16 text-center">
                   <p className="font-serif text-2xl">No blanks yet.</p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Add one per garment, colour and size you keep, like
@@ -239,6 +244,7 @@ function BlankRow({
     const parsed = BlankBodySchema.safeParse({
       name: name ?? blank.name,
       stock: stock === null ? blank.stock : Number(stock || NaN),
+      price: blank.price,
     });
     if (
       !parsed.success ||
@@ -274,6 +280,12 @@ function BlankRow({
           aria-label={`Name of ${blank.name}`}
           className="h-8 w-full border border-transparent bg-transparent px-2 text-[0.8125rem] outline-none hover:border-input focus:border-ring focus:bg-background"
         />
+      </TableCell>
+      <TableCell className="text-[0.8125rem] text-muted-foreground">
+        {blank.garment ?? "—"}
+      </TableCell>
+      <TableCell className="text-right text-[0.8125rem] text-muted-foreground tabular-nums">
+        {blank.price === null ? "—" : formatPrice(blank.price)}
       </TableCell>
       <TableCell className="text-right text-muted-foreground tabular-nums">
         {blank.variant_count}

@@ -45,6 +45,7 @@ export const ErrorCodeSchema = z
     "DEFAULT_VARIANT_EXISTS",
     // blank
     "BLANK_NOT_FOUND",
+    "GARMENT_NOT_FOUND",
     "INVALID_BLANK_ID",
     "BLANK_ALREADY_EXISTS",
     // attribute

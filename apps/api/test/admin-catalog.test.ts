@@ -19,7 +19,11 @@ let admin = "";
 let categoryId = "";
 let blankId = "";
 beforeEach(async () => {
-  blankId = (await createBlank(db, { name: "Black tee", stock: 10 }))!.id;
+  blankId = (await createBlank(db, {
+    name: "Black tee",
+    stock: 10,
+    price: null,
+  }))!.id;
   admin = (await signIn(db, cfg, "admin")).cookie;
   categoryId = (await createCategory(db, { name: "Tees", slug: "tees" }))!.id;
   cloudinary.deleted.length = 0;
