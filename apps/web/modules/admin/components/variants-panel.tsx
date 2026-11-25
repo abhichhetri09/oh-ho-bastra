@@ -228,6 +228,7 @@ export function VariantsPanel({
                     productId={productId}
                     variant={variant}
                     label={variantLabel(variant)}
+                    isDisabled={true}
                   />
                   <OfferNote variant={variant} />
                 </TableCell>
@@ -237,6 +238,7 @@ export function VariantsPanel({
                     variantId={variant.id}
                     stock={variant.stock}
                     label={variantLabel(variant)}
+                    isDisabled={true}
                   />
                 </TableCell>
                 <TableCell>

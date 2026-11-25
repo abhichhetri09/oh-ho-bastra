@@ -21,12 +21,14 @@ export function StockInput({
   stock,
   label,
   onSaved,
+  isDisabled,
 }: {
   productId: string;
   variantId: string;
   stock: number;
   label: string;
   onSaved?: (stock: number) => void;
+  isDisabled?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<string | null>(null);
@@ -105,11 +107,11 @@ export function StockInput({
             setDraft(null);
           }
         }}
-        disabled={save.isPending}
+        disabled={save.isPending || isDisabled}
         aria-label={`Stock for ${label}`}
         aria-invalid={!valid}
         className={cn(
-          "h-8 w-20 border border-transparent bg-transparent px-2 text-right text-[0.8125rem] tabular-nums transition-colors outline-none hover:border-input focus:border-ring focus:bg-background disabled:opacity-60 aria-invalid:border-destructive",
+          "h-8 w-20 border border-transparent disabled:border-transparent bg-transparent px-2 text-right text-[0.8125rem] tabular-nums transition-colors outline-none hover:border-input focus:border-ring focus:bg-background disabled:opacity-60 aria-invalid:border-destructive",
           stock === 0 && draft === null && "text-destructive",
         )}
       />

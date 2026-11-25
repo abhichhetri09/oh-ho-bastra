@@ -20,10 +20,12 @@ export function PriceInput({
   productId,
   variant,
   label,
+  isDisabled,
 }: {
   productId: string;
   variant: AdminVariant;
   label: string;
+  isDisabled?: boolean;
 }) {
   const queryClient = useQueryClient();
   const saved = fromCents(variant.selling_price);
@@ -100,11 +102,11 @@ export function PriceInput({
             setDraft(null);
           }
         }}
-        disabled={save.isPending}
+        disabled={save.isPending || isDisabled}
         aria-label={`Price for ${label}`}
         aria-invalid={!valid}
         className={cn(
-          "h-8 w-24 border border-transparent bg-transparent pr-2 pl-5 text-right text-[0.8125rem] tabular-nums transition-colors outline-none hover:border-input focus:border-ring focus:bg-background disabled:opacity-60 aria-invalid:border-destructive",
+          "h-8 w-24 disabled:border-transparent border border-transparent bg-transparent pr-2 pl-5 text-right text-[0.8125rem] tabular-nums transition-colors outline-none hover:border-input focus:border-ring focus:bg-background disabled:opacity-60 aria-invalid:border-destructive",
         )}
       />
       <CheckIcon
