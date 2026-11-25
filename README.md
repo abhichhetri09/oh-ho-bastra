@@ -290,6 +290,7 @@ the store's font and corners are `[data-font="…"]` and `[data-corners="…"]` 
 | `bun run db:seed`                          | create the seed admin and customer (`SEED_*` in `.env.local`)                     |
 | `bun run db:seed:catalog`                  | add the tees and their categories through the running api as the seed admin      |
 | `bun run db:seed:demo`                    | add demo discount codes (WELCOME10, SUMMER20, FIVEOFF) and a 20% sale on two colours |
+| `bun run db:seed:all`                     | run all three seeds in order (needs the api running)                              |
 | `bun run generate`                         | regenerate `openapi.json` and the api clients                                     |
 | `bun run generate:check` / `db:sqlc:check` | fail if generated code is out of date                                             |
 | `bun run check-types`                      | typecheck every package                                                           |

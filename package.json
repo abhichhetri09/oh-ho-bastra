@@ -18,6 +18,7 @@
     "db:seed": "cd apps/api && bun run seed",
     "db:seed:catalog": "bun run scripts/seed-catalog.ts",
     "db:seed:demo": "bun run scripts/seed-demo.ts",
+    "db:seed:all": "bun run db:seed && bun run db:seed:catalog && bun run db:seed:demo",
     "docker:dev:up": "docker compose --env-file .env.local -f docker-compose.dev.yml up --build",
     "docker:dev:down": "docker compose --env-file .env.local -f docker-compose.dev.yml down",
     "docker:dev:reset": "docker compose --env-file .env.local -f docker-compose.dev.yml down -v && bun run docker:dev:up",
